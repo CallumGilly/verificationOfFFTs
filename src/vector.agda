@@ -54,12 +54,9 @@ replicate : (n : ℕ) → X → Vec X n
 replicate zero    x = nil
 replicate (suc n) x = cons x (replicate n x)
 
--- Playing arround, not a useful function
--- replicate′ : (n : ℕ) → (X → X) → X → Vec X n
--- replicate′ zero        step start = nil
--- replicate′ (suc count) step start = cons start (replicate′ count step (step start))
--- _ : replicate′ 4 (λ current → current + 4) 2 ≡ cons 2 (cons 6 (cons 10 (cons 14 nil))) 
--- _ = refl
+iterate : (n : ℕ) → (X → X) → X → Vec X n
+iterate zero    f acc = nil
+iterate (suc n) f acc = cons acc (iterate n f (f acc))
 
 concat : ∀ {n m : ℕ} {X : Set} → Vec X n → Vec X m → Vec X (n + m)
 concat {zero } {zero } xs ys = nil
@@ -135,11 +132,8 @@ anyᵇ {suc n} p xs with p (head xs)
 ...                  | true  = true
 ...                  | false = anyᵇ p (tail xs)
 
-
-
-
-
-
+_ : zip (cons 2 (cons 4 nil)) (iterate 4 (suc) 0) ≡ cons ⟨ 2 , 0 ⟩ (cons ⟨ 4 , 1 ⟩ nil)
+_ = refl
 
 
 
