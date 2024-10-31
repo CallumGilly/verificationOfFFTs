@@ -12,6 +12,8 @@ open import Data.Product.Base using (_×_; proj₁; proj₂) renaming ( _,_ to �
 module src.complex (r : Real) where
   open Real r using (ℝ; _+ᵣ_; _-ᵣ_; _*ᵣ_; sin; cos; fromℕ)
 
+  infixl 7 _*_
+
   record ℂ : Set where
     constructor _+_i
     field

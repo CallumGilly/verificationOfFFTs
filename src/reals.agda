@@ -6,6 +6,7 @@ open Eq.≡-Reasoning
 open import Data.Nat.Base using (ℕ)
 
 record Real : Set₁ where
+  infixl 7 _*ᵣ_ _ₙ/ᵣ_ 
   field
     ℝ : Set
 
@@ -16,6 +17,7 @@ record Real : Set₁ where
     _-ᵣ_ : ℝ → ℝ → ℝ
     _*ᵣ_ : ℝ → ℝ → ℝ
     _/ᵣ_ : ℝ → ℝ → ℝ
+    _ₙ/ᵣ_ : ℕ → ℕ → ℝ
 
     cos : ℝ → ℝ
     sin : ℝ → ℝ
