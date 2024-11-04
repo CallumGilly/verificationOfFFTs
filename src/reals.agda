@@ -8,11 +8,14 @@ open import Data.Nat.Base using (ℕ)
 record Real : Set₁ where
 
   infixl 7 _*ᵣ_
+  infix   9 _ᵣ
+  infixr 8 -ᵣ_
 
   field
     ℝ : Set
 
     fromℕ : ℕ → ℝ
+    _ᵣ :    ℕ → ℝ
     π    : ℝ
 
     _+ᵣ_ : ℝ → ℝ → ℝ
