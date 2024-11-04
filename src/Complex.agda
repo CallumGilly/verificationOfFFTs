@@ -1,4 +1,4 @@
-open import src.reals using (Real)
+open import src.Real using (Real)
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl)
@@ -9,7 +9,7 @@ open import Function using (_∘_)
 
 open import Data.Product.Base using (_×_; proj₁; proj₂) renaming ( _,_ to ⟨_,_⟩)
 
-module src.complex (r : Real) where
+module src.Complex (r : Real) where
   open Real r using (ℝ; _+ᵣ_; _-ᵣ_; _*ᵣ_; sin; cos; fromℕ)
 
   infixl 7 _*_

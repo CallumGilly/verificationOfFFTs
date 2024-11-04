@@ -1,4 +1,4 @@
-module src.vector where
+module src.Vector where
 
 open import Data.Bool using (Bool; true; false; _∧_; _∨_; not)
 open import Data.Nat.Base using (ℕ; zero; suc; _+_; _*_; _∸_; _≤_; s≤s; z≤n; _>_; _⊓_)

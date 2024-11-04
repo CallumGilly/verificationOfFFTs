@@ -1,12 +1,12 @@
-open import src.vector using (Vec; foldr; zip; iterate)
-open import src.reals using (Real)
+open import src.Vector using (Vec; foldr; zip; iterate)
+open import src.Real using (Real)
 open import Data.Nat.Base using (ℕ; suc)
 open import Data.Fin.Base using (Fin; toℕ) renaming (zero to fzero; suc to fsuc)
 open import Data.Product.Base using (_×_; proj₁; proj₂) renaming ( _,_ to ⟨_,_⟩)
 
 module src.DFT (r : Real) where
   open Real r using (ℝ; -ᵣ_; _/ᵣ_; _*ᵣ_; π; _ᵣ)
-  open import src.complex r using (ℂ; ℂfromℕ; _+_; _*_;e^i_)
+  open import src.Complex r using (ℂ; ℂfromℕ; _+_; _*_;e^i_)
   
   -- Todo: move this syntax sugar to somewhere that isn't here
   _ₙ/ᵣ_ : ℕ → ℕ → ℝ
