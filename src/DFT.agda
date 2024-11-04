@@ -5,8 +5,14 @@ open import Data.Fin.Base using (Fin; toℕ) renaming (zero to fzero; suc to fsu
 open import Data.Product.Base using (_×_; proj₁; proj₂) renaming ( _,_ to ⟨_,_⟩)
 
 module src.DFT (r : Real) where
-  open Real r using (ℝ; -ᵣ_; _*ᵣ_; _ₙ/ᵣ_; π; fromℕ)
+  open Real r using (ℝ; -ᵣ_; _/ᵣ_; _*ᵣ_; π; fromℕ)
   open import src.complex r using (ℂ; ℂfromℕ; _+_; _*_;e^i_)
+  
+  -- Todo: move this syntax sugar to somewhere that isn't here
+  _ₙ/ᵣ_ : ℕ → ℕ → ℝ
+  _ₙ/ᵣ_ num den = (fromℕ num) /ᵣ (fromℕ den)
+
+  -- May need checks on division exluding zero
 
   DFT : ∀ {N : ℕ} → Vec ℂ N → Vec ℂ N
   DFT {N} xs k = foldr (step (toℕ k)) (ℂfromℕ 0) (zip xs posVec)
@@ -16,3 +22,5 @@ module src.DFT (r : Real) where
 
       posVec : Vec ℕ N
       posVec = iterate N suc 0
+  
+  -- For the FFT, follow the wiki page on how they decompose it, idealy for the general case but can start with 2 if needed
