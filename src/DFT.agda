@@ -6,7 +6,7 @@ open import Data.Product.Base using (_×_; proj₁; proj₂) renaming ( _,_ to �
 
 module src.DFT (r : Real) where
   open Real r using (ℝ; -ᵣ_; _/ᵣ_; _*ᵣ_; π; _ᵣ)
-  open import src.Complex r using (ℂ; ℂfromℕ; _+_; _*_;e^i_)
+  open import src.Complex r using (ℂ; ℂfromℕ; _+_; _*_; e^i_)
   
   -- Todo: move this syntax sugar to somewhere that isn't here
   _ₙ/ᵣ_ : ℕ → ℕ → ℝ
