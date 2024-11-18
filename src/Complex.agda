@@ -1,7 +1,7 @@
 open import src.Real using (Real)
 
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; refl)
+open Eq using (_≡_; refl; cong)
 open Eq.≡-Reasoning
 
 open import Data.Nat.Base using (ℕ)
@@ -42,7 +42,38 @@ module src.Complex (r : Real) where
   _*_ : ℂ → ℂ → ℂ
   (xRe + xIm i) * (yRe + yIm i) = ((xRe *ᵣ yRe) -ᵣ (xIm *ᵣ yIm)) + ((xRe *ᵣ yIm) +ᵣ (xIm *ᵣ yRe)) i
 
+  *-identityʳ : ∀ {n : ℂ} → n * (ℂfromℕ 1) ≡ n
+  *-identityʳ {real + imaginary i} =
+    begin
+      (real + imaginary i) * ℂfromℕ 1
+    ≡⟨⟩
+      (real + imaginary i) * ((1 ᵣ) + (0 ᵣ) i)
+    ≡⟨⟩
+      ((real *ᵣ 1 ᵣ) -ᵣ (imaginary *ᵣ 0 ᵣ)) + ((real *ᵣ 0 ᵣ) +ᵣ (imaginary *ᵣ 1 ᵣ)) i
+    ≡⟨ cong (_+ ((real *ᵣ 0 ᵣ) +ᵣ (imaginary *ᵣ 1 ᵣ)) i) (cong (λ x → (real *ᵣ 1 ᵣ) -ᵣ x) *ᵣ-zeroᵣ) ⟩
+      ((real *ᵣ 1 ᵣ) -ᵣ (0 ᵣ)) + ((real *ᵣ 0 ᵣ) +ᵣ (imaginary *ᵣ 1 ᵣ)) i
+    ≡⟨ cong (_+ ((real *ᵣ 0 ᵣ) +ᵣ (imaginary *ᵣ 1 ᵣ)) i) (-ᵣ-identityʳ (real *ᵣ 1 ᵣ)) ⟩
+      (real *ᵣ 1 ᵣ) + ((real *ᵣ 0 ᵣ) +ᵣ (imaginary *ᵣ 1 ᵣ)) i
+    ≡⟨ cong ((real *ᵣ 1 ᵣ) +_i) (cong (_+ᵣ (imaginary *ᵣ 1 ᵣ)) *ᵣ-zeroᵣ) ⟩
+      (real *ᵣ 1 ᵣ) + ((0 ᵣ) +ᵣ (imaginary *ᵣ 1 ᵣ)) i
+    ≡⟨ cong ((real *ᵣ 1 ᵣ) +_i) (+ᵣ-identityˡ (imaginary *ᵣ 1 ᵣ)) ⟩
+      (real *ᵣ 1 ᵣ) + ((imaginary *ᵣ 1 ᵣ)) i
+    ≡⟨ cong ((real *ᵣ 1 ᵣ) +_i) (*ᵣ-identityʳ imaginary) ⟩
+      (real *ᵣ 1 ᵣ) + imaginary i
+    ≡⟨ cong (_+ imaginary i) (*ᵣ-identityʳ real) ⟩
+      real + imaginary i
+    ∎
+
   -- Eulers Formula
   e^i_ : ℝ → ℂ
   e^i_ x = (cos x) + (sin x) i
-  
+
+  postulate
+    e^0 : e^i (0 ᵣ) ≡ ℂfromℕ 1 
+
+  ℂ-conjugate : ℂ → ℂ
+  ℂ-conjugate (real + imaginary i) = real + (-ᵣ imaginary) i
+
+  ω : ∀ (N : ℕ) (k : ℕ) → ℂ
+  ω N k = e^i (((-ᵣ (2 ᵣ)) *ᵣ π *ᵣ (k ᵣ)) /ᵣ (N ᵣ))
+
