@@ -14,7 +14,6 @@ record Real : Set₁ where
   field
     ℝ : Set
 
-    fromℕ : ℕ → ℝ
     _ᵣ :    ℕ → ℝ
     π    : ℝ
 
@@ -33,11 +32,11 @@ record Real : Set₁ where
 --     +ᵣ-assocᵣ : ∀ (x y z : ℝ) → (x +ᵣ y) +ᵣ z ≡ x +ᵣ (y +ᵣ z)
 --     *ᵣ-assocᵣ : ∀ (x y z : ℝ) → (x *ᵣ y) *ᵣ z ≡ x *ᵣ (y *ᵣ z)
 -- 
---     +ᵣ-identityˡ : ∀ (x : ℝ) → (fromℕ 0) +ᵣ x ≡ x
---     *ᵣ-identityˡ : ∀ (x : ℝ) → (fromℕ 1) *ᵣ x ≡ x
+    +ᵣ-identityˡ : ∀ (x : ℝ) → (0 ᵣ) +ᵣ x ≡ x
+--  *ᵣ-identityˡ : ∀ (x : ℝ) → (1 ᵣ) *ᵣ x ≡ x
 -- 
 --     +ᵣ-identityʳ : ∀ (x : ℝ) → x +ᵣ (fromℕ 0) ≡ x
---     -ᵣ-identityʳ : ∀ (x : ℝ) → x -ᵣ (fromℕ 0) ≡ x
---     *ᵣ-identityʳ : ∀ (x : ℝ) → x *ᵣ (fromℕ 1) ≡ x
+    -ᵣ-identityʳ : ∀ (x : ℝ) → x -ᵣ (0 ᵣ) ≡ x
+    *ᵣ-identityʳ : ∀ (x : ℝ) → x *ᵣ (1 ᵣ) ≡ x
 --     /ᵣ-identityʳ : ∀ (x : ℝ) → x /ᵣ (fromℕ 1) ≡ x
     
