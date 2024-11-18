@@ -54,30 +54,30 @@ fft₂-butterfly {N/2} ar (ι n) with splitAt N/2 nReshaped
 ... | inj₂ k = fft₂-butterfly-K+N/2 N/2 k ar
 
 
-data splitWithRadix2 : Shape → Set where
+data FFT₂-shaped : Shape → Set where
   singleton : ∀ {s : Shape}
     → s ≡ ι 1
     ----------------------
-    → splitWithRadix2 s
+    → FFT₂-shaped s
 
   splitAr : ∀ {s t : Shape}
-    → splitWithRadix2 t
+    → FFT₂-shaped t
     → s ≡ ι 2 ⊗ t
     ----------------------
-    → splitWithRadix2 s
+    → FFT₂-shaped s
 
 newRad2ArLength : ∀ (s : Shape) 
-  → splitWithRadix2 s
+  → FFT₂-shaped s
   → ℕ
 newRad2ArLength (ι 1) (singleton x) = 1
 newRad2ArLength (ι 2 ⊗ subAr) (splitAr prf refl) = 2 *ₙ newRad2ArLength subAr prf
 
-FFT₂ : ∀ {s : Shape} {n : ℕ}
-    → (prf : splitWithRadix2 s)
-    → n ≡ newRad2ArLength s prf
+FFT₂ : ∀ {s : Shape} {N : ℕ}
+    → (prf : FFT₂-shaped s)
+    → N ≡ newRad2ArLength s prf
     → Ar s ℂ 
     --------------
-    → Ar (ι n) ℂ
+    → Ar (ι N) ℂ
 FFT₂ {ι 1    } (singleton     refl) refl xs = xs
 FFT₂ {ι 2 ⊗ s} (splitAr   prf refl) refl xs = fft₂-butterfly (unnest (map (FFT₂ {s} {newRad2ArLength s prf} prf refl) (nest xs)))
 
