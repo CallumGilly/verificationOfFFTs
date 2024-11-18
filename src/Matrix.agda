@@ -69,28 +69,12 @@ identityMatrix (ι i ⊗ ι j) with (toℕ i) ≡ᵇ (toℕ j)
 ... | false = 0
 ... | true  = 1
 
--- Used AS's paper to give some practive things to make with Matricis
 head₁ : Ar (ι (suc n)) X → X
 head₁ ar = ar (ι fzero)
 
 tail₁ : Ar (ι (suc n)) X → Ar (ι n) X
 tail₁ ar (ι x) = ar (ι (fsuc x))
 
-sum : Ar s ℕ → ℕ
-sum = sum′ 0
-  where
-    sum′ : ∀ {s : Shape} → ℕ → Ar s ℕ → ℕ
-    sum′ {ι zero   } n ar = n
-    sum′ {ι (suc x)} n ar = sum′ (n + head₁ ar) (tail₁ ar)
-    sum′ {s ⊗ s₁   } n ar = sum (map sum (nest ar))
-
-_ : sum (ι-cons 3 (ι-cons 4 nil)) ≡ 7
-_ = refl
-_ : sum (ι-cons 3 (ι-cons 4 nil)) ≡ 7
-_ = refl
-
-_ : ι-cons 3 (ι-cons 4 nil) ≡ ι-cons 3 (ι-cons 4 nil)
-_ = refl
-_ : sum (unnest (ι-cons (ι-cons 3 (ι-cons 4 nil)) (ι-cons (ι-cons 3 (ι-cons 4 nil)) nil))) ≡ 14
-_ = refl
-
+foldr : ∀ {n : ℕ} {X Y : Set} → (X → Y → Y) → Y → Ar (ι n) X → Y
+foldr {zero } f acc ar = acc
+foldr {suc n} f acc ar = foldr f (f (head₁ ar) acc) (tail₁ ar)
