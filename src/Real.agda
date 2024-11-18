@@ -7,9 +7,9 @@ open import Data.Nat.Base using (ℕ)
 
 record Real : Set₁ where
 
-  infixl 7 _*ᵣ_
+  infixl 7 _*_
   infix   9 _ᵣ
-  infixr 8 -ᵣ_
+  infixr 8 -_
 
   field
     ℝ : Set
@@ -17,19 +17,19 @@ record Real : Set₁ where
     _ᵣ :    ℕ → ℝ
     π    : ℝ
 
-    _+ᵣ_ : ℝ → ℝ → ℝ
-    _-ᵣ_ : ℝ → ℝ → ℝ
-    _*ᵣ_ : ℝ → ℝ → ℝ
-    _/ᵣ_ : ℝ → ℝ → ℝ
-    -ᵣ_ : ℝ → ℝ
+    _+_ : ℝ → ℝ → ℝ
+    _-_ : ℝ → ℝ → ℝ
+    _*_ : ℝ → ℝ → ℝ
+    _/_ : ℝ → ℝ → ℝ
+    -_ : ℝ → ℝ
 
     cos : ℝ → ℝ
     sin : ℝ → ℝ
 
-    double-negative : ∀ (x : ℝ) → -ᵣ (-ᵣ x) ≡ x
+    double-negative : ∀ (x : ℝ) → - (- x) ≡ x
 
-    *ᵣ-zeroᵣ : ∀ {x : ℝ} → x *ᵣ (0 ᵣ)  ≡ 0 ᵣ
-    /ᵣ-zeroₜ : ∀ {x : ℝ} → (0 ᵣ) /ᵣ x  ≡ 0 ᵣ
+    *ᵣ-zeroᵣ : ∀ {x : ℝ} → x * (0 ᵣ)  ≡ 0 ᵣ
+    /ᵣ-zeroₜ : ∀ {x : ℝ} → (0 ᵣ) / x  ≡ 0 ᵣ
     
 --     +ᵣ-commᵣ  : ∀ (x y   : ℝ) → (x +ᵣ y) ≡ (y +ᵣ x)
 --     *ᵣ-commᵣ  : ∀ (x y   : ℝ) → (x *ᵣ y) ≡ (y *ᵣ x)
@@ -37,11 +37,11 @@ record Real : Set₁ where
 --     +ᵣ-assocᵣ : ∀ (x y z : ℝ) → (x +ᵣ y) +ᵣ z ≡ x +ᵣ (y +ᵣ z)
 --     *ᵣ-assocᵣ : ∀ (x y z : ℝ) → (x *ᵣ y) *ᵣ z ≡ x *ᵣ (y *ᵣ z)
 -- 
-    +ᵣ-identityˡ : ∀ (x : ℝ) → (0 ᵣ) +ᵣ x ≡ x
+    +ᵣ-identityˡ : ∀ (x : ℝ) → (0 ᵣ) + x ≡ x
 --  *ᵣ-identityˡ : ∀ (x : ℝ) → (1 ᵣ) *ᵣ x ≡ x
 -- 
 --     +ᵣ-identityʳ : ∀ (x : ℝ) → x +ᵣ (fromℕ 0) ≡ x
-    -ᵣ-identityʳ : ∀ (x : ℝ) → x -ᵣ (0 ᵣ) ≡ x
-    *ᵣ-identityʳ : ∀ (x : ℝ) → x *ᵣ (1 ᵣ) ≡ x
+    -ᵣ-identityʳ : ∀ (x : ℝ) → x - (0 ᵣ) ≡ x
+    *ᵣ-identityʳ : ∀ (x : ℝ) → x * (1 ᵣ) ≡ x
 --     /ᵣ-identityʳ : ∀ (x : ℝ) → x /ᵣ (fromℕ 1) ≡ x
     

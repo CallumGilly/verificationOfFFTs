@@ -13,7 +13,7 @@ open import Data.Sum.Base using (inj₁; inj₂; _⊎_)
 open import Data.Bool.Base using (Bool; true; false; T; _∧_; _∨_; not)
 open import Function.Base using (id)
 
-open Real r using (ℝ; -ᵣ_; _/ᵣ_; _*ᵣ_; π; _ᵣ; *ᵣ-zeroᵣ; /ᵣ-zeroₜ)
+open Real r using (ℝ; *ᵣ-zeroᵣ; /ᵣ-zeroₜ)
 open import src.Complex r using (ℂ; e^i_; ℂfromℕ; e^0; _+_; _-_; _*_; _+_i; ω; *-identityʳ; ω-N-0)
 open import src.DFT r using (DFT)
 
@@ -89,21 +89,21 @@ FFT₂ : ∀ {s : Shape} {n : ℕ}
 FFT₂ {ι 1    } (singleton     refl) refl xs = xs
 FFT₂ {ι 2 ⊗ s} (splitAr   prf refl) refl xs = Twiddler (unnest (map (FFT₂ {s} {newRad2ArLength s prf} prf refl) (nest xs)))
 
-data generalRadixSplit : Shape → Set where
-  singleton : ∀ {s : Shape}
-    → s ≡ ι 1
-    ----------------------
-    → generalRadixSplit s
-
-newGeneralArLength : ∀ (s : Shape)
-  → generalRadixSplit s
-  → ℕ
-newGeneralArLength s splt = ?
-
-general-FFT : ∀ {s : Shape} {N₁ N₂ : ℕ} 
-  → Ar s ℂ
-  → Ar (ι ?) ℂ
-general-FFT = ?
+-- data generalRadixSplit : Shape → Set where
+--   singleton : ∀ {s : Shape}
+--     → s ≡ ι 1
+--     ----------------------
+--     → generalRadixSplit s
+-- 
+-- newGeneralArLength : ∀ (s : Shape)
+--   → generalRadixSplit s
+--   → ℕ
+-- newGeneralArLength s splt = ?
+-- 
+-- general-FFT : ∀ {s : Shape} {N₁ N₂ : ℕ} 
+--   → Ar s ℂ
+--   → Ar (ι ?) ℂ
+-- general-FFT = ?
 
 evidence-one : ∀ {x₀ : ℂ} → FFT₂
   {ι 1}
@@ -154,7 +154,7 @@ evidence-two {x₀} {x₂} (ι (fsuc fzero)) =
     Twiddler-K+N/2 1 fzero (unnest (ι-cons (ι-cons x₀ nil) (ι-cons (ι-cons x₂ nil) nil)))
   ≡⟨⟩
     (  unnest (ι-cons (ι-cons x₀ nil) (ι-cons (ι-cons x₂ nil) nil))) (ι       fzero  ⊗ ι fzero) -
-    (((unnest (ι-cons (ι-cons x₀ nil) (ι-cons (ι-cons x₂ nil) nil))) (ι (fsuc fzero) ⊗ ι fzero)) * (ω (2 *ₙ 1) (toℕ fzero)))
+    (((unnest (ι-cons (ι-cons x₀ nil) (ι-cons (ι-cons x₂ nil) nil))) (ι (fsuc fzero) ⊗ ι fzero)) * (ω (2 *ₙ 1) (0)))
   ≡⟨⟩
     x₀ - (x₂ * (ω 2 0))
   ≡⟨ cong (x₀ -_) (cong (x₂ *_) ω-N-0) ⟩

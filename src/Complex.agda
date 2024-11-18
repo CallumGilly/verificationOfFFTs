@@ -10,7 +10,8 @@ open import Function using (_∘_)
 open import Data.Product.Base using (_×_; proj₁; proj₂) renaming ( _,_ to ⟨_,_⟩)
 
 module src.Complex (r : Real) where
-  open Real r using (ℝ; _+ᵣ_; -ᵣ_; π; _-ᵣ_; _/ᵣ_; _*ᵣ_; sin; cos; fromℕ; double-negative; _ᵣ; -ᵣ-identityʳ; *ᵣ-zeroᵣ; +ᵣ-identityˡ; *ᵣ-identityʳ; /ᵣ-zeroₜ)
+  open Real r using (ℝ; π; sin; cos; double-negative; _ᵣ; -ᵣ-identityʳ; *ᵣ-zeroᵣ; +ᵣ-identityˡ; *ᵣ-identityʳ; /ᵣ-zeroₜ)
+    renaming (_+_ to _+ᵣ_; _-_ to _-ᵣ_; -_ to -ᵣ_; _/_ to _/ᵣ_; _*_ to _*ᵣ_)
 
   infixl 7 _*_
   infixl 6 _+_ _-_
