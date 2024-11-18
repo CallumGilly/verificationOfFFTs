@@ -25,6 +25,11 @@ record Real : Set₁ where
 
     cos : ℝ → ℝ
     sin : ℝ → ℝ
+
+    double-negative : ∀ (x : ℝ) → -ᵣ (-ᵣ x) ≡ x
+
+    *ᵣ-zeroᵣ : ∀ {x : ℝ} → x *ᵣ (0 ᵣ)  ≡ 0 ᵣ
+    /ᵣ-zeroₜ : ∀ {x : ℝ} → (0 ᵣ) /ᵣ x  ≡ 0 ᵣ
     
 --     +ᵣ-commᵣ  : ∀ (x y   : ℝ) → (x +ᵣ y) ≡ (y +ᵣ x)
 --     *ᵣ-commᵣ  : ∀ (x y   : ℝ) → (x *ᵣ y) ≡ (y *ᵣ x)
