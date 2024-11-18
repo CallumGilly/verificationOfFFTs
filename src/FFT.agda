@@ -1,21 +1,13 @@
 open import src.Real using (Real)
 module src.FFT (r : Real) where
 
-open import src.Vector using (Vec; foldr; zip; iterate)
 open import src.Matrix using (Ar; Shape; Position; ι; _⊗_; nest; map; unnest; ι-cons; nil; _==_)
-open import src.VecMat using (arrToVec; vecToArr)
-open import Data.Nat.Base using (ℕ; zero; suc; _/_; _<ᵇ_; _∸_) renaming (_+_ to _+ₙ_; _*_ to _*ₙ_)
+open import Data.Nat.Base using (ℕ; zero; _<ᵇ_) renaming (_+_ to _+ₙ_; _*_ to _*ₙ_)
 open import Data.Nat.Properties using (+-identityʳ)
-open import Data.Fin.Base using (Fin; toℕ; splitAt) renaming (zero to fzero; suc to fsuc; _-_ to _-f_)
-open import Data.Product.Base using (_×_; proj₁; proj₂) renaming ( _,_ to ⟨_,_⟩)
-open import Data.Sum.Base using (inj₁; inj₂; _⊎_)
--- open import Data.Bool using (false; true)
-open import Data.Bool.Base using (Bool; true; false; T; _∧_; _∨_; not)
-open import Function.Base using (id)
+open import Data.Fin.Base using (Fin; toℕ; splitAt) renaming (zero to fzero; suc to fsuc)
+open import Data.Sum.Base using (inj₁; inj₂)
 
-open Real r using (ℝ; *ᵣ-zeroᵣ; /ᵣ-zeroₜ)
-open import src.Complex r using (ℂ; e^i_; ℂfromℕ; e^0; _+_; _-_; _*_; _+_i; ω; *-identityʳ; ω-N-0)
-open import src.DFT r using (DFT)
+open import src.Complex r using (ℂ; ℂfromℕ; _+_; _-_; _*_; ω; *-identityʳ; ω-N-0)
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong)
