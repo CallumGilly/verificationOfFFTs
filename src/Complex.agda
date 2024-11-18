@@ -10,9 +10,10 @@ open import Function using (_∘_)
 open import Data.Product.Base using (_×_; proj₁; proj₂) renaming ( _,_ to ⟨_,_⟩)
 
 module src.Complex (r : Real) where
-  open Real r using (ℝ; _+ᵣ_; _-ᵣ_; _*ᵣ_; sin; cos; fromℕ)
+  open Real r using (ℝ; _+ᵣ_; -ᵣ_; π; _-ᵣ_; _/ᵣ_; _*ᵣ_; sin; cos; fromℕ; double-negative; _ᵣ; -ᵣ-identityʳ; *ᵣ-zeroᵣ; +ᵣ-identityˡ; *ᵣ-identityʳ)
 
   infixl 7 _*_
+  infixl 6 _+_ _-_
 
   record ℂ : Set where
     constructor _+_i
@@ -26,10 +27,10 @@ module src.Complex (r : Real) where
   ImaginaryPart = ℂ.imaginary
 
   fromℝ : ℝ → ℂ
-  fromℝ x = x + (fromℕ 0) i
+  fromℝ x = x + (0 ᵣ) i
 
   ℂfromℕ : ℕ → ℂ
-  ℂfromℕ = fromℝ ∘ fromℕ
+  ℂfromℕ = fromℝ ∘ _ᵣ
 
   _+_ : ℂ → ℂ → ℂ
   (xRe + xIm i) + (yRe + yIm i) = (xRe +ᵣ yRe) + (xIm +ᵣ yIm) i
