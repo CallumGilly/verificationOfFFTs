@@ -37,29 +37,29 @@ conged+-identityʳ n =
 --     Xk+N/2 ← p − q
 -- end for
 
-Twiddler-K     : ∀ (N/2 : ℕ) (k : Fin N/2) → Ar (ι 2 ⊗ ι N/2) ℂ → ℂ
-Twiddler-K     N/2 k ar = p + q
+fft₂-butterfly-K     : ∀ (N/2 : ℕ) (k : Fin N/2) → Ar (ι 2 ⊗ ι N/2) ℂ → ℂ
+fft₂-butterfly-K     N/2 k ar = p + q
   where
     p : ℂ
     p = ar (ι fzero ⊗ ι k) 
     q : ℂ
     q = (ar (ι (fsuc fzero) ⊗ ι k)) * ω (2 *ₙ N/2) (toℕ k)
 
-Twiddler-K+N/2 : ∀ (N/2 : ℕ) (k : Fin N/2) → Ar (ι 2 ⊗ ι N/2) ℂ → ℂ
-Twiddler-K+N/2 N/2 k ar = p - q
+fft₂-butterfly-K+N/2 : ∀ (N/2 : ℕ) (k : Fin N/2) → Ar (ι 2 ⊗ ι N/2) ℂ → ℂ
+fft₂-butterfly-K+N/2 N/2 k ar = p - q
   where
     p : ℂ
     p = ar (ι fzero ⊗ ι k) 
     q : ℂ
     q = (ar (ι (fsuc fzero) ⊗ ι k)) * (ω (2 *ₙ N/2) (toℕ k))
 
-Twiddler : ∀ {N/2 : ℕ} → Ar (ι 2 ⊗ ι N/2) ℂ → Ar (ι (2 *ₙ N/2)) ℂ
-Twiddler {N/2} ar (ι n) with toℕ n <ᵇ N/2 | splitAt N/2 nReshaped
+fft₂-butterfly : ∀ {N/2 : ℕ} → Ar (ι 2 ⊗ ι N/2) ℂ → Ar (ι (2 *ₙ N/2)) ℂ
+fft₂-butterfly {N/2} ar (ι n) with toℕ n <ᵇ N/2 | splitAt N/2 nReshaped
   where
     nReshaped : Fin (N/2 +ₙ N/2)
     nReshaped rewrite conged+-identityʳ N/2 = n
-... | legacy | inj₁ k = Twiddler-K     N/2 k ar
-... | legacy | inj₂ k = Twiddler-K+N/2 N/2 k ar
+... | legacy | inj₁ k = fft₂-butterfly-K     N/2 k ar
+... | legacy | inj₂ k = fft₂-butterfly-K+N/2 N/2 k ar
 
 
 data splitWithRadix2 : Shape → Set where
@@ -87,7 +87,7 @@ FFT₂ : ∀ {s : Shape} {n : ℕ}
     --------------
     → Ar (ι n) ℂ
 FFT₂ {ι 1    } (singleton     refl) refl xs = xs
-FFT₂ {ι 2 ⊗ s} (splitAr   prf refl) refl xs = Twiddler (unnest (map (FFT₂ {s} {newRad2ArLength s prf} prf refl) (nest xs)))
+FFT₂ {ι 2 ⊗ s} (splitAr   prf refl) refl xs = fft₂-butterfly (unnest (map (FFT₂ {s} {newRad2ArLength s prf} prf refl) (nest xs)))
 
 -- data generalRadixSplit : Shape → Set where
 --   singleton : ∀ {s : Shape}
@@ -126,13 +126,13 @@ evidence-two : ∀ {x₀ x₂ : ℂ} → FFT₂
   == ι-cons (x₀ + x₂) (ι-cons (x₀ - x₂) nil) 
 evidence-two {x₀} {x₂} (ι fzero) =
   begin
-    Twiddler-K 1 fzero
+    fft₂-butterfly-K 1 fzero
             (unnest
              (map (λ xs → xs)
               (nest
                (unnest (ι-cons (ι-cons x₀ nil) (ι-cons (ι-cons x₂ nil) nil))))))
   ≡⟨⟩
-    Twiddler-K 1 fzero (unnest (ι-cons (ι-cons x₀ nil) (ι-cons (ι-cons x₂ nil) nil)))
+    fft₂-butterfly-K 1 fzero (unnest (ι-cons (ι-cons x₀ nil) (ι-cons (ι-cons x₂ nil) nil)))
   ≡⟨⟩
     (unnest (ι-cons (ι-cons x₀ nil) (ι-cons (ι-cons x₂ nil) nil))) (ι fzero ⊗ ι fzero) +
     (((unnest (ι-cons (ι-cons x₀ nil) (ι-cons (ι-cons x₂ nil) nil))) (ι (fsuc fzero) ⊗ ι fzero)) * ω (2 *ₙ 1) (0))
@@ -145,13 +145,13 @@ evidence-two {x₀} {x₂} (ι fzero) =
   ∎
 evidence-two {x₀} {x₂} (ι (fsuc fzero)) =
   begin
-    Twiddler-K+N/2 1 fzero
+    fft₂-butterfly-K+N/2 1 fzero
             (unnest
              (map (λ xs → xs)
               (nest
                (unnest (ι-cons (ι-cons x₀ nil) (ι-cons (ι-cons x₂ nil) nil))))))
   ≡⟨⟩
-    Twiddler-K+N/2 1 fzero (unnest (ι-cons (ι-cons x₀ nil) (ι-cons (ι-cons x₂ nil) nil)))
+    fft₂-butterfly-K+N/2 1 fzero (unnest (ι-cons (ι-cons x₀ nil) (ι-cons (ι-cons x₂ nil) nil)))
   ≡⟨⟩
     (  unnest (ι-cons (ι-cons x₀ nil) (ι-cons (ι-cons x₂ nil) nil))) (ι       fzero  ⊗ ι fzero) -
     (((unnest (ι-cons (ι-cons x₀ nil) (ι-cons (ι-cons x₂ nil) nil))) (ι (fsuc fzero) ⊗ ι fzero)) * (ω (2 *ₙ 1) (0)))
@@ -191,7 +191,7 @@ evidence-two {x₀} {x₂} (ι (fsuc fzero)) =
 -- FFT₂ {ι 0} ar = ? --(ι ()) -- Length of 0 is absurd
 -- FFT₂ {ι 1} ar = ?
 -- FFT₂ {ι (suc (suc x))} ar = ?
--- FFT₂ {ι 2 ⊗ t₁} ar = ? -- Twiddler (unnest (map FFT₂ (nest ar)))
+-- FFT₂ {ι 2 ⊗ t₁} ar = ? -- fft₂-butterfly (unnest (map FFT₂ (nest ar)))
 -- FFT₂ {ι x ⊗ t₁} ar = ?
 -- FFT₂ {(t ⊗ t₂) ⊗ t₁} ar = ?
 
