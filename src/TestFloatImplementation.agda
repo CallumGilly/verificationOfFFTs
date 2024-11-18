@@ -1,13 +1,17 @@
 module src.TestFloatImplementation where
-open import src.reals using (Real)
+open import src.Real using (Real)
 import Agda.Builtin.Float as Float 
 open Float using (Float; primNatToFloat; primFloatPlus; primFloatMinus; primFloatTimes; primFloatDiv)
 open Float using (primFloatNegate; primFloatCos; primFloatSin)
+import Relation.Binary.PropositionalEquality as Eq
+open Eq using (_≡_; refl)
+open Eq.≡-Reasoning
 
 myReals : Real
 myReals = record
    { ℝ            = Float
    ; fromℕ        = primNatToFloat
+   ; _ᵣ           = primNatToFloat
 
     -- In no world should I be representing pi like this this is stupid, but this is a test
    ; π            = 3.14159265359
@@ -20,6 +24,7 @@ myReals = record
 
    ; cos          = primFloatCos
    ; sin          = primFloatSin
+   ; double-negative = λ{x → ?} 
 
 --    ; +ᵣ-commᵣ     = ?
 --    ; *ᵣ-commᵣ     = ?
@@ -39,9 +44,9 @@ open Real myReals using (-ᵣ_; fromℕ; ℝ)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl)
 open Eq.≡-Reasoning
-open import src.vector using (cons; nil)
+open import src.Vector using (cons; nil)
 open import src.DFT myReals using (DFT)
-open import src.complex myReals using (ℂfromℕ; ℂ; fromℝ;_+_i)
+open import src.Complex myReals using (ℂfromℕ; ℂ; fromℝ;_+_i)
 
 val36 : ℂ
 val36 = ℂfromℕ 36
@@ -65,9 +70,16 @@ val44  = fromℕ 44
 val7   : ℝ  
 val7   = fromℕ 7
 
+val1   : ℂ 
+val1   = ℂfromℕ 1
+val-1   : ℂ 
+val-1   = fromℝ (-ᵣ (fromℕ 1))
+
 _ : DFT (cons val36 (cons val22 (cons val45 (cons val15 nil)))) ≡ cons (val118 + val0 i) (cons (val-9 + val-7 i) (cons (val44 + val0 i) (cons (val-9 + val7 i) nil)))
 _ = ?
 
+_ : DFT (cons val1 (cons val1 (cons val1 (cons val1 nil)))) ≡ (cons val1 (cons val1 (cons val1 (cons val-1 nil))))
+_ = ?
 
 
 
