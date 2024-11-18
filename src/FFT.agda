@@ -2,7 +2,7 @@ open import src.Real using (Real)
 module src.FFT (r : Real) where
 
 open import src.Matrix using (Ar; Shape; Position; ι; _⊗_; nest; map; unnest; ι-cons; nil; _==_)
-open import Data.Nat.Base using (ℕ; zero; _<ᵇ_) renaming (_+_ to _+ₙ_; _*_ to _*ₙ_)
+open import Data.Nat.Base using (ℕ; zero) renaming (_+_ to _+ₙ_; _*_ to _*ₙ_)
 open import Data.Nat.Properties using (+-identityʳ)
 open import Data.Fin.Base using (Fin; toℕ; splitAt) renaming (zero to fzero; suc to fsuc)
 open import Data.Sum.Base using (inj₁; inj₂)
@@ -46,12 +46,12 @@ fft₂-butterfly-K+N/2 N/2 k ar = p - q
     q = (ar (ι (fsuc fzero) ⊗ ι k)) * (ω (2 *ₙ N/2) (toℕ k))
 
 fft₂-butterfly : ∀ {N/2 : ℕ} → Ar (ι 2 ⊗ ι N/2) ℂ → Ar (ι (2 *ₙ N/2)) ℂ
-fft₂-butterfly {N/2} ar (ι n) with toℕ n <ᵇ N/2 | splitAt N/2 nReshaped
+fft₂-butterfly {N/2} ar (ι n) with splitAt N/2 nReshaped
   where
     nReshaped : Fin (N/2 +ₙ N/2)
     nReshaped rewrite conged+-identityʳ N/2 = n
-... | legacy | inj₁ k = fft₂-butterfly-K     N/2 k ar
-... | legacy | inj₂ k = fft₂-butterfly-K+N/2 N/2 k ar
+... | inj₁ k = fft₂-butterfly-K     N/2 k ar
+... | inj₂ k = fft₂-butterfly-K+N/2 N/2 k ar
 
 
 data splitWithRadix2 : Shape → Set where
