@@ -1,12 +1,15 @@
 open import src.Real using (Real)
 module src.FFT (r : Real) where
 
-open import src.Matrix using (Ar; Shape; Position; ι; _⊗_; nest; map; unnest; ι-cons; nil; _==_)
-open import Data.Nat.Base using (ℕ; zero) renaming (_+_ to _+ₙ_; _*_ to _*ₙ_)
+open import src.Matrix using (Ar; Shape; Position; ι; _⊗_; nest; map; foldr; unnest; ι-cons; nil; _==_; zip; iterate)
+open import Data.Nat.Base using (ℕ; zero; suc) renaming (_+_ to _+ₙ_; _*_ to _*ₙ_)
 open import Data.Nat.Properties using (+-identityʳ)
 open import Data.Fin.Base using (Fin; toℕ; splitAt) renaming (zero to fzero; suc to fsuc)
 open import Data.Sum.Base using (inj₁; inj₂)
+open import Data.Product.Base using (_×_; proj₁; proj₂) renaming ( _,_ to ⟨_,_⟩)
+open import src.VecMat using (arrToVec; vecToArr)
 
+open import src.DFT r using (DFT)
 open import src.Complex r using (ℂ; ℂfromℕ; _+_; _-_; _*_; ω; *-identityʳ; ω-N-0)
 
 import Relation.Binary.PropositionalEquality as Eq
@@ -97,6 +100,53 @@ FFT₂ {ι 2 ⊗ s} (splitAr   prf refl) refl xs = fft₂-butterfly (unnest (map
 --   → Ar (ι ?) ℂ
 -- general-FFT = ?
 
+data valid-shape : Shape → Set where
+  singleton : ∀ {s : Shape}
+    → s ≡ ι 1
+    -------------
+    → valid-shape s
+
+  dft-shaped : ∀ {s : Shape} {n : ℕ}
+    → s ≡ ι n
+    ---------------
+    → valid-shape s
+
+  cooley-tukey-split : ∀ {s t : Shape} {radix : ℕ}
+    → valid-shape t
+    → s ≡ ι radix ⊗ t
+    -------------------
+    → valid-shape s
+
+final-shape-length : ∀ (s : Shape)
+  → valid-shape s
+  → ℕ
+final-shape-length (ι n) (singleton  refl) = n
+final-shape-length (ι n) (dft-shaped refl) = n
+final-shape-length (ι radix ⊗ subShape) (cooley-tukey-split subShapeIsValid refl) = radix *ₙ (final-shape-length subShape subShapeIsValid)
+
+general-case-butterfly : ∀ {r N/r : ℕ} → Ar (ι r ⊗ ι N/r) ℂ → Ar (ι (r *ₙ N/r)) ℂ
+--general-case-butterfly {radix} {N/r} xs (ι n) = let tmp = foldr ? (ℂfromℕ 0) (zip (iterate radix suc 0) (nest xs)) in ?
+--general-case-butterfly {radix} {N/r} xs (ι n) = let tmp = (zip (iterate radix suc 0) (nest xs)) in ?
+  where
+    submissive-twiddler : Ar (ι N/r) (ℕ × ℂ) → ℂ → ℂ
+    submissive-twiddler = ?
+
+FFT : ∀ {s : Shape} {N : ℕ}
+  → (shape-description : valid-shape s)
+  → N ≡ final-shape-length s shape-description 
+  → Ar s ℂ
+  --------------------------------------------
+  → Ar (ι N) ℂ
+FFT (singleton  refl) refl ar = ar
+FFT (dft-shaped refl) refl ar = vecToArr (DFT (arrToVec ar)) 
+FFT (cooley-tukey-split {t = t} {radix = radix} shape-description refl) refl ar = general-case-butterfly 
+                                                                                    {radix} 
+                                                                                    {final-shape-length t shape-description }
+                                                                                    (unnest (map (FFT shape-description refl) (nest ar)))
+--FFT₂ {ι 2 ⊗ s} (splitAr   prf refl) refl xs = fft₂-butterfly (unnest (map (FFT₂ {s} {newRad2ArLength s prf} prf refl) (nest xs)))
+-- FFT {ι x             } ar 
+-- FFT {s ⊗ t} ar = FFT₂ ar -- unnest (map (FFT) (nest Ar))
+
 evidence-one : ∀ {x₀ : ℂ} → FFT₂
   {ι 1}
   {1}
@@ -178,21 +228,6 @@ evidence-two {x₀} {x₂} (ι (fsuc fzero)) =
 --        nil)))
 -- evidence-four = ?
 
--- FFT₂ {ι 1    } xs (singleton   x) = ?
--- FFT₂ {ι 2 ⊗ s} xs (splitAr prf x) = ?
--- FFT₂ {ι 0} ar = ? --(ι ()) -- Length of 0 is absurd
--- FFT₂ {ι 1} ar = ?
--- FFT₂ {ι (suc (suc x))} ar = ?
--- FFT₂ {ι 2 ⊗ t₁} ar = ? -- fft₂-butterfly (unnest (map FFT₂ (nest ar)))
--- FFT₂ {ι x ⊗ t₁} ar = ?
--- FFT₂ {(t ⊗ t₂) ⊗ t₁} ar = ?
-
--- FFT₁ {x} ar = ?
--- 
--- FFT₂ {s} ar = ?
--- 
--- FFT {ι x             } ar = FFT₁ ar
--- FFT {s ⊗ t} ar = FFT₂ ar -- unnest (map (FFT) (nest Ar))
 
 
 
