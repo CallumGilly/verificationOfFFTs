@@ -3,6 +3,7 @@ module src.Matrix where
 open import Data.Nat using (ℕ; _≡ᵇ_; suc; zero; _+_)
 open import Data.Fin as F using (Fin; toℕ) renaming (zero to fzero; suc to fsuc)
 open import Data.Bool using (true; false)
+open import Data.Product.Base using (_×_; proj₁; proj₂) renaming ( _,_ to ⟨_,_⟩)
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl)
@@ -78,3 +79,10 @@ tail₁ ar (ι x) = ar (ι (fsuc x))
 foldr : ∀ {n : ℕ} {X Y : Set} → (X → Y → Y) → Y → Ar (ι n) X → Y
 foldr {zero } f acc ar = acc
 foldr {suc n} f acc ar = foldr f (f (head₁ ar) acc) (tail₁ ar)
+
+zip : Ar (ι n) X → Ar (ι n) Y → Ar (ι n) (X × Y)
+zip xs ys pos = ⟨ xs pos , ys pos ⟩
+
+iterate : (n : ℕ) → (X → X) → X → Ar (ι n) X
+iterate zero    f acc = nil
+iterate (suc n) f acc = ι-cons acc (iterate n f (f acc))
