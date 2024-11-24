@@ -24,6 +24,29 @@ conged+-identityʳ n =
     n +ₙ n
   ∎
 
+-- Taken from "Computational Frameworks for the Fast Fourier Transform"
+-- ISBN 978-0-898712-85-8
+-- 1.1.2
+Fₙ : ∀ {N : ℕ} → Ar (ι N ⊗ ι N) ℂ
+Fₙ {N} (ι p ⊗ ι q) = ω N ((toℕ p) *ₙ (toℕ q))--e^i (((-ᵣ (2 ᵣ)) *ᵣ π *ᵣ (toℕ p) ᵣ *ᵣ (toℕ q) ᵣ ) /ᵣ (n ᵣ))
+
+-- F₁ : Fₙ {1} == unnest (ι-cons (ι-cons (ℂfromℕ 1) nil) nil) 
+-- F₁ = 
+--   λ{(ι fzero ⊗ ι fzero) → 
+--     begin
+--       ω 1 0
+--     ≡⟨⟩
+--       e^i (((-ᵣ 2 ᵣ *ᵣ π) *ᵣ (0 ᵣ)) /ᵣ (1 ᵣ))
+--     ≡⟨ cong (e^i_) (cong (_/ᵣ (1 ᵣ)) *ᵣ-zeroᵣ) ⟩
+--       e^i ((0 ᵣ) /ᵣ (1 ᵣ))
+--     ≡⟨ cong (e^i_) /ᵣ-zeroₜ ⟩
+--       e^i (0 ᵣ)
+--     ≡⟨ e^0 ⟩
+--       ℂfromℕ 1
+--     ∎
+--   }
+
+
 -- Taken from Wikipedia
 -- for k = 0 to N/2−1 do                        combine DFTs of two halves into full DFT:
 --     p ← Xk
@@ -100,52 +123,58 @@ FFT₂ {ι 2 ⊗ s} (splitAr   prf refl) refl xs = fft₂-butterfly (unnest (map
 --   → Ar (ι ?) ℂ
 -- general-FFT = ?
 
-data valid-shape : Shape → Set where
-  singleton : ∀ {s : Shape}
-    → s ≡ ι 1
-    -------------
-    → valid-shape s
+---------------------------------------------------------------------------------------------------
+-- First general case attemmpt, with restrictions imposed on the shape, and flattening implicit --
+---------------------------------------------------------------------------------------------------
 
-  dft-shaped : ∀ {s : Shape} {n : ℕ}
-    → s ≡ ι n
-    ---------------
-    → valid-shape s
-
-  cooley-tukey-split : ∀ {s t : Shape} {radix : ℕ}
-    → valid-shape t
-    → s ≡ ι radix ⊗ t
-    -------------------
-    → valid-shape s
-
-final-shape-length : ∀ (s : Shape)
-  → valid-shape s
-  → ℕ
-final-shape-length (ι n) (singleton  refl) = n
-final-shape-length (ι n) (dft-shaped refl) = n
-final-shape-length (ι radix ⊗ subShape) (cooley-tukey-split subShapeIsValid refl) = radix *ₙ (final-shape-length subShape subShapeIsValid)
-
-general-case-butterfly : ∀ {r N/r : ℕ} → Ar (ι r ⊗ ι N/r) ℂ → Ar (ι (r *ₙ N/r)) ℂ
---general-case-butterfly {radix} {N/r} xs (ι n) = let tmp = foldr ? (ℂfromℕ 0) (zip (iterate radix suc 0) (nest xs)) in ?
---general-case-butterfly {radix} {N/r} xs (ι n) = let tmp = (zip (iterate radix suc 0) (nest xs)) in ?
-  where
-    submissive-twiddler : Ar (ι N/r) (ℕ × ℂ) → ℂ → ℂ
-    submissive-twiddler = ?
-
-FFT : ∀ {s : Shape} {N : ℕ}
-  → (shape-description : valid-shape s)
-  → N ≡ final-shape-length s shape-description 
-  → Ar s ℂ
-  --------------------------------------------
-  → Ar (ι N) ℂ
-FFT (singleton  refl) refl ar = ar
-FFT (dft-shaped refl) refl ar = vecToArr (DFT (arrToVec ar)) 
-FFT (cooley-tukey-split {t = t} {radix = radix} shape-description refl) refl ar = general-case-butterfly 
-                                                                                    {radix} 
-                                                                                    {final-shape-length t shape-description }
-                                                                                    (unnest (map (FFT shape-description refl) (nest ar)))
---FFT₂ {ι 2 ⊗ s} (splitAr   prf refl) refl xs = fft₂-butterfly (unnest (map (FFT₂ {s} {newRad2ArLength s prf} prf refl) (nest xs)))
--- FFT {ι x             } ar 
--- FFT {s ⊗ t} ar = FFT₂ ar -- unnest (map (FFT) (nest Ar))
+-- data valid-shape : Shape → Set where
+--   singleton : ∀ {s : Shape}
+--     → s ≡ ι 1
+--     -------------
+--     → valid-shape s
+-- 
+--   dft-shaped : ∀ {s : Shape} {n : ℕ}
+--     → s ≡ ι n
+--     ---------------
+--     → valid-shape s
+-- 
+--   cooley-tukey-split : ∀ {s t : Shape} {radix : ℕ}
+--     → valid-shape t
+--     → s ≡ ι radix ⊗ t
+--     -------------------
+--     → valid-shape s
+-- 
+-- final-shape-length : ∀ (s : Shape)
+--   → valid-shape s
+--   → ℕ
+-- final-shape-length (ι n) (singleton  refl) = n
+-- final-shape-length (ι n) (dft-shaped refl) = n
+-- final-shape-length (ι radix ⊗ subShape) (cooley-tukey-split subShapeIsValid refl) = radix *ₙ (final-shape-length subShape subShapeIsValid)
+-- 
+-- general-case-butterfly : ∀ {r N/r : ℕ} → Ar (ι r ⊗ ι N/r) ℂ → Ar (ι (r *ₙ N/r)) ℂ
+-- general-case-butterfly {radix} {N/r} xs (ι n) = let tmp = foldr ? (ℂfromℕ 0) (zip (iterate radix suc 0) (nest xs)) in ?
+-- --general-case-butterfly {radix} {N/r} xs (ι n) = let tmp = (zip (iterate radix suc 0) (nest xs)) in ?
+--   where
+--     helper : Ar (ι N/r) (ℕ × ℂ) → ℂ → ℂ
+--     helper = ?
+-- 
+-- -- try implementing for ι n ⊗ ι m 
+-- 
+-- FFT : ∀ {s : Shape} {N : ℕ}
+--   → (shape-description : valid-shape s)
+--   → N ≡ final-shape-length s shape-description 
+--   → Ar s ℂ
+--   --------------------------------------------
+--   → Ar (ι N) ℂ
+-- FFT (singleton  refl) refl ar = ar
+-- FFT (dft-shaped refl) refl ar = vecToArr (DFT (arrToVec ar)) 
+-- FFT (cooley-tukey-split {t = t} {radix = radix} shape-description refl) refl ar = general-case-butterfly 
+--                                                                                     {radix} 
+--                                                                                     {final-shape-length t shape-description }
+--                                                                                     (unnest (map (FFT shape-description refl) (nest ar)))
+-- --FFT₂ {ι 2 ⊗ s} (splitAr   prf refl) refl xs = fft₂-butterfly (unnest (map (FFT₂ {s} {newRad2ArLength s prf} prf refl) (nest xs)))
+-- -- FFT {ι x             } ar 
+-- -- FFT {s ⊗ t} ar = FFT₂ ar -- unnest (map (FFT) (nest Ar))
 
 evidence-one : ∀ {x₀ : ℂ} → FFT₂
   {ι 1}
