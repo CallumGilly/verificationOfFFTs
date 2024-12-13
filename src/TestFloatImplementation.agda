@@ -63,19 +63,23 @@ builtinReals = record
   ; show            = primShowFloat
   }
 
-open Real builtinReals using (ℝ; _ᵣ; show; π)
--- toString : ∀ {n : ℕ} → Vec n ℂ → String
--- toString arr = "pp"
+open Real builtinReals using (ℝ; _ᵣ; π) renaming (show to showReal)
 
+-- Complex numbers stuff
+
+open import src.Complex builtinReals using (ℂfromℕ; ℂ; fromℝ;_+_i; _+_)
+open import src.ComplexShow builtinReals renaming (show to showComplex)
+
+-- Printing stuff
 private
   variable
    a : Level
 
-objectToPrint : ℝ
-objectToPrint = 3 ᵣ
+objectToPrint : ℂ
+objectToPrint = ((3 ᵣ) + (7 ᵣ) i) + ((8 ᵣ) + (11 ᵣ) i)
 
 testDFT : IO {a} ⊤
-testDFT = putStrLn (show π)
+testDFT = putStrLn (showComplex objectToPrint)
 
 main : Main
 main = run testDFT
