@@ -51,11 +51,11 @@ module src.Complex (r : Real) where
       (real + imaginary i) * ((1 ᵣ) + (0 ᵣ) i)
     ≡⟨⟩
       ((real *ᵣ 1 ᵣ) -ᵣ (imaginary *ᵣ 0 ᵣ)) + ((real *ᵣ 0 ᵣ) +ᵣ (imaginary *ᵣ 1 ᵣ)) i
-    ≡⟨ cong (_+ ((real *ᵣ 0 ᵣ) +ᵣ (imaginary *ᵣ 1 ᵣ)) i) (cong (λ x → (real *ᵣ 1 ᵣ) -ᵣ x) *ᵣ-zeroᵣ) ⟩
+    ≡⟨ cong (_+ ((real *ᵣ 0 ᵣ) +ᵣ (imaginary *ᵣ 1 ᵣ)) i) (cong (λ x → (real *ᵣ 1 ᵣ) -ᵣ x) (*ᵣ-zeroᵣ (imaginary))) ⟩
       ((real *ᵣ 1 ᵣ) -ᵣ (0 ᵣ)) + ((real *ᵣ 0 ᵣ) +ᵣ (imaginary *ᵣ 1 ᵣ)) i
     ≡⟨ cong (_+ ((real *ᵣ 0 ᵣ) +ᵣ (imaginary *ᵣ 1 ᵣ)) i) (-ᵣ-identityʳ (real *ᵣ 1 ᵣ)) ⟩
       (real *ᵣ 1 ᵣ) + ((real *ᵣ 0 ᵣ) +ᵣ (imaginary *ᵣ 1 ᵣ)) i
-    ≡⟨ cong ((real *ᵣ 1 ᵣ) +_i) (cong (_+ᵣ (imaginary *ᵣ 1 ᵣ)) *ᵣ-zeroᵣ) ⟩
+    ≡⟨ cong ((real *ᵣ 1 ᵣ) +_i) (cong (_+ᵣ (imaginary *ᵣ 1 ᵣ)) (*ᵣ-zeroᵣ (real))) ⟩
       (real *ᵣ 1 ᵣ) + ((0 ᵣ) +ᵣ (imaginary *ᵣ 1 ᵣ)) i
     ≡⟨ cong ((real *ᵣ 1 ᵣ) +_i) (+ᵣ-identityˡ (imaginary *ᵣ 1 ᵣ)) ⟩
       (real *ᵣ 1 ᵣ) + ((imaginary *ᵣ 1 ᵣ)) i
@@ -100,9 +100,9 @@ module src.Complex (r : Real) where
       -ω N 0
     ≡⟨⟩
       e^i (((-ᵣ 2 ᵣ *ᵣ π) *ᵣ (0 ᵣ)) /ᵣ (N ᵣ))
-    ≡⟨ cong (e^i_) (cong (_/ᵣ (N ᵣ)) *ᵣ-zeroᵣ) ⟩
+    ≡⟨ cong (e^i_) (cong (_/ᵣ (N ᵣ)) (*ᵣ-zeroᵣ (-ᵣ 2 ᵣ *ᵣ π))) ⟩
       e^i ((0 ᵣ) /ᵣ (N ᵣ))
-    ≡⟨ cong (e^i_) /ᵣ-zeroₜ ⟩
+    ≡⟨ cong (e^i_) (/ᵣ-zeroₜ (N ᵣ)) ⟩
       e^i (0 ᵣ)
     ≡⟨ e^0 ⟩
       ℂfromℕ 1
