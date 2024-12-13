@@ -10,16 +10,15 @@ open Eq.≡-Reasoning
 myReals : Real
 myReals = record
    { ℝ            = Float
-   ; fromℕ        = primNatToFloat
    ; _ᵣ           = primNatToFloat
 
     -- In no world should I be representing pi like this this is stupid, but this is a test
    ; π            = 3.14159265359
 
-   ; _+ᵣ_         = primFloatPlus
-   ; _-ᵣ_         = primFloatMinus
-   ; _*ᵣ_         = primFloatTimes
-   ; _/ᵣ_         = primFloatDiv
+   ; _+_         = primFloatPlus
+   ; _-_         = primFloatMinus
+   ; _*_         = primFloatTimes
+   ; _/_         = primFloatDiv
    ; -ᵣ_          = primFloatNegate
 
    ; cos          = primFloatCos
@@ -40,11 +39,11 @@ myReals = record
 --    ; /ᵣ-identityʳ = ?
   }
 
-open Real myReals using (-ᵣ_; fromℕ; ℝ)
+open Real myReals using (-_; _ᵣ; ℝ)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl)
 open Eq.≡-Reasoning
-open import src.Vector using (cons; nil)
+open import src.Vector using (Vec; cons; nil)
 open import src.DFT myReals using (DFT)
 open import src.Complex myReals using (ℂfromℕ; ℂ; fromℝ;_+_i)
 
@@ -58,35 +57,45 @@ val15 : ℂ
 val15 = ℂfromℕ 15
 
 val118 : ℝ 
-val118 = fromℕ 118
+val118 = 118 ᵣ
 val0   : ℝ 
-val0   = fromℕ 0
+val0   = 0 ᵣ
 val-9  : ℝ 
-val-9  = (-ᵣ (fromℕ 9))
+val-9  = (- (9 ᵣ))
 val-7  : ℝ 
-val-7  = (-ᵣ (fromℕ 7))
+val-7  = (- (7 ᵣ))
 val44  : ℝ
-val44  = fromℕ 44
+val44  = 44 ᵣ
 val7   : ℝ  
-val7   = fromℕ 7
+val7   = 7 ᵣ
 
 val1   : ℂ 
 val1   = ℂfromℕ 1
 val-1   : ℂ 
-val-1   = fromℝ (-ᵣ (fromℕ 1))
+val-1   = fromℝ (- (1 ᵣ))
 
-_ : DFT (cons val36 (cons val22 (cons val45 (cons val15 nil)))) ≡ cons (val118 + val0 i) (cons (val-9 + val-7 i) (cons (val44 + val0 i) (cons (val-9 + val7 i) nil)))
-_ = ?
-
-_ : DFT (cons val1 (cons val1 (cons val1 (cons val1 nil)))) ≡ (cons val1 (cons val1 (cons val1 (cons val-1 nil))))
-_ = ?
-
-
+-- _ : DFT (cons val36 (cons val22 (cons val45 (cons val15 nil)))) == cons (val118 + val0 i) (cons (val-9 + val-7 i) (cons (val44 + val0 i) (cons (val-9 + val7 i) nil)))
+-- _ = ?
+-- 
+-- _ : DFT (cons val1 (cons val1 (cons val1 (cons val1 nil)))) ≡ (cons val1 (cons val1 (cons val1 (cons val-1 nil))))
+-- _ = ?
 
 
 
+open import Agda.Builtin.IO using (IO)
+open import Agda.Builtin.String
+open import Agda.Builtin.Unit
+open import Agda.Builtin.Nat
+open import Data.Nat using (ℕ)
 
+toString : ∀ {n : ℕ} → Vec n ℂ → String
+toString arr = "pp"
 
+testDFT : IO ⊤
+testDFT = putStrLn (toString (cons val36 (cons val22 (cons val45 (cons val15 nil)))))
+
+main : IO ⊤
+main = testDFT
 
 
 

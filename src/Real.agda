@@ -40,8 +40,14 @@ record Real : Set₁ where
     +ᵣ-identityˡ : ∀ (x : ℝ) → (0 ᵣ) + x ≡ x
 --  *ᵣ-identityˡ : ∀ (x : ℝ) → (1 ᵣ) *ᵣ x ≡ x
 -- 
---     +ᵣ-identityʳ : ∀ (x : ℝ) → x +ᵣ (fromℕ 0) ≡ x
+    +ᵣ-identityʳ : ∀ (x : ℝ) → x + (0 ᵣ) ≡ x
     -ᵣ-identityʳ : ∀ (x : ℝ) → x - (0 ᵣ) ≡ x
     *ᵣ-identityʳ : ∀ (x : ℝ) → x * (1 ᵣ) ≡ x
 --     /ᵣ-identityʳ : ∀ (x : ℝ) → x /ᵣ (fromℕ 1) ≡ x
+
+    neg-distrib-* : ∀ {x y : ℝ} → (- x) * y ≡ - (x * y)
     
+    *ᵣ-assoc : ∀ {x y z : ℝ} → (x * y) * z ≡ x * (y * z) 
+    *ᵣ-comm  : ∀ {x y   : ℝ} →  x * y      ≡ y * x
+
+    *-cancels-/ : ∀ {x y : ℝ} → x * (y / x) ≡ y

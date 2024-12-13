@@ -10,7 +10,7 @@ open import Function using (_∘_)
 open import Data.Product.Base using (_×_; proj₁; proj₂) renaming ( _,_ to ⟨_,_⟩)
 
 module src.Complex (r : Real) where
-  open Real r using (ℝ; π; sin; cos; double-negative; _ᵣ; -ᵣ-identityʳ; *ᵣ-zeroᵣ; +ᵣ-identityˡ; *ᵣ-identityʳ; /ᵣ-zeroₜ)
+  open Real r using (ℝ; π; sin; cos; double-negative; _ᵣ; -ᵣ-identityʳ; *ᵣ-zeroᵣ; +ᵣ-identityˡ; *ᵣ-identityʳ; /ᵣ-zeroₜ; +ᵣ-identityʳ)
     renaming (_+_ to _+ᵣ_; _-_ to _-ᵣ_; -_ to -ᵣ_; _/_ to _/ᵣ_; _*_ to _*ᵣ_)
 
   infixl 7 _*_
@@ -65,23 +65,39 @@ module src.Complex (r : Real) where
       real + imaginary i
     ∎
 
+  +-identityʳ : ∀ {n : ℂ} → n + (ℂfromℕ 0) ≡ n 
+  +-identityʳ {real + imaginary i} rewrite +ᵣ-identityʳ real | +ᵣ-identityʳ imaginary = refl
+    -- begin 
+    --   (real + imaginary i) + ℂfromℕ 0
+    -- ≡⟨⟩
+    --   (real + imaginary i) + ((0 ᵣ) + (0 ᵣ) i)
+    -- ≡⟨⟩
+    --   ((real +ᵣ (0 ᵣ)) + (imaginary +ᵣ (0 ᵣ)) i)
+    -- ≡⟨ cong ( (real +ᵣ (0 ᵣ)) +_i ) (+ᵣ-identityʳ imaginary) ⟩
+    --   ?
+  -- (xRe + xIm i) + (yRe + yIm i) = (xRe +ᵣ yRe) + (xIm +ᵣ yIm) i
+
   -- Eulers Formula
   e^i_ : ℝ → ℂ
   e^i_ x = (cos x) + (sin x) i
 
   postulate
     e^0 : e^i (0 ᵣ) ≡ ℂfromℕ 1 
+    e^i[-π] : e^i (-ᵣ π) ≡ (-ᵣ (1 ᵣ)) + (0 ᵣ) i
 
   ℂ-conjugate : ℂ → ℂ
   ℂ-conjugate (real + imaginary i) = real + (-ᵣ imaginary) i
 
   ω : ∀ (N : ℕ) (k : ℕ) → ℂ
-  ω N k = e^i (((-ᵣ (2 ᵣ)) *ᵣ π *ᵣ (k ᵣ)) /ᵣ (N ᵣ))
+  ω N k = e^i (((2 ᵣ) *ᵣ π *ᵣ (k ᵣ)) /ᵣ (N ᵣ))
 
-  ω-N-0 : ∀ {N : ℕ} → ω N 0 ≡ ℂfromℕ 1
+  -ω : ∀ (N : ℕ) (k : ℕ) → ℂ
+  -ω N k = e^i (((-ᵣ (2 ᵣ)) *ᵣ π *ᵣ (k ᵣ)) /ᵣ (N ᵣ))
+
+  ω-N-0 : ∀ {N : ℕ} → -ω N 0 ≡ ℂfromℕ 1
   ω-N-0 {N} =
     begin
-      ω N 0
+      -ω N 0
     ≡⟨⟩
       e^i (((-ᵣ 2 ᵣ *ᵣ π) *ᵣ (0 ᵣ)) /ᵣ (N ᵣ))
     ≡⟨ cong (e^i_) (cong (_/ᵣ (N ᵣ)) *ᵣ-zeroᵣ) ⟩
