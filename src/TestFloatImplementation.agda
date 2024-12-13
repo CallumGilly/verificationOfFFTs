@@ -5,7 +5,7 @@ open import src.Real using (Real)
 
 import Agda.Builtin.Float as Float 
 open Float using (Float; primNatToFloat; primFloatPlus; primFloatMinus; primFloatTimes; primFloatDiv)
-open Float using (primFloatNegate; primFloatCos; primFloatSin; primShowFloat)
+open Float using (primFloatNegate; primFloatCos; primFloatACos; primFloatSin; primShowFloat)
 open Float using (primRatioToFloat)
 
 open import Agda.Builtin.Int using (pos)
@@ -41,7 +41,7 @@ builtinReals : Real
 builtinReals = record
   { ℝ = Float
   ; _ᵣ              = primNatToFloat
-  ; π               = primRatioToFloat (pos 355) (pos 113)
+  ; π               = primFloatACos (primFloatNegate (primNatToFloat 1))
   ; _+_             = primFloatPlus
   ; _-_             = primFloatMinus
   ; _*_             = primFloatTimes
@@ -63,7 +63,7 @@ builtinReals = record
   ; show            = primShowFloat
   }
 
-open Real builtinReals using (ℝ; _ᵣ; π) renaming (show to showReal)
+open Real builtinReals using (ℝ; _ᵣ; π; cos) renaming (show to showReal)
 
 -- Complex numbers stuff
 
