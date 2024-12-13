@@ -1,6 +1,7 @@
 module src.Real where
 
 import Relation.Binary.PropositionalEquality as Eq
+open import Agda.Builtin.String
 open Eq using (_≡_; refl)
 open Eq.≡-Reasoning
 open import Data.Nat.Base using (ℕ)
@@ -28,8 +29,8 @@ record Real : Set₁ where
 
     double-negative : ∀ (x : ℝ) → - (- x) ≡ x
 
-    *ᵣ-zeroᵣ : ∀ {x : ℝ} → x * (0 ᵣ)  ≡ 0 ᵣ
-    /ᵣ-zeroₜ : ∀ {x : ℝ} → (0 ᵣ) / x  ≡ 0 ᵣ
+    *ᵣ-zeroᵣ : ∀ (x : ℝ) → x * (0 ᵣ)  ≡ 0 ᵣ
+    /ᵣ-zeroₜ : ∀ (x : ℝ) → (0 ᵣ) / x  ≡ 0 ᵣ
     
 --     +ᵣ-commᵣ  : ∀ (x y   : ℝ) → (x +ᵣ y) ≡ (y +ᵣ x)
 --     *ᵣ-commᵣ  : ∀ (x y   : ℝ) → (x *ᵣ y) ≡ (y *ᵣ x)
@@ -45,9 +46,11 @@ record Real : Set₁ where
     *ᵣ-identityʳ : ∀ (x : ℝ) → x * (1 ᵣ) ≡ x
 --     /ᵣ-identityʳ : ∀ (x : ℝ) → x /ᵣ (fromℕ 1) ≡ x
 
-    neg-distrib-* : ∀ {x y : ℝ} → (- x) * y ≡ - (x * y)
+    neg-distrib-* : ∀ (x y : ℝ) → (- x) * y ≡ - (x * y)
     
-    *ᵣ-assoc : ∀ {x y z : ℝ} → (x * y) * z ≡ x * (y * z) 
-    *ᵣ-comm  : ∀ {x y   : ℝ} →  x * y      ≡ y * x
+    *ᵣ-assoc : ∀ (x y z : ℝ) → (x * y) * z ≡ x * (y * z) 
+    *ᵣ-comm  : ∀ (x y   : ℝ) →  x * y      ≡ y * x
 
-    *-cancels-/ : ∀ {x y : ℝ} → x * (y / x) ≡ y
+    *-cancels-/ : ∀ (x y : ℝ) → x * (y / x) ≡ y
+
+    show : ℝ → String
