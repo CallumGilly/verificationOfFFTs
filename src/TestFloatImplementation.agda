@@ -41,7 +41,7 @@ builtinReals : Real
 builtinReals = record
   { ℝ = Float
   ; _ᵣ              = primNatToFloat
-  ; π               = primRatioToFloat (pos 22) (pos 7)
+  ; π               = primRatioToFloat (pos 355) (pos 113)
   ; _+_             = primFloatPlus
   ; _-_             = primFloatMinus
   ; _*_             = primFloatTimes
@@ -98,6 +98,21 @@ counting-matrix (ι zero       ⊗ ι (suc zero)) = ℂfromℕ 2
 counting-matrix (ι (suc zero) ⊗ ι zero      ) = ℂfromℕ 3
 counting-matrix (ι (suc zero) ⊗ ι (suc zero)) = ℂfromℕ 4
 
+-- DFT
+
+-----------------------------------------------
+-- DFT example                               --
+-- For an input   [1   ,  3   , 3   ,  1   ] --
+-- We should get  [8+0i, -2-2i, 0+0i, -2+2i] --
+-----------------------------------------------
+
+open import src.DFTMatrix builtinReals using (DFT)
+dft-example-input : Ar (ι 4) ℂ
+dft-example-input (ι zero)                   = ℂfromℕ 1
+dft-example-input (ι (suc zero))             = ℂfromℕ 3
+dft-example-input (ι (suc (suc zero)))       = ℂfromℕ 3
+dft-example-input (ι (suc (suc (suc zero)))) = ℂfromℕ 1
+
 -- Printing stuff
 private
   variable
@@ -107,7 +122,7 @@ objectToPrint : ℂ
 objectToPrint = ((3 ᵣ) + (7 ᵣ) i) + ((8 ᵣ) + (11 ᵣ) i)
 
 testDFT : IO {a} ⊤
-testDFT = putStrLn (showMatrix showComplex counting-matrix)
+testDFT = putStrLn (showMatrix showComplex (DFT dft-example-input))
 
 main : Main
 main = run testDFT
