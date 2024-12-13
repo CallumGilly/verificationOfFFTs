@@ -70,6 +70,34 @@ open Real builtinReals using (ℝ; _ᵣ; π) renaming (show to showReal)
 open import src.Complex builtinReals using (ℂfromℕ; ℂ; fromℝ;_+_i; _+_)
 open import src.ComplexShow builtinReals renaming (show to showComplex)
 
+complex-02 : ℂ
+complex-02 = ℂfromℕ 2
+complex-03 : ℂ
+complex-03 = ℂfromℕ 3
+
+-- Matrix Stuff
+open import src.Matrix using (Ar; Shape; ι; _⊗_; ι-cons; nil)
+open import src.MatrixShow renaming (show to showMatrix)
+
+small-matrix : Ar (ι 2) ℂ
+small-matrix = ι-cons complex-02 (ι-cons complex-03 nil)
+
+tiny-matrix : Ar (ι 1) ℂ
+tiny-matrix = ι-cons complex-02 nil
+
+----------
+-- 1  2 -- 
+----------
+-- 3  4 --
+----------
+open import Data.Fin using (zero; suc)
+
+counting-matrix : Ar (ι 2 ⊗ ι 2) ℂ
+counting-matrix (ι zero       ⊗ ι zero      ) = ℂfromℕ 1 
+counting-matrix (ι zero       ⊗ ι (suc zero)) = ℂfromℕ 2
+counting-matrix (ι (suc zero) ⊗ ι zero      ) = ℂfromℕ 3
+counting-matrix (ι (suc zero) ⊗ ι (suc zero)) = ℂfromℕ 4
+
 -- Printing stuff
 private
   variable
@@ -79,7 +107,7 @@ objectToPrint : ℂ
 objectToPrint = ((3 ᵣ) + (7 ᵣ) i) + ((8 ᵣ) + (11 ᵣ) i)
 
 testDFT : IO {a} ⊤
-testDFT = putStrLn (showComplex objectToPrint)
+testDFT = putStrLn (showMatrix showComplex counting-matrix)
 
 main : Main
 main = run testDFT
@@ -95,7 +123,6 @@ main = run testDFT
 -- open Eq using (_≡_; refl)
 -- open Eq.≡-Reasoning
 -- open import src.Vector using (Vec; cons; nil)
--- open import src.DFT myReals using (DFT)
 -- open import src.Complex myReals using (ℂfromℕ; ℂ; fromℝ;_+_i)
 -- 
 -- val36 : ℂ
