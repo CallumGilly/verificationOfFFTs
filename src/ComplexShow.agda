@@ -10,4 +10,4 @@ _++_ : String → String → String
 _++_ = primStringAppend
 
 show : ℂ → String
-show (real + imaginary i) = (((showReal real) ++ " + ") ++ (showReal imaginary)) ++ " i "
+show (real + imaginary i) = (((showReal real) ++ " + ") ++ (showReal imaginary)) ++ " i"
