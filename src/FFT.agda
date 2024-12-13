@@ -76,9 +76,9 @@ tmp (ι fzero) =
     e^i ((neg (2 ᵣ)) *ᵣ π *ᵣ (_ₙ/ᵣ_ {2} fzero 2)) 
   ≡⟨⟩
     e^i ((neg (2 ᵣ)) *ᵣ π *ᵣ ((0 ᵣ) /ᵣ (2 ᵣ))) 
-  ≡⟨ cong (e^i_) (cong (neg 2 ᵣ *ᵣ π *ᵣ_) /ᵣ-zeroₜ) ⟩
+  ≡⟨ cong (e^i_) (cong (neg 2 ᵣ *ᵣ π *ᵣ_) (/ᵣ-zeroₜ (2 ᵣ))) ⟩
     e^i (((neg (2 ᵣ)) *ᵣ π) *ᵣ 0 ᵣ) 
-  ≡⟨ cong (e^i_) (*ᵣ-zeroᵣ) ⟩
+  ≡⟨ cong (e^i_) (*ᵣ-zeroᵣ ((neg (2 ᵣ)) *ᵣ π)) ⟩
     e^i (0 ᵣ) 
   ≡⟨ e^0 ⟩
     ℂfromℕ 1
@@ -94,15 +94,15 @@ tmp (ι (fsuc fzero)) =
     e^i ((neg (2 ᵣ)) *ᵣ π *ᵣ (_/ᵣ_ (1 ᵣ) (2 ᵣ))) 
   ≡⟨⟩
     e^i ((neg (2 ᵣ)) *ᵣ π *ᵣ (_/ᵣ_ (1 ᵣ) (2 ᵣ))) 
-  ≡⟨ cong e^i_ (cong (_*ᵣ (_/ᵣ_ (1 ᵣ) (2 ᵣ))) neg-distrib-*) ⟩
+  ≡⟨ cong e^i_ (cong (_*ᵣ (_/ᵣ_ (1 ᵣ) (2 ᵣ))) (neg-distrib-* (2 ᵣ) π)) ⟩
     e^i (neg ((2 ᵣ) *ᵣ π) *ᵣ (_/ᵣ_ (1 ᵣ) (2 ᵣ))) 
-  ≡⟨ cong e^i_ neg-distrib-* ⟩
+  ≡⟨ cong e^i_ (neg-distrib-* ((2 ᵣ) *ᵣ π) (_/ᵣ_ (1 ᵣ) (2 ᵣ))) ⟩
     e^i (neg (((2 ᵣ) *ᵣ π) *ᵣ (_/ᵣ_ (1 ᵣ) (2 ᵣ)))) 
-  ≡⟨ cong e^i_ (cong neg_ (cong (_*ᵣ (_/ᵣ_ (1 ᵣ) (2 ᵣ))) *ᵣ-comm)) ⟩
+  ≡⟨ cong e^i_ (cong neg_ (cong (_*ᵣ (_/ᵣ_ (1 ᵣ) (2 ᵣ))) (*ᵣ-comm (2 ᵣ) (π)))) ⟩
     e^i (neg ((π *ᵣ (2 ᵣ)) *ᵣ (_/ᵣ_ (1 ᵣ) (2 ᵣ)))) 
-  ≡⟨ cong e^i_ (cong neg_ (*ᵣ-assoc)) ⟩
+  ≡⟨ cong e^i_ (cong neg_ (*ᵣ-assoc π (2 ᵣ) (_/ᵣ_ (1 ᵣ) (2 ᵣ)))) ⟩
     e^i (neg (π *ᵣ ((2 ᵣ) *ᵣ (_/ᵣ_ (1 ᵣ) (2 ᵣ))))) 
-  ≡⟨ cong e^i_ (cong neg_ (cong (π *ᵣ_) *-cancels-/)) ⟩
+  ≡⟨ cong e^i_ (cong neg_ (cong (π *ᵣ_) (*-cancels-/ (2 ᵣ) (1 ᵣ)))) ⟩
     e^i (neg (π *ᵣ (1 ᵣ))) 
   ≡⟨ cong e^i_ (cong neg_ (*ᵣ-identityʳ π)) ⟩
     e^i (neg (π)) 
