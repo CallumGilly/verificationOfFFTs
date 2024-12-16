@@ -118,7 +118,7 @@ dft-example-input (ι (suc (suc (suc zero)))) = ℂfromℕ 1
 -- For an input   [[1   ,  3], [3 ,  1]] --
 -- We should get  [8+0i, -2-2i, 0+0i, -2+2i] --
 
-open import src.FFT builtinReals using (FFT)
+open import src.FFT builtinReals using (FFT; twiddles)
 fft-example-input : Ar (ι 2 ⊗ ι 2) ℂ
 fft-example-input = unnest (ι-cons (ι-cons (ℂfromℕ 1) (ι-cons (ℂfromℕ 3) nil)) (ι-cons (ι-cons (ℂfromℕ 3) (ι-cons (ℂfromℕ 1) nil)) nil))
 
@@ -135,9 +135,6 @@ testDFT = putStrLn (showMatrix showComplex (FFT fft-example-input))
 
 main : Main
 main = run testDFT
-
-
-
 
 
 
