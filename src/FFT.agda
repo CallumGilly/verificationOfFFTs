@@ -22,6 +22,8 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong)
 open Eq.≡-Reasoning
 
+open import Function using (_$_)
+
 private
   variable
     N r₁ r₂ : ℕ
@@ -68,5 +70,5 @@ FFT : ∀ {s : Shape} → Ar s ℂ → Ar (recursive-transpose s) ℂ
 FFT {ι x     } arr = DFT arr -- Use the DFT when no splitting is defined 
 FFT {sₗ  ⊗ sᵣ} arr = let innerDFTapplied       = nestedMap FFT arr in
                      let twiddleFactorsApplied = zipWith _*_ innerDFTapplied twiddles in
-                     nestedMap FFT (reshape transposeᵣ twiddleFactorsApplied)
+                     nestedMap FFT $ reshape transposeᵣ twiddleFactorsApplied
 
