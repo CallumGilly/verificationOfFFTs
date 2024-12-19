@@ -69,6 +69,9 @@ nest a i j = a (i ⊗ j)
 unnest : Ar s (Ar p X) → Ar (s ⊗ p) X
 unnest a (i ⊗ j) = a i j
 
+nestedMap : ∀ {s p t : Shape} → (Ar p X → Ar t Y) → Ar (s ⊗ p) X → Ar (s ⊗ t) Y
+nestedMap f ar = unnest (map f (nest ar))
+
 transpose : Ar (s ⊗ p) X → Ar (p ⊗ s) X
 transpose ar (i ⊗ j) = ar (j ⊗ i)
 

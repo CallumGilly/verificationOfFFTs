@@ -1,7 +1,7 @@
 open import src.Real using (Real)
 module src.FFT (r : Real) where
 
-open import src.Matrix using (Ar; Shape; Position; ι; _⊗_; nest; map; foldr; unnest; ι-cons; nil; _==_; zip; iterate; zipWith)
+open import src.Matrix using (Ar; Shape; Position; ι; _⊗_; nest; map; foldr; unnest; ι-cons; nil; _==_; zip; iterate; zipWith; nestedMap)
 open import Data.Nat.Base using (ℕ; zero; suc) renaming (_+_ to _+ₙ_; _*_ to _*ₙ_; _⊔_ to max)
 open import Data.Nat.Properties using (+-identityʳ)
 open import Data.Fin.Base using (Fin; toℕ; splitAt; opposite) renaming (zero to fzero; suc to fsuc)
@@ -66,7 +66,7 @@ twiddles {s} p = ω (base s) (position-sum p)
 
 FFT : ∀ {s : Shape} → Ar s ℂ → Ar (recursive-transpose s) ℂ
 FFT {ι x     } arr = DFT arr -- Use the DFT when no splitting is defined 
-FFT {sₗ  ⊗ sᵣ} arr = let innerDFTapplied       = unnest (map FFT (nest arr)) in
+FFT {sₗ  ⊗ sᵣ} arr = let innerDFTapplied       = nestedMap FFT arr in
                      let twiddleFactorsApplied = zipWith _*_ innerDFTapplied twiddles in
-                     unnest (map FFT (nest (reshape transposeᵣ twiddleFactorsApplied)))
+                     nestedMap FFT (reshape transposeᵣ twiddleFactorsApplied)
 
