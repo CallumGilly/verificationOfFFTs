@@ -117,10 +117,18 @@ dft-example-input (ι (suc (suc (suc zero)))) = ℂfromℕ 1
 -- Same as DFT example above
 -- For an input   [[1   ,  3], [3 ,  1]] --
 -- We should get  [8+0i, -2-2i, 0+0i, -2+2i] --
+-----------------------------------------------
+-- Second FFT example
+-- For an input   [[1   ,  2], [3 ,  4]] --
+-- We should get  [10+0i, -2+2i, -2+0i, -2-2i] --
+-----------------------------------------------
 
 open import src.FFT builtinReals using (FFT; twiddles)
+open import src.Reshape using (Reshape; eq; _∙_; _⊕_; split; flat; swap)
+open import src.Reshape using (reshape; rev; rev-eq; rev-rev; transpose; transposeᵣ; recursive-transposeᵣ)
+
 fft-example-input : Ar (ι 2 ⊗ ι 2) ℂ
-fft-example-input = unnest (ι-cons (ι-cons (ℂfromℕ 1) (ι-cons (ℂfromℕ 3) nil)) (ι-cons (ι-cons (ℂfromℕ 3) (ι-cons (ℂfromℕ 1) nil)) nil))
+fft-example-input = reshape split (ι-cons (ℂfromℕ 1) (ι-cons (ℂfromℕ 3) (ι-cons (ℂfromℕ 2) (ι-cons (ℂfromℕ 4) nil))))
 
 -- Printing stuff
 private
@@ -131,7 +139,7 @@ objectToPrint : ℂ
 objectToPrint = ((3 ᵣ) + (7 ᵣ) i) + ((8 ᵣ) + (11 ᵣ) i)
 
 testDFT : IO {a} ⊤
-testDFT = putStrLn (showMatrix showComplex (FFT fft-example-input))
+testDFT = putStrLn (showMatrix showComplex (reshape (flat ∙ rev recursive-transposeᵣ) (FFT fft-example-input)))
 
 main : Main
 main = run testDFT
