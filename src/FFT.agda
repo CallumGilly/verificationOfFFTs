@@ -9,25 +9,20 @@ open import Data.Nat.Base using (ℕ; suc) renaming (_+_ to _+ₙ_; _*_ to _*ₙ
 open Real r renaming (_*_ to _*ᵣ_)
 open import src.Complex r using (ℂ; _*_; ω)
 
-open import src.Matrix using (Ar; Shape; Position; ι; _⊗_; zipWith; nestedMap)
+open import src.Matrix using (Ar; Shape; Position; ι; _⊗_; zipWith; nestedMap; length)
 open import src.Reshape using (Reshape; transposeᵣ; recursive-transpose; reshape)
 
 open import src.DFTMatrix r using (DFT)
 
 
 twiddles : ∀ {s : Shape} → Ar s ℂ
-twiddles {s} p = ω (base s) (position-sum p)
+twiddles {s} p = ω (length s) (position-sum p)
   where
     -- This has to do some weird stuff I dont like to get the correct value as Fin seems to be reversed :Puzzled_face:
     position-sum : ∀ {s : Shape} → Position s → ℕ
     position-sum {ι (suc n)} (ι fzero) = 0
     position-sum {ι (suc n)} (ι (fsuc pos)) = (toℕ (opposite (fsuc pos))) +ₙ 1
     position-sum {sₗ ⊗ sᵣ} (xₗ ⊗ xᵣ) = (position-sum {sₗ} xₗ) *ₙ (position-sum {sᵣ} xᵣ)
-
-    -- Base of the omega value
-    base : Shape → ℕ
-    base (ι x) = x
-    base (s ⊗ s₁) = base s *ₙ base s₁
 
     
 

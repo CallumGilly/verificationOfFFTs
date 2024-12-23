@@ -46,22 +46,12 @@ length : Shape → ℕ
 length (ι x) = x
 length (s ⊗ s₁) = length s * length s₁
 
-test : Ar (ι 2) ℕ
-test (ι fzero) = 2
-test (ι (fsuc x)) = 3
-
 map : (X → Y) → Ar s X → Ar s Y
 map f ar i = f (ar i)
 
 -- Define my own version of equality
 _==_ : ∀ {s : Shape} {X : Set} → Ar s X → Ar s X → Set
 _==_ {s} xs ys = ∀ (p : Position s) → xs p ≡ ys p
-
--- This is getting stuck because of my use of pattern matching in ι-cons
-_ : ι-cons 3 (ι-cons 4 nil) == ι-cons 3 (ι-cons 4 nil)
-_ = λ p → refl
--- _ : (map (suc) test) == (ι-cons 4 (ι-cons 5 nil))
--- _ = ?
 
 nest : Ar (s ⊗ p) X → Ar s (Ar p X)
 nest a i j = a (i ⊗ j)
@@ -71,9 +61,6 @@ unnest a (i ⊗ j) = a i j
 
 nestedMap : ∀ {s p t : Shape} → (Ar p X → Ar t Y) → Ar (s ⊗ p) X → Ar (s ⊗ t) Y
 nestedMap f ar = unnest (map f (nest ar))
-
-transpose : Ar (s ⊗ p) X → Ar (p ⊗ s) X
-transpose ar (i ⊗ j) = ar (j ⊗ i)
 
 identityMatrix : ∀ { i : ℕ } → Ar (ι i ⊗ ι i) ℕ
 identityMatrix (ι i ⊗ ι j) with (toℕ i) ≡ᵇ (toℕ j)
@@ -100,10 +87,6 @@ _++_ : Ar (ι n) X → Ar (ι m) X → Ar (ι (n + m)) X
 _++_ {n} {X} {m} arr₁ arr₂ (ι pos) with splitAt n {m} pos
 ... | inj₁ finN = arr₁ (ι finN)
 ... | inj₂ finM = arr₂ (ι finM)
-
-flattern : Ar (ι n ⊗ ι m) X → Ar (ι (n * m)) X
-flattern {x} {y} arr (ι p) with remQuot {x} (y) p
-... |  ⟨ fst , snd ⟩ = arr (ι fst ⊗ ι snd)
 
 
 -- ar-⊗-assoc : ∀ {s t u : Shape} → Ar ((s ⊗ t) ⊗ u) X → Ar (s ⊗ (t ⊗ u)) X
