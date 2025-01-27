@@ -63,11 +63,11 @@ builtinReals = record
   ; show            = primShowFloat
   }
 
-open Real builtinReals using (ℝ; _ᵣ; π; cos) renaming (show to showReal)
+open Real builtinReals using (ℝ; _ᵣ; π; cos; -_) renaming (show to showReal)
 
 -- Complex numbers stuff
 
-open import src.Complex builtinReals using (ℂfromℕ; ℂ; fromℝ;_+_i; _+_)
+open import src.Complex builtinReals using (ℂfromℕ; ℂ; fromℝ;_+_i; _+_; _*_)
 open import src.ComplexShow builtinReals renaming (show to showComplex)
 
 complex-02 : ℂ
@@ -126,9 +126,22 @@ dft-example-input (ι (suc (suc (suc zero)))) = ℂfromℕ 1
 open import src.FFT builtinReals using (FFT; twiddles)
 open import src.Reshape using (Reshape; eq; _∙_; _⊕_; split; flat; swap)
 open import src.Reshape using (reshape; rev; rev-eq; rev-rev; transpose; transposeᵣ; recursive-transposeᵣ)
+open import src.FFTSpliter using (FFT-flattern)
 
 fft-example-input : Ar (ι 2 ⊗ ι 2) ℂ
 fft-example-input = reshape split (ι-cons (ℂfromℕ 1) (ι-cons (ℂfromℕ 3) (ι-cons (ℂfromℕ 2) (ι-cons (ℂfromℕ 4) nil))))
+
+fft-example-input-unstructured : Ar (ι 8) ℂ
+fft-example-input-unstructured = (
+  ι-cons (ℂfromℕ 1) (
+  ι-cons (ℂfromℕ 2) (
+  ι-cons (ℂfromℕ 3) (
+  ι-cons (ℂfromℕ 4) (
+  ι-cons (ℂfromℕ 5) (
+  ι-cons (ℂfromℕ 6) (
+  ι-cons (ℂfromℕ 7) (
+  ι-cons (ℂfromℕ 8) nil
+  ))))))))
 
 -- Printing stuff
 private
@@ -139,7 +152,10 @@ objectToPrint : ℂ
 objectToPrint = ((3 ᵣ) + (7 ᵣ) i) + ((8 ᵣ) + (11 ᵣ) i)
 
 testDFT : IO {a} ⊤
-testDFT = putStrLn (showMatrix showComplex (reshape (flat ∙ rev recursive-transposeᵣ) (FFT fft-example-input)))
+-- testDFT = putStrLn (showMatrix showComplex (FFT fft-example-input))
+-- testDFT = putStrLn (showMatrix showComplex (reshape (flat ∙ rev recursive-transposeᵣ) (FFT fft-example-input)))
+--testDFT = putStrLn (showMatrix showComplex (reshape FFT-flattern (reshape (swap ∙ split {2} {2}) (fft-example-input-unstructured))))
+testDFT = putStrLn (showMatrix showComplex (FFT ((reshape (swap ∙ split {4} {2}) (fft-example-input-unstructured)))))
 
 main : Main
 main = run testDFT

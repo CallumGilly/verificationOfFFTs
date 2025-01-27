@@ -14,11 +14,11 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl)
 open Eq.≡-Reasoning
 
-theorm₁ : ∀ {n : ℕ} (arr : Ar (ι n) ℂ) → DFT arr == FFT arr
-theorm₁ arr (ι x) = refl
+-- theorm₁ : ∀ {n : ℕ} (arr : Ar (ι n) ℂ) → DFT arr == FFT arr
+-- theorm₁ arr (ι x) = refl
+-- 
+-- theorm₂ : ∀ {n m : ℕ} (arr : Ar (ι n ⊗ ι m) ℂ) → DFT (flattern arr) == flattern (transpose (FFT arr))
+-- theorm₂ arr (ι x) = ?
 
-theorm₂ : ∀ {n m : ℕ} (arr : Ar (ι n ⊗ ι m) ℂ) → DFT (flattern arr) == flattern (transpose (FFT arr))
-theorm₂ arr (ι x) = ?
-
-theorm : ∀ {s : Shape} (arr : Ar s ℂ) → DFT (flattern arr) == flattern (transpose (FFT arr))
+theorm : ∀ {s : Shape} (arr : Ar s ℂ) → FFT arr == DFT arr
 -- theorm′ : ∀ {n : ℕ} (arr : Ar (ι n) ℂ) (reshape : Reshape (ι n)) → DFT arr == (FFT (arr ⟨ reshape ⟩ )) ⟨ rev reshape ⟩
