@@ -24,6 +24,8 @@ open import Data.Nat using (ℕ)
 
 open import Level
 
+open import Function.Base using (_$_)
+
 postulate
   double-negative : ∀ (x : Float) → primFloatNegate (primFloatNegate x) ≡ x
   *ᵣ-zeroᵣ        : ∀ (x : Float) → primFloatTimes x (primNatToFloat 0)  ≡ primNatToFloat 0
@@ -132,16 +134,42 @@ fft-example-input : Ar (ι 2 ⊗ ι 2) ℂ
 fft-example-input = reshape split (ι-cons (ℂfromℕ 1) (ι-cons (ℂfromℕ 3) (ι-cons (ℂfromℕ 2) (ι-cons (ℂfromℕ 4) nil))))
 
 fft-example-input-unstructured : Ar (ι 8) ℂ
-fft-example-input-unstructured = (
-  ι-cons (ℂfromℕ 1) (
-  ι-cons (ℂfromℕ 2) (
-  ι-cons (ℂfromℕ 3) (
-  ι-cons (ℂfromℕ 4) (
-  ι-cons (ℂfromℕ 5) (
-  ι-cons (ℂfromℕ 6) (
-  ι-cons (ℂfromℕ 7) (
+fft-example-input-unstructured =
+  ι-cons (ℂfromℕ 1) $
+  ι-cons (ℂfromℕ 2) $
+  ι-cons (ℂfromℕ 3) $
+  ι-cons (ℂfromℕ 4) $
+  ι-cons (ℂfromℕ 5) $
+  ι-cons (ℂfromℕ 6) $
+  ι-cons (ℂfromℕ 7) $
   ι-cons (ℂfromℕ 8) nil
-  ))))))))
+
+giant-fft : Ar (ι 16) ℂ
+giant-fft = 
+  ι-cons (ℂfromℕ 1 ) $
+  ι-cons (ℂfromℕ 2 ) $
+  ι-cons (ℂfromℕ 3 ) $
+  ι-cons (ℂfromℕ 4 ) $
+  ι-cons (ℂfromℕ 5 ) $
+  ι-cons (ℂfromℕ 6 ) $
+  ι-cons (ℂfromℕ 7 ) $
+  ι-cons (ℂfromℕ 8 ) $
+  ι-cons (ℂfromℕ 9 ) $
+  ι-cons (ℂfromℕ 10) $
+  ι-cons (ℂfromℕ 11) $
+  ι-cons (ℂfromℕ 12) $
+  ι-cons (ℂfromℕ 13) $
+  ι-cons (ℂfromℕ 14) $
+  ι-cons (ℂfromℕ 15) $
+  ι-cons (ℂfromℕ 16) nil
+  
+step1 : Ar (ι 4) ℂ
+step1 = (
+  ι-cons (ℂfromℕ 1) (
+  ι-cons (ℂfromℕ 3) (
+  ι-cons (ℂfromℕ 5) (
+  ι-cons (ℂfromℕ 7) nil
+  ))))
 
 -- Printing stuff
 private
@@ -155,7 +183,15 @@ testDFT : IO {a} ⊤
 -- testDFT = putStrLn (showMatrix showComplex (FFT fft-example-input))
 -- testDFT = putStrLn (showMatrix showComplex (reshape (flat ∙ rev recursive-transposeᵣ) (FFT fft-example-input)))
 --testDFT = putStrLn (showMatrix showComplex (reshape FFT-flattern (reshape (swap ∙ split {2} {2}) (fft-example-input-unstructured))))
-testDFT = putStrLn (showMatrix showComplex (FFT ((reshape (swap ∙ split {4} {2}) (fft-example-input-unstructured)))))
+-- testDFT = putStrLn (showMatrix showComplex (FFT ((reshape (swap ∙ split {4} {2}) (fft-example-input-unstructured)))))
+--testDFT = putStrLn $ showMatrix showComplex $ FFT $ reshape (swap ∙ split {4} {4}) $ giant-fft
+testDFT = putStrLn $ showMatrix showComplex $ reshape (rev $ swap ∙ split {2} {4}) $ FFT $ reshape (swap ∙ split {4} {2}) $ fft-example-input-unstructured
+--reshape (swap ∙ split {4} {4}) $ 
+-- reshape (rev (swap ∙ split {2} {4})) $ 
+--testDFT = putStrLn (showMatrix showComplex (DFT step1))
+
+showTwiddles : IO {a} ⊤
+showTwiddles = putStrLn $ showMatrix showComplex $ twiddles {ι 4 ⊗ ι 4}
 
 main : Main
 main = run testDFT

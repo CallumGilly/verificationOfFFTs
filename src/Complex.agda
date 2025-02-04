@@ -88,8 +88,9 @@ module src.Complex (r : Real) where
   ℂ-conjugate : ℂ → ℂ
   ℂ-conjugate (real + imaginary i) = real + (-ᵣ imaginary) i
 
-  ω : ∀ (N : ℕ) (k : ℕ) → ℂ
-  ω N k = e^i (((2 ᵣ) *ᵣ π *ᵣ (k ᵣ)) /ᵣ (N ᵣ))
+  -- Explicitly states which complex roots are positive and which are negative
+  +ω : ∀ (N : ℕ) (k : ℕ) → ℂ
+  +ω N k = e^i (((2 ᵣ) *ᵣ π *ᵣ (k ᵣ)) /ᵣ (N ᵣ))
 
   -ω : ∀ (N : ℕ) (k : ℕ) → ℂ
   -ω N k = e^i (((-ᵣ (2 ᵣ)) *ᵣ π *ᵣ (k ᵣ)) /ᵣ (N ᵣ))
