@@ -1,1 +1,1 @@
-agda --compile src/TestFloatImplementation.agda && ./TestFloatImplementation
+agda --compile src/TestFloatImplementation.agda 1> /dev/null && ./TestFloatImplementation
