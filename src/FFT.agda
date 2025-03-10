@@ -10,26 +10,39 @@ open Real r renaming (_*_ to _*ᵣ_)
 open import src.Complex r using (ℂ; _*_; -ω; ℂfromℕ)
 
 open import src.Matrix using (Ar; Shape; Position; ι; _⊗_; zipWith; nestedMap; length)
-open import src.Reshape using (Reshape; transposeᵣ; recursive-transpose; reshape)
+open import src.Reshape using (Reshape; transposeᵣ; recursive-transpose; reshape; flat; _∙_)
 
 open import src.DFTMatrix r using (DFT)
 
 
+-- This has to do some weird stuff I dont like to get the correct value as Fin seems to be reversed :Puzzled_face:
+position-sum : ∀ {s : Shape} → Position s → ℕ
+position-sum {ι (suc n)} (ι fzero) = 0
+position-sum {ι (suc n)} (ι (fsuc pos)) = (position-sum {ι (n)} (ι pos)) +ₙ 1
+-- position-sum {ι (suc n)} (ι (fsuc pos)) = (toℕ ((fsuc pos))) +ₙ 1 -- THIS BROKE THE ENTIRE PROGRAM AGGGGG
+position-sum {sₗ ⊗ sᵣ} (xₗ ⊗ xᵣ) = (position-sum {sₗ} xₗ) *ₙ (position-sum {sᵣ} xᵣ)
+
 twiddles : ∀ {s : Shape} → Ar s ℂ
 twiddles {s} p = -ω (length s) (position-sum p)
-  where
-    -- This has to do some weird stuff I dont like to get the correct value as Fin seems to be reversed :Puzzled_face:
-    position-sum : ∀ {s : Shape} → Position s → ℕ
-    position-sum {ι (suc n)} (ι fzero) = 0
-    position-sum {ι (suc n)} (ι (fsuc pos)) = (position-sum {ι (n)} (ι pos)) +ₙ 1
-    -- position-sum {ι (suc n)} (ι (fsuc pos)) = (toℕ ((fsuc pos))) +ₙ 1 -- THIS BROKE THE ENTIRE PROGRAM AGGGGG
-    position-sum {sₗ ⊗ sᵣ} (xₗ ⊗ xᵣ) = (position-sum {sₗ} xₗ) *ₙ (position-sum {sᵣ} xᵣ)
 
+tmp : Shape → Shape
+tmp (ι x) = ι x
+tmp (x ⊗ x₁) = x ⊗ tmp x₁
     
+FFT₁ : ∀ {s : Shape} → Ar s ℂ → Ar (ι (length s)) ℂ
+FFT₁ {ι x} arr = DFT arr
+FFT₁ {s ⊗ s₁} arr = let innerDFTapplied       = nestedMap FFT₁ arr in
+                    let twiddleFactorsApplied = zipWith _*_ innerDFTapplied twiddles in
+                    let outerDFTapplied = nestedMap FFT₁ $ reshape transposeᵣ twiddleFactorsApplied in
+                    reshape (flat ∙ transposeᵣ) outerDFTapplied
 
+----------------------------------
+-- THIS BELOW IS WRONG!!: :( :( --
+----------------------------------
 FFT : ∀ {s : Shape} → Ar s ℂ → Ar (recursive-transpose s) ℂ
 FFT {ι x     } arr = DFT arr -- Use the DFT when no splitting is defined 
 FFT {sₗ  ⊗ sᵣ} arr = let innerDFTapplied       = nestedMap FFT arr in
                      let twiddleFactorsApplied = zipWith _*_ innerDFTapplied twiddles in
-                     nestedMap FFT $ reshape transposeᵣ twiddleFactorsApplied
+                     let transposed = reshape transposeᵣ twiddleFactorsApplied in
+                     nestedMap FFT transposed 
 

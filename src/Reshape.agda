@@ -6,12 +6,15 @@ open import Data.Fin.Properties using (remQuot-combine; combine-remQuot)
 
 open import Data.Product using (Σ; ∃; _,_; _×_; proj₁; proj₂)
 open import Relation.Binary.PropositionalEquality
-open import src.Matrix using (Shape; Position; Ar; ι; _⊗_)
+open import src.Matrix using (Shape; Position; Ar; ι; _⊗_; length)
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong)
 open Eq.≡-Reasoning
 
+open import src.Extensionality using (extensionality)
+
+open import Function.Base using (_$_; id; _∘_)
 
 variable
   m n k : ℕ
@@ -65,6 +68,9 @@ rev-eq (split {m = m} {n = n}) (ι x ⊗ ι x₁) with cong proj₁ (remQuot-com
 rev-eq (flat {m = m} {n = n}) (ι x) rewrite combine-remQuot {m} n x = refl 
 rev-eq swap (i ⊗ i₁) = refl
 
+eq+eq : ∀ {X : Set} {n m : ℕ} (arr : Ar (ι n ⊗ ι m) X) → reshape (eq ⊕ eq) arr ≡ arr
+eq+eq {X} {n} {m} arr = extensionality λ{(ι x ⊗ ι y) → refl }
+
 rev-rev : (r : Reshape s p) → ∀ (i : Position p) → i ⟨ rev (rev r) ⟩ ≡ i ⟨ r ⟩
 rev-rev eq i = refl
 rev-rev (r ∙ r₁) i rewrite rev-rev r (i) | rev-rev r₁ (i ⟨ r ⟩) = refl
@@ -94,14 +100,14 @@ recursive-transpose-inv : ∀ {s : Shape} → recursive-transpose (recursive-tra
 recursive-transpose-inv {ι x} = refl
 recursive-transpose-inv {s ⊗ s₁} rewrite recursive-transpose-inv {s} | recursive-transpose-inv {s₁} = refl
 
--- Define flatten
-flatten : Shape → ℕ
-flatten (ι x) = x
-flatten (s ⊗ s₁) = flatten s * flatten s₁
-_♭ : Reshape s (ι (flatten s))
+-- Define flatten - This is legthin in matrix
+-- flatten : Shape → ℕ
+-- flatten (ι x) = x
+-- flatten (s ⊗ s₁) = flatten s * flatten s₁
+_♭ : Reshape s (ι (length s))
 _♭ {ι x} = eq
 _♭ {s ⊗ s₁} = flat ∙ _♭ ⊕ _♭
 
 -- Get unflatten for free
-_♯ : Reshape (ι (flatten s)) s
+_♯ : Reshape (ι (length s)) s
 _♯ = rev _♭

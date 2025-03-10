@@ -14,17 +14,17 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl)
 open Eq.≡-Reasoning
 
-open import IO using (IO; run; Main)
+open import IO using (IO; run; Main; _>>_; _>>=_)
 open import IO.Finite using (putStrLn)
 open import Data.Unit.Polymorphic.Base using (⊤)
 open import Agda.Builtin.String
 
 open import Data.Nat using (ℕ)
---open import Data.Nat.Show using (show)
+open import Data.Nat.Show renaming (show to showNat)
 
 open import Level
 
-open import Function.Base using (_$_)
+open import Function.Base using (_$_; _∘_)
 
 postulate
   double-negative : ∀ (x : Float) → primFloatNegate (primFloatNegate x) ≡ x
@@ -79,7 +79,7 @@ complex-03 = ℂfromℕ 3
 
 -- Matrix Stuff
 open import src.Matrix using (Ar; Shape; ι; _⊗_; ι-cons; nil; unnest)
-open import src.MatrixShow renaming (show to showMatrix)
+open import src.MatrixShow using (showShape) renaming (show to showMatrix)
 
 small-matrix : Ar (ι 2) ℂ
 small-matrix = ι-cons complex-02 (ι-cons complex-03 nil)
@@ -108,7 +108,7 @@ counting-matrix (ι (suc zero) ⊗ ι (suc zero)) = ℂfromℕ 4
 -- We should get  [8+0i, -2-2i, 0+0i, -2+2i] --
 -----------------------------------------------
 
-open import src.DFTMatrix builtinReals using (DFT)
+open import src.DFTMatrix builtinReals using (DFT; posVec)
 dft-example-input : Ar (ι 4) ℂ
 dft-example-input (ι zero)                   = ℂfromℕ 1
 dft-example-input (ι (suc zero))             = ℂfromℕ 3
@@ -125,9 +125,9 @@ dft-example-input (ι (suc (suc (suc zero)))) = ℂfromℕ 1
 -- We should get  [10+0i, -2+2i, -2+0i, -2-2i] --
 -----------------------------------------------
 
-open import src.FFT builtinReals using (FFT; twiddles)
-open import src.Reshape using (Reshape; eq; _∙_; _⊕_; split; flat; swap)
-open import src.Reshape using (reshape; rev; rev-eq; rev-rev; transpose; transposeᵣ; recursive-transposeᵣ)
+open import src.FFT builtinReals using (FFT; twiddles; FFT₁)
+open import src.Reshape using (Reshape; eq; _∙_; _⊕_; split; flat; swap; _♭; _♯)
+open import src.Reshape using (reshape; rev; rev-eq; rev-rev; transpose; transposeᵣ;recursive-transpose; recursive-transposeᵣ; eq; flatten)
 open import src.FFTSpliter using (FFT-flattern)
 
 fft-example-input : Ar (ι 2 ⊗ ι 2) ℂ
@@ -162,6 +162,68 @@ giant-fft =
   ι-cons (ℂfromℕ 14) $
   ι-cons (ℂfromℕ 15) $
   ι-cons (ℂfromℕ 16) nil
+
+giant-fft-half-split : Ar (ι 4 ⊗ ι 4) ℂ
+giant-fft-half-split = unnest $ ι-cons (
+      ι-cons (ℂfromℕ 1 ) $ 
+      ι-cons (ℂfromℕ 5 ) $ 
+      ι-cons (ℂfromℕ 9 ) $ 
+      ι-cons (ℂfromℕ 13) $ nil
+  ) $ ι-cons (
+      ι-cons (ℂfromℕ 2 ) $ 
+      ι-cons (ℂfromℕ 6 ) $
+      ι-cons (ℂfromℕ 10) $ 
+      ι-cons (ℂfromℕ 14) $ nil
+  ) $ ι-cons (
+      ι-cons (ℂfromℕ 3 ) $ 
+      ι-cons (ℂfromℕ 7 ) $
+      ι-cons (ℂfromℕ 11) $ 
+      ι-cons (ℂfromℕ 15) $ nil
+  ) $ ι-cons (
+      ι-cons (ℂfromℕ 4 ) $ 
+      ι-cons (ℂfromℕ 8 ) $
+      ι-cons (ℂfromℕ 12) $
+      ι-cons (ℂfromℕ 16) $ nil
+  ) $ nil
+
+giant-fft-split : Ar (ι 4 ⊗ (ι 2 ⊗ ι 2)) ℂ
+giant-fft-split =
+  unnest $ ι-cons (
+    unnest $ ι-cons (
+      ι-cons (ℂfromℕ 1 ) $ 
+      ι-cons (ℂfromℕ 9 ) $ nil
+    ) $ ι-cons (
+      ι-cons (ℂfromℕ 5 ) $ 
+      ι-cons (ℂfromℕ 13) $ nil
+    ) nil
+  ) $ ι-cons (
+    unnest $ ι-cons (
+      ι-cons (ℂfromℕ 2 ) $ 
+      ι-cons (ℂfromℕ 10) $ nil
+    ) $ ι-cons (
+      ι-cons (ℂfromℕ 6 ) $ 
+      ι-cons (ℂfromℕ 14) $ nil
+    ) nil
+  ) $ ι-cons (
+    unnest $ ι-cons (
+      ι-cons (ℂfromℕ 3 ) $ 
+      ι-cons (ℂfromℕ 11) $ nil
+    ) $ ι-cons (
+      ι-cons (ℂfromℕ 7 ) $ 
+      ι-cons (ℂfromℕ 15) $ nil
+    ) nil
+  ) $ ι-cons (
+    unnest $ ι-cons (
+      ι-cons (ℂfromℕ 4 ) $ 
+      ι-cons (ℂfromℕ 12) $ nil
+    ) $ ι-cons (
+      ι-cons (ℂfromℕ 8 ) $ 
+      ι-cons (ℂfromℕ 16) $ nil
+    ) nil
+  ) $ nil
+
+
+
   
 step1 : Ar (ι 4) ℂ
 step1 = (
@@ -179,23 +241,43 @@ private
 objectToPrint : ℂ
 objectToPrint = ((3 ᵣ) + (7 ᵣ) i) + ((8 ᵣ) + (11 ᵣ) i)
 
-testDFT : IO {a} ⊤
+-- testDFT : IO {a} ⊤
 -- testDFT = putStrLn (showMatrix showComplex (FFT fft-example-input))
 -- testDFT = putStrLn (showMatrix showComplex (reshape (flat ∙ rev recursive-transposeᵣ) (FFT fft-example-input)))
 --testDFT = putStrLn (showMatrix showComplex (reshape FFT-flattern (reshape (swap ∙ split {2} {2}) (fft-example-input-unstructured))))
 -- testDFT = putStrLn (showMatrix showComplex (FFT ((reshape (swap ∙ split {4} {2}) (fft-example-input-unstructured)))))
 --testDFT = putStrLn $ showMatrix showComplex $ FFT $ reshape (swap ∙ split {4} {4}) $ giant-fft
-testDFT = putStrLn $ showMatrix showComplex $ reshape (rev $ swap ∙ split {2} {4}) $ FFT $ reshape (swap ∙ split {4} {2}) $ fft-example-input-unstructured
+--testDFT = putStrLn $ showMatrix showComplex $ reshape (rev $ swap ∙ split {2} {4}) $ FFT $ reshape (swap ∙ split {4} {2}) $ fft-example-input-unstructured
 --reshape (swap ∙ split {4} {4}) $ 
 -- reshape (rev (swap ∙ split {2} {4})) $ 
 --testDFT = putStrLn (showMatrix showComplex (DFT step1))
 
-showTwiddles : IO {a} ⊤
-showTwiddles = putStrLn $ showMatrix showComplex $ twiddles {ι 4 ⊗ ι 4}
+showTwiddles : IO {a} ⊤ 
+showTwiddles = putStrLn $ showMatrix showComplex $ twiddles {ι 4 ⊗ (ι 2 ⊗ ι 2)}
+
+showGiantFFTSplit : IO {a} ⊤
+showGiantFFTSplit = putStrLn $ showMatrix showComplex $ giant-fft-split
+showGiantFFTFlat : IO {a} ⊤
+showGiantFFTFlat = putStrLn $ showMatrix showComplex $ reshape (_♭ ∙ recursive-transposeᵣ) giant-fft-split
+showProofLeft  : IO {a} ⊤
+showProofLeft  = putStrLn $ showMatrix showComplex 
+  $ reshape (_♭ ∙ recursive-transposeᵣ) (FFT giant-fft-split)
+showProofRight : IO {a} ⊤
+showProofRight = putStrLn $ showMatrix showComplex $ DFT (reshape (_♭ ∙ recursive-transposeᵣ) giant-fft-split)
+-- theorm : ∀ {s : Shape} → FFT {s} ≡ (reshape (recursive-transposeᵣ) ∘ reshape ( _♯ ) ∘ DFT ∘ reshape _♭)
+
+showGiantShape : IO {a} ⊤
+showGiantShape = putStrLn $ showMatrix showComplex $  reshape _♭ (reshape recursive-transposeᵣ giant-fft-split)
+
+bunchOStuff : IO {a} ⊤
+bunchOStuff = do 
+  showTwiddles
+  showProofLeft
+  showProofRight
 
 main : Main
-main = run testDFT
-
+main = run bunchOStuff 
+  
 
 
 

@@ -4,7 +4,7 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong)
 open Eq.≡-Reasoning
 
-open import Data.Nat.Base using (ℕ)
+open import Data.Nat.Base using (ℕ) renaming (_*_ to _*ₙ_)
 open import Function using (_∘_)
 
 open import Data.Product.Base using (_×_; proj₁; proj₂) renaming ( _,_ to ⟨_,_⟩)
@@ -108,5 +108,27 @@ module src.Complex (r : Real) where
     ≡⟨ e^0 ⟩
       ℂfromℕ 1
     ∎
+
+--  ω-multi : ∀ {N₁ N₂ k₁ k₂ : ℕ} → (-ω (N₁ *ₙ N₂) (k₁ *ₙ k₂)) ≡ (-ω N₁ k₁) * (-ω N₂ k₂)
+--  ω-multi {N₁} {N₂} {k₁} {k₂} =
+--    begin
+--      -ω (N₁ *ₙ N₂) (k₁ *ₙ k₂)
+--    ≡⟨⟩
+--      e^i (((-ᵣ (2 ᵣ)) *ᵣ π *ᵣ ((k₁ *ₙ k₂) ᵣ)) /ᵣ ((N₁ *ₙ N₂) ᵣ))
+--    ≡⟨⟩
+--      ?
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

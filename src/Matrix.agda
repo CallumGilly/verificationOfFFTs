@@ -8,6 +8,8 @@ open import Data.Bool using (true; false)
 open import Data.Product.Base using (_×_; proj₁; proj₂) renaming ( _,_ to ⟨_,_⟩)
 open import Data.Sum.Base using (inj₁; inj₂)
 
+open import Function.Base using (_$_; id; _∘_)
+
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl)
 open Eq.≡-Reasoning
@@ -62,6 +64,12 @@ unnest a (i ⊗ j) = a i j
 nestedMap : ∀ {s p t : Shape} → (Ar p X → Ar t Y) → Ar (s ⊗ p) X → Ar (s ⊗ t) Y
 nestedMap f ar = unnest (map f (nest ar))
 
+mapMap : ∀ {X Y Z : Set} {f : X → Y} {g : Y → Z} {s : Shape} → map {X} {Z} {s} (g ∘ f) ≡ (map g) ∘ (map f)
+mapMap = refl
+
+_[_] : ∀ {X : Set} {s : Shape} → Ar s X → Position s → X
+arr [ pos ] = arr pos
+
 identityMatrix : ∀ { i : ℕ } → Ar (ι i ⊗ ι i) ℕ
 identityMatrix (ι i ⊗ ι j) with (toℕ i) ≡ᵇ (toℕ j)
 ... | false = 0
@@ -88,6 +96,9 @@ _++_ {n} {X} {m} arr₁ arr₂ (ι pos) with splitAt n {m} pos
 ... | inj₁ finN = arr₁ (ι finN)
 ... | inj₂ finM = arr₂ (ι finM)
 
+-- foldZip : ∀ {n : ℕ} → (X → Y → Z → Z ) → Z → Ar (ι n) X → Ar (ι n) Y → Z
+-- foldZip {X} {Y} {Z} {zero} f acc xs ys = acc
+-- foldZip {X} {Y} {Z} {suc n} f acc xs ys = foldr f (f (head₁ xs) (head₁ ys) acc) (tail₁ xs) (tail₁ ys)
 
 -- ar-⊗-assoc : ∀ {s t u : Shape} → Ar ((s ⊗ t) ⊗ u) X → Ar (s ⊗ (t ⊗ u)) X
 -- ar-⊗-assoc arr (p ⊗ (p₁ ⊗ p₂)) = arr ((p ⊗ p₁) ⊗ p₂)
