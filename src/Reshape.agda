@@ -1,6 +1,7 @@
 module src.Reshape where
 
 open import Data.Nat
+open import Data.Nat.Properties using (*-comm)
 open import Data.Fin as F using (Fin; combine; remQuot; quotRem; toℕ)
 open import Data.Fin.Properties using (remQuot-combine; combine-remQuot)
 
@@ -111,3 +112,17 @@ _♭ {s ⊗ s₁} = flat ∙ _♭ ⊕ _♭
 -- Get unflatten for free
 _♯ : Reshape (ι (length s)) s
 _♯ = rev _♭
+
+length-invariance : 
+    ∀ {s q : Shape} 
+  → Reshape s q
+  → length s ≡ length q
+length-invariance {s} {.s} eq = refl
+length-invariance {s} {q} (r ∙ r₁) rewrite length-invariance r₁ | length-invariance r = refl
+length-invariance {.(_ ⊗ _)} {.(_ ⊗ _)} (r ⊕ r₁) rewrite length-invariance r | length-invariance r₁ = refl
+length-invariance {s} {q} split = refl
+length-invariance {s} {q} flat = refl
+length-invariance {.(s ⊗ p)} {.(p ⊗ s)} (swap {s} {p}) rewrite *-comm (length s) (length p) = refl
+
+
+

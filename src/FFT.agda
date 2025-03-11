@@ -43,6 +43,5 @@ FFT : ∀ {s : Shape} → Ar s ℂ → Ar (recursive-transpose s) ℂ
 FFT {ι x     } arr = DFT arr -- Use the DFT when no splitting is defined 
 FFT {sₗ  ⊗ sᵣ} arr = let innerDFTapplied       = nestedMap FFT arr in
                      let twiddleFactorsApplied = zipWith _*_ innerDFTapplied twiddles in
-                     let transposed = reshape transposeᵣ twiddleFactorsApplied in
-                     nestedMap FFT transposed 
-
+                     let outerDFTapplied = nestedMap FFT $ reshape transposeᵣ twiddleFactorsApplied in
+                     outerDFTapplied

@@ -32,10 +32,10 @@ record Real : Set₁ where
     *ᵣ-zeroᵣ : ∀ (x : ℝ) → x * (0 ᵣ)  ≡ 0 ᵣ
     /ᵣ-zeroₜ : ∀ (x : ℝ) → (0 ᵣ) / x  ≡ 0 ᵣ
     
---     +ᵣ-commᵣ  : ∀ (x y   : ℝ) → (x +ᵣ y) ≡ (y +ᵣ x)
+    +ᵣ-comm : ∀ (x y   : ℝ) → (x + y) ≡ (y + x)
 --     *ᵣ-commᵣ  : ∀ (x y   : ℝ) → (x *ᵣ y) ≡ (y *ᵣ x)
 -- 
---     +ᵣ-assocᵣ : ∀ (x y z : ℝ) → (x +ᵣ y) +ᵣ z ≡ x +ᵣ (y +ᵣ z)
+    +ᵣ-assoc     : ∀ (x y z : ℝ) → (x + y) + z ≡ x + (y + z)
 --     *ᵣ-assocᵣ : ∀ (x y z : ℝ) → (x *ᵣ y) *ᵣ z ≡ x *ᵣ (y *ᵣ z)
 -- 
     +ᵣ-identityˡ : ∀ (x : ℝ) → (0 ᵣ) + x ≡ x
