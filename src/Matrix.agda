@@ -85,6 +85,24 @@ foldr : ∀ {n : ℕ} {X Y : Set} → (X → Y → Y) → Y → Ar (ι n) X → 
 foldr {zero } f acc ar = acc
 foldr {suc n} f acc ar = foldr f (f (head₁ ar) acc) (tail₁ ar)
 
+--tail-equality : ∀ 
+--  {n : ℕ}
+--  {arr₁ arr₂ : Ar (ι (suc n)) X} 
+--  → arr₁ ≡ arr₂ 
+--  -------------------------
+--  → tail₁ arr₁ ≡ tail₁ arr₂
+
+cong-foldr : ∀ 
+  {n : ℕ} 
+  {X Y : Set}
+  {f : X → Y → Y}
+  {acc : Y}
+  {arr₁ arr₂ : Ar (ι n) X} 
+  → arr₁ ≡ arr₂ 
+  ------------------------
+  → foldr f acc arr₁ ≡ foldr f acc arr₂
+cong-foldr {n} {X} {Y} {f} {acc} {arr₁} {.arr₁} refl = refl
+
 zip : Ar (ι n) X → Ar (ι n) Y → Ar (ι n) (X × Y)
 zip xs ys pos = ⟨ xs pos , ys pos ⟩
 

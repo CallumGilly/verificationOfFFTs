@@ -1,29 +1,535 @@
 open import src.Real using (Real)
 module src.Proof (r : Real) where
-
 open import Data.Nat.Base using (ℕ; suc; zero) renaming (_*_ to _*ₙ_; _+_ to _+ₙ_)
-open import Data.Nat.Properties using (*-zeroʳ)
-open import Data.Fin.Base using (Fin; quotRem; toℕ; combine; remQuot) renaming (zero to fzero; suc to fsuc)
+open import Data.Nat.Properties using (*-zeroʳ; *-comm; _≟_)
+open import Data.Fin.Base using (Fin; quotRem; toℕ; combine; remQuot; quotient; remainder; cast) renaming (zero to fzero; suc to fsuc)
+open import Data.Fin.Properties using (cast-is-id)
 open import Data.Product.Base using (_×_; proj₁; proj₂) renaming ( _,_ to ⟨_,_⟩)
 
-open import src.Matrix using (Ar; Shape; _⊗_; ι; _==_; Position; nestedMap; zipWith; nest; map; unnest; head₁; tail₁; zip; iterate; ι-cons; nil; foldr; length)
-open import src.Reshape using (reshape; Reshape; flat; _♭; _♯; recursive-transpose; recursive-transposeᵣ; _∙_; rev; flatten; _⊕_; swap; eq; split; _⟨_⟩; reshape-reshape; eq+eq)
+open import src.Matrix using (Ar; Shape; _⊗_; ι; _==_; Position; nestedMap; zipWith; nest; map; unnest; head₁; tail₁; zip; iterate; ι-cons; nil; foldr; length; cong-foldr)
+open import src.Reshape using (reshape; Reshape; flat; _♭; _♯; recursive-transpose; recursive-transposeᵣ; _∙_; rev; _⊕_; swap; eq; split; _⟨_⟩; eq+eq; _♯₂)
 open import src.Complex r using (ℂ; _*_; _+_; ℂfromℕ; -ω; +-identityʳ; ω-N-0; *-identityʳ; _+_i)
 open ℂ using (real; imaginary)
-open import src.FFT r using (FFT; twiddles; position-sum; FFT₁)
+open import src.FFT r using (FFT; twiddles; position-sum; offset-n)
 open import src.DFTMatrix r using (DFT; posVec; step)
 open import src.Extensionality using (extensionality)
+open import Relation.Nullary using (Dec; yes; no)
 open Real r using (ℝ; π; sin; cos; double-negative; _ᵣ; -ᵣ-identityʳ; *ᵣ-zeroᵣ; +ᵣ-identityˡ; *ᵣ-identityʳ; /ᵣ-zeroₜ; +ᵣ-identityʳ; +ᵣ-assoc; +ᵣ-comm)
   renaming (_+_ to _+ᵣ_; _-_ to _-ᵣ_; -_ to -ᵣ_; _/_ to _/ᵣ_; _*_ to _*ᵣ_)
 
-open import Function.Base using (_$_; id; _∘_)
+open import Function.Base using (_$_; id; _∘_; flip; _∘₂_)
 
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; refl; cong; sym)
+open Eq using (_≡_; refl; cong; sym; cong₂; subst; cong-app)
 open Eq.≡-Reasoning
 
+lemma₁ : ∀ {s : Shape} → length s ≡ length (recursive-transpose s)
+lemma₁ {ι x}    = refl
+lemma₁ {s ⊗ s₁} rewrite 
+      *-comm (length s) (length s₁) 
+    | lemma₁ {s}
+    | lemma₁ {s₁} = refl
+
+
+-- TODO: Workout if this is feasable, or find another way for theorm₅ (at time of writing), this is the reason I couldn't hop between the two forms...
+lemma₂ : ∀ {n : ℕ} {arr₁ : Ar (ι n) ℂ} → (λ p → arr₁ p) ≡ λ{(ι x) → arr₁ (ι x)}  
+lemma₂ {n} {arr₁} = ?
+
+
+theorm₅ : ∀ {n m : ℕ}
+  → FFT ≡ (reshape {ι (length (ι n ⊗ ι m))} {recursive-transpose (ι n ⊗ ι m)} _♯₂) ∘ DFT ∘ (reshape {ι n ⊗ ι m} _♭)
+theorm₅ {n} {m} = 
+  extensionality λ{ arr →
+    extensionality λ{ (ι x ⊗ ι y) →
+      begin
+        FFT arr (ι x ⊗ ι y)
+      ≡⟨⟩
+        ( nest (
+          reshape swap (nestedMap (DFT) (zipWith _*_ (reshape swap (nestedMap DFT (reshape swap arr))) twiddles))
+        )) (ι x) (ι y)
+      ≡⟨⟩
+        (map 
+           DFT
+          (nest (zipWith _*_ (reshape swap (nestedMap DFT (reshape swap arr))) twiddles))
+        ) (ι y) (ι x)
+      ≡⟨⟩
+        (DFT
+          (
+            zipWith _*_ 
+              (
+                (nest (reshape swap (unnest (map DFT (nest (reshape swap arr))))))
+                (ι y)
+              )
+              ((nest twiddles) (ι y))
+          )
+        ) (ι x)
+      ≡⟨⟩
+        foldr 
+          _+_ 
+          (ℂfromℕ 0) 
+          (zipWith 
+            (step {m} {x})
+            (zipWith 
+              _*_ 
+              (
+                (λ (p) → DFT ((nest (reshape swap arr)) p) (ι y))
+              )
+              (nest twiddles (ι y))
+            )
+            posVec
+          )
+      ≡⟨⟩
+        foldr 
+          _+_ 
+          (ℂfromℕ 0) 
+          (zipWith 
+            (step {m} {x})
+            (zipWith 
+              _*_ 
+              (λ p → 
+                foldr 
+                  _+_ 
+                  (ℂfromℕ 0)
+                  (zipWith 
+                    (step {n} {y})
+                    (λ q → arr (q ⊗ p))
+                    (posVec {n})
+                  )
+              )
+              (nest twiddles (ι y))
+            )
+            (posVec {m})
+          )
+      ≡⟨⟩
+        foldr 
+          _+_ 
+          (ℂfromℕ 0) 
+          (λ p₀ → 
+            step {m} {x}
+              (
+                (
+                  foldr 
+                    _+_ 
+                    (ℂfromℕ 0)
+                    (λ p₁ → step {n} {y} (arr (p₁ ⊗ p₀)) (posVec {n} p₁))
+                )
+                * 
+                (twiddles (ι y ⊗ p₀))
+              )
+            (posVec {m} p₀)
+          )
+          
+      ≡⟨ cong-foldr
+          {m} 
+          {arr₁ = (λ p₀ → step {m} {x} ( ( foldr _+_ (ℂfromℕ 0) (λ p₁ → step {n} {y} (arr (p₁ ⊗ p₀)) (posVec {n} p₁))) * (twiddles (ι y ⊗ p₀))) (posVec {m} p₀))} 
+          ?
+      ⟩
+        foldr 
+          {m}
+          _+_ 
+          (ℂfromℕ 0) 
+          (λ{ (ι p₀) → 
+            step {m} {x}
+              (
+                (
+                  foldr 
+                    _+_ 
+                    (ℂfromℕ 0)
+                    (λ p₁ → step {n} {y} (arr (p₁ ⊗ (ι p₀))) (posVec {n} p₁))
+                )
+                * 
+                (twiddles (ι y ⊗ (ι p₀)))
+              )
+            (posVec {m} (ι p₀))
+          })
+      ≡⟨⟩
+          
+      --  foldr 
+      --    _+_ 
+      --    (ℂfromℕ 0) 
+      --    (λ p₀ → 
+      --      step {m} {x}
+      --        (
+      --          (
+      --            foldr 
+      --              {n}
+      --              _+_ 
+      --              (ℂfromℕ 0)
+      --              λ{ (ι x) → ? } -- step {n} {y} (arr (? ⊗ p₀)) (posVec {n} ?)}
+      --          )
+      --          * 
+      --          (-ω (n *ₙ m) (position-sum (ι y ⊗ p₀)) )
+      --        )
+      --      (posVec {m} p₀)
+      --    )
+      --≡⟨⟩
+        ?
+    }
+  }
+
+
+theorm₄ : ∀ {s : Shape}
+  → FFT ≡ (reshape {ι (length s)} {recursive-transpose s} _♯₂) ∘ DFT ∘ (reshape {s} _♭)
+theorm₄ {ι x} = refl
+theorm₄ {s ⊗ s₁} =
+  extensionality λ{ arr →
+    extensionality λ{ (p ⊗ p₁) →
+      begin
+        FFT arr (p ⊗ p₁)
+      ≡⟨⟩
+        reshape 
+          swap 
+          (nestedMap 
+            FFT 
+            (zipWith 
+              _*_ 
+              (reshape 
+                swap 
+                (nestedMap FFT (reshape swap arr))
+              )
+              twiddles
+            )
+          )
+        (p ⊗ p₁)
+      ≡⟨ cong (λ f → reshape swap (nestedMap f (zipWith _*_ (reshape swap (nestedMap FFT (reshape swap arr))) twiddles)) (p ⊗ p₁)) (theorm₄ {s₁}) ⟩
+        reshape 
+          swap 
+          (nestedMap 
+            ((reshape {ι (length s₁)} {recursive-transpose s₁} _♯₂) ∘ DFT ∘ (reshape {s₁} _♭)) 
+            (zipWith 
+              _*_ 
+              (reshape 
+                swap 
+                (nestedMap FFT (reshape swap arr))
+              )
+              twiddles
+            )
+          )
+        (p ⊗ p₁)
+        
+      ≡⟨ cong (λ f → reshape swap (nestedMap ((reshape {ι (length s₁)} {recursive-transpose s₁} _♯₂) ∘ DFT ∘ (reshape {s₁} _♭)) (zipWith _*_ (reshape swap (nestedMap f (reshape swap arr))) twiddles)) (p ⊗ p₁)) (theorm₄ {s}) ⟩
+        reshape 
+          swap 
+          (nestedMap 
+            (
+                (reshape {ι (length s₁)} {recursive-transpose s₁} _♯₂)
+              ∘ DFT 
+              ∘ (reshape {s₁} _♭)
+            ) 
+            (zipWith 
+              _*_ 
+              (reshape 
+                swap 
+                (nestedMap 
+                  ((reshape {ι (length s)} {recursive-transpose s} _♯₂) ∘ DFT ∘ (reshape {s} _♭)) 
+                  (reshape swap arr)
+                )
+              )
+              twiddles
+            )
+          )
+        (p ⊗ p₁)
+      ≡⟨⟩
+        (
+          (
+            (
+                (reshape {ι (length s₁)} {recursive-transpose s₁} _♯₂)
+              ∘ DFT 
+              ∘ (reshape {s₁} _♭)
+            )
+            ((nest 
+              (zipWith 
+                _*_ 
+                (reshape 
+                  swap 
+                  (nestedMap 
+                    ((reshape {ι (length s)} {recursive-transpose s} _♯₂) ∘ DFT ∘ (reshape {s} _♭)) 
+                    (reshape swap arr)
+                  )
+                )
+                twiddles
+              )
+            ) p₁)
+          )
+        )
+        p
+      ≡⟨⟩
+        (
+            (
+                (reshape {ι (length s₁)} {recursive-transpose s₁} _♯₂)
+              ∘ DFT 
+              ∘ (reshape {s₁} _♭)
+            )
+            (
+              (zipWith _*_ 
+                ((nest
+                  (reshape swap (nestedMap ((reshape {ι (length s)} {recursive-transpose s} _♯₂) ∘ DFT ∘ (reshape {s} _♭)) (reshape swap arr)))
+                ) p₁)
+                (( nest
+                  twiddles
+                ) p₁)
+              )
+            )
+        )
+        p
+      ≡⟨⟩
+        ?
+    }
+  }
+
+
+--tmp : ∀ { s₁ s₂ : Shape} {arr₁ arr₂ : Ar (s₁ ⊗ s₂) ℂ} {p₁ : Position s₁} {p₂ : Position s₂} {f : ∀ {s : Shape} → Ar s ℂ → Ar s ℂ} → (f (nest arr₁ p₁)) p₂ ≡ ?
+
+        
+--lemma₁ : ∀ {s : Shape} → length s ≡ length (recursive-transpose s)
+--lemma₁ {ι x}    = refl
+--lemma₁ {s ⊗ s₁} rewrite 
+--    *-comm (length s) (length s₁) 
+--  | lemma₁ {s}
+--  | lemma₁ {s₁} = refl
+--
+--lemma₂ : ∀ {s : Shape} → Position (ι (length s)) → Position (ι (length (recursive-transpose s)))
+--lemma₂ {s} (ι x) = ι (cast (lemma₁ {s}) x)
+
+--
+----lemma₃ : ∀ {n m : ℕ} {x : Fin n} → {prf : n ≡ m} → cast {m} prf x ≡ x
+----lemma₃ {n} = ?
+--
+--theorm : ∀ {s : Shape} (arr : Ar s ℂ)
+--  → ((reshape _♭ ∘ FFT) arr) ∘ lemma₂ {s} ≡ (DFT ∘ (reshape {s} (_♭))) arr
+--theorm {ι x} arr = 
+--  extensionality λ{(ι p) →
+--    begin
+--      ((reshape eq ∘ FFT) arr ∘ lemma₂ {ι x}) (ι p)
+--    ≡⟨⟩
+--      FFT arr (lemma₂ {ι x} (ι p))
+--    ≡⟨⟩
+--      FFT arr (ι (cast refl p))
+--    ≡⟨⟩
+--      DFT arr (ι (cast refl p))
+--    ≡⟨⟩
+--      (DFT ∘ reshape eq) arr (ι (cast refl p))
+--    ≡⟨ cong (λ f → (DFT ∘ reshape eq) arr (ι f)) (cast-is-id refl p ) ⟩
+--      (DFT ∘ reshape eq) arr (ι p)
+--    ∎
+--  }
+--theorm {s ⊗ s₁} arr = ?
+--
+--theorm₂ : ∀ {s : Shape} (arr : Ar s ℂ) (p : Position (ι (length s)))
+--  → ((reshape _♭ ∘ FFT) arr) (lemma₂ {s} p) ≡ (DFT ∘ (reshape {s} (_♭))) arr p
+--theorm₂ {ι n   } arr (ι p) rewrite cast-is-id refl p = refl
+--theorm₂ {s ⊗ s₁} arr (ι p) =
+--  begin
+--    (reshape (flat ∙ _♭ ⊕ _♭) ∘ FFT) arr (ι (cast (lemma₁ {s ⊗ s₁}) p))
+--  ≡⟨⟩
+--    (reshape (flat ∙ _♭ ⊕ _♭) (FFT arr)) (ι (cast (lemma₁ {s ⊗ s₁}) p))
+--  ≡⟨⟩
+--    reshape (flat ∙ _♭ ⊕ _♭)
+--            (reshape 
+--              swap 
+--              (nestedMap 
+--                FFT 
+--                (zipWith 
+--                  _*_ 
+--                  (reshape swap (nestedMap FFT (reshape swap arr)))
+--                  twiddles
+--                )
+--              )
+--            )
+--            (ι (cast (lemma₁ {s ⊗ s₁}) p))
+--  ≡⟨ cong ? ? ⟩
+--    reshape (flat ∙ _♭ ⊕ _♭)
+--            (reshape 
+--              swap 
+--              (nestedMap 
+--                (?) 
+--                (zipWith 
+--                  _*_ 
+--                  (reshape swap (nestedMap FFT (reshape swap arr)))
+--                  twiddles
+--                )
+--              )
+--            )
+--            (ι (cast _ p))
+--  ≡⟨⟩
+--    ?
+--
+--
+--theorm₃ : ∀ {s : Shape}
+--  → (λ arr → ((reshape _♭ ∘ FFT) arr) ∘ lemma₂ {s}) ≡ (DFT ∘ (reshape {s} (_♭)))
+--theorm₃ {ι x} =
+--  extensionality λ{ arr →
+--    extensionality λ{ (ι p) →
+--      begin
+--        (FFT arr ∘ (lemma₂ {ι x})) (ι p)
+--      ≡⟨⟩
+--        (FFT arr) (ι (cast refl p))
+--      ≡⟨ cong (λ f → (FFT arr) (ι f)) (cast-is-id refl p) ⟩
+--        (FFT arr) (ι p)
+--      ≡⟨⟩
+--        (DFT arr) (ι p)
+--      ∎
+--    }
+--  }
+--theorm₃ {s ⊗ s₁} =
+--  extensionality λ{ arr →
+--    extensionality λ{ (ι p) →
+--      begin
+--        ((reshape (flat ∙ _♭ ⊕ _♭) ∘ FFT) arr ∘ lemma₂ {s ⊗ s₁}) (ι p)
+--      ≡⟨⟩
+--        reshape (flat ∙ _♭ ⊕ _♭)
+--            (reshape swap
+--             (nestedMap FFT
+--              (zipWith _*_ (reshape swap (nestedMap FFT (reshape swap arr)))
+--               twiddles)))
+--            (lemma₂ {s ⊗ s₁} (ι p))
+--      ≡⟨⟩
+--        ?
+--    }
+--  }
+
+
+
+--  $ (FFT giant-fft-in-order)
+--  --$ (DFT ∘ reshape (_♭)) giant-fft-in-order
+--showProofRight : IO {a} ⊤
+--showProofRight = putStrLn $ showMatrix showComplex 
+--  $ reshape {ι 16 } {recursive-transpose (ι 4 ⊗ (ι 2 ⊗ ι 2))} _♯ ((DFT ∘ (reshape {ι 4 ⊗ (ι 2 ⊗ ι 2) } (_♭))) giant-fft-in-order) 
+
+
+  --≡⟨ cong (λ f → (reshape (flat ∙ _♭ ⊕ _♭) ∘ FFT) arr (ι f)) (?) ⟩
+  --  (reshape (flat ∙ _♭ ⊕ _♭) ∘ FFT) arr (ι (?))
+  --≡⟨⟩
+  --  ?
+
+{-
+theorm : ∀ {s : Shape} (arr : Ar s ℂ) → (pos : Fin (length s))
+  → (DFT (reshape {s} (_♭) arr)) (ι pos) ≡ (reshape _♭ (FFT arr)) (ι (cast (lemma₁ {s}) pos))
+theorm {ι .(suc _)} arr fzero = refl
+theorm {ι .(suc _)} arr (fsuc pos) = ?
+theorm {s ⊗ s₁} arr pos = ?
+-}
+
+
+
+--reshape-length : {s : Shape} → Reshape (ι $ length $ recursive-transpose s) (ι $ length s)
+--reshape-length {ι x} = eq
+--reshape-length {s ⊗ s₁} = flat ∙ swap ∙ reshape-length {s₁} ⊕ reshape-length {s} ∙ split
+--
+--lemma₂ : ∀ {s : Shape} → Fin (length (recursive-transpose s)) ≡ Fin (length s)
+--lemma₂ {s} rewrite lemma₁ {s} = refl
+--
+--
+---- TAKEN FROM CODE SHARED TO BE BY Artem, if I wish to include this I must thus cite it
+--module equality
+--  where
+--    private variable
+--      m n : ℕ
+--      s p q u : Shape
+--
+--    ι-injₛ : _≡_ {A = Shape} (ι m) (ι n) → m ≡ n
+--    ι-injₛ refl = refl
+--
+--    s-eq-proj₁ : _≡_ {A = Shape} (s ⊗ p) (q ⊗ u) → s ≡ q
+--    s-eq-proj₁ refl = refl
+--
+--    s-eq-proj₂ : _≡_ {A = Shape} (s ⊗ p) (q ⊗ u) → p ≡ u
+--    s-eq-proj₂ refl = refl
+--
+--    _≟ₛ_ : (s p : Shape) → Dec (s ≡ p)
+--    ι m ≟ₛ ι n with m ≟ n
+--    ... | yes refl = yes refl
+--    ... | no ¬p = no λ p → ¬p (ι-injₛ p)
+--    ι x ≟ₛ (p ⊗ p₁) = no (λ ())
+--    (s ⊗ s₁) ≟ₛ ι x = no (λ ())
+--    (s ⊗ q) ≟ₛ (p ⊗ w) with s ≟ₛ p | q ≟ₛ w
+--    ... | yes a | yes b = yes (cong₂ _⊗_ a b)
+--    ... | yes a | no ¬b = no λ p → ¬b (s-eq-proj₂ p)
+--    ... | no ¬a | _     = no λ p → ¬a (s-eq-proj₁ p)
+--
+--open equality
+--
+--tmp₁ : ∀ {s : Shape} → Ar s ℂ → Ar (ι (length s)) ℂ 
+--tmp₁ arr (ι x) = ((DFT ∘ reshape (_♭)) arr) (ι x)
+
+--tmp₂ : ∀ {s : Shape} → Ar s ℂ → Ar (ι (length s)) ℂ 
+----tmp₂ {s} arr (ι x) with lemma₂ {s}
+----... | prf rewrite prf = (reshape (_♭) (FFT arr)) (ι x)
+----tmp₂ {s} arr (ι x) rewrite lemma₂ {s} = (reshape (_♭) (FFT arr)) (ι x)
+--tmp₂ {s} arr (ι x) rewrite lemma₂ {s} = (reshape (_♭) (FFT arr)) (ι x)
+
+--tmp₃ : ∀ {s : Shape} → Ar (ι (length s)) ℂ → Ar (ι (length (recursive-transpose s))) ℂ 
+--tmp₃ {s} arr (ι x) rewrite lemma₂ {s} = arr (ι x)
+--tmp₃ {s} arr (ι x) rewrite lemma₂ {s} = arr (ι ?)
+--((cast {length s} {length (recursive-transpose s)})
+
+
+--theorm : ∀ {s : Shape} {arr : Ar s ℂ} {pos : Position (ι (length s))} →  (DFT ∘ reshape (_♭)) arr pos ≡ (reshape (_♭ ∙ recursive-transposeᵣ) ∘ FFT {s}) arr pos
+--theorm {s} {arr} {ι x} = ?
+--theorm {s} {arr} {pos} =
+--  begin
+--    ( reshape (_♯ ∙ reshape-length {s}) 
+--    ∘ DFT 
+--    ∘ reshape (_♭ ∙ recursive-transposeᵣ)
+--    ) arr pos
+--  ≡⟨⟩
+--    ( reshape _♯
+--    ∘ reshape (reshape-length {s}) 
+--    ∘ DFT 
+--    ∘ reshape _♭ 
+--    ∘ reshape recursive-transposeᵣ
+--    ) arr pos
+--  ≡⟨ cong (λ f → ( reshape _♯ ∘ reshape f ∘ DFT ∘ reshape _♭ ∘ reshape recursive-transposeᵣ) arr pos) (?) ⟩
+--    ( reshape _♯
+--    ∘ reshape (?) 
+--    ∘ DFT 
+--    ∘ reshape _♭ 
+--    ∘ reshape recursive-transposeᵣ
+--    ) arr pos
+--  ≡⟨⟩
+--    ?
+    
+--atheorm : ∀ {s : Shape} → FFT {s} ≡ (reshape (_♯) ∘ DFT ∘ reshape {s} (_♭ ∙ recursive-transposeᵣ))
+--btheorm : ∀ {s : Shape} →  (DFT ∘ reshape {s} (_♭ ∙ recursive-transposeᵣ )) ≡ ?
+-- showProofLeft  : IO {a} ⊤
+-- showProofLeft  = putStrLn $ showMatrix showComplex 
+--   $ reshape (_♭ ) (FFT giant-fft-half-split)
+-- showProofRight : IO {a} ⊤
+-- showProofRight = putStrLn $ showMatrix showComplex $ DFT (reshape (_♭ ∙ recursive-transposeᵣ) giant-fft-half-split)
+
+{- 
 sub-θ : {s s₁ : Shape} (pos : Position (ι (length s))) → (p : Fin (length s *ₙ length s₁)) → ℝ 
 sub-θ {s} {s₁} pos p = (((posVec pos *ₙ toℕ (proj₂ (quotRem {length s} (length s₁) p))) ᵣ) /ᵣ (length s ᵣ))
+
+lemma₈ : 
+  ∀ {n m : ℕ} {arr : Ar (ι (suc n) ⊗ ι m) ℂ} 
+  → (flt : Reshape (ι (suc n) ⊗ ι m) (ι ((suc n) *ₙ m)) )
+  → (fun : ℂ → ℂ)
+  →   foldr _+_ (ℂfromℕ 0) (λ p → f ((reshape flt arr) p))
+    ≡
+      foldr _+_ (ℂfromℕ 0) (λ p → (foldr _+_ (ℂfromℕ 0)) ((nest arr) p))
+lemma₈ {n} {m} {arr} flt = ?
+
+theorm₈ : ∀ {n : ℕ} {m : ℕ} → (DFT ∘ reshape (_♭ {ι (suc n) ⊗ ι m})) ≡ FFT₁ {ι (suc n) ⊗ ι m}
+theorm₈ {n} {m} =
+  extensionality λ{ arr → 
+    extensionality λ{ (ι p) → 
+      let ⟨ y , x ⟩ = quotRem {suc n} m p in 
+      begin
+        (DFT ∘ reshape (flat ∙ eq ⊕ eq )) arr (ι p)
+      ≡⟨ cong (λ f → (DFT ∘ reshape flat) f (ι p)) (eq+eq arr) ⟩
+        (DFT ∘ reshape flat) arr (ι p)
+      ≡⟨⟩
+        (DFT (reshape flat arr)) (ι p)
+      ≡⟨⟩
+        foldr _+_ (ℂfromℕ 0) (zipWith step (reshape flat arr) posVec)
+      ≡⟨⟩
+        foldr _+_ (ℂfromℕ 0) (((λ flattened_arr → (λ pos → (step {(suc n) *ₙ m} {p} (flattened_arr pos) (posVec pos)))) ∘ (reshape flat)) arr)
+      ≡⟨ lemma₈ {n} {m} {?} flat ? ⟩
+        ?
+    }
+  }
+--ι i         ⟨ flat   ⟩ = let a , b = remQuot _ i in ι a ⊗ ι b
 
 FFT₁≡FFT : ∀ {s : Shape} → FFT₁ {s} ≡ reshape (_♭ ∙ (rev recursive-transposeᵣ)) ∘ FFT {s} 
 FFT₁≡FFT {ι x} = refl
@@ -34,9 +540,7 @@ FFT₁≡FFT {s ⊗ s₁} =
     }
   }
 
---tmp : ∀ {n : ℕ} {real-arr complex-arr : Ar (ι n) ℝ} 
---  → foldr {n} _+_  ((0 ᵣ) + 0 ᵣ i) (λ pos → (real-arr pos) + (complex-arr pos)  i) ≡ 
---    foldr {n} _+ᵣ_  (0 ᵣ)          (λ pos → (real-arr pos)                       )
+--tmp : ∀ {quotRem : ℕ} {real-arr complex-arr : Ar (ι n) ℝ} 
 --                                                           +
 --    foldr {n} _+ᵣ_         (0 ᵣ)   (λ pos →                  (complex-arr pos)) i
 --tmp {zero } {real-arr} {complex-arr} = refl
@@ -301,7 +805,7 @@ theorm₇ {s₀ ⊗ s₁} =
 --   ≡⟨⟩
 --     ?
 
-
+-}
 
 
 

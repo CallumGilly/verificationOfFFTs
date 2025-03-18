@@ -113,6 +113,26 @@ _♭ {s ⊗ s₁} = flat ∙ _♭ ⊕ _♭
 _♯ : Reshape (ι (length s)) s
 _♯ = rev _♭
 
+lemma₁ : ∀ {s : Shape} → length s ≡ length (recursive-transpose s)
+lemma₁ {ι x}    = refl
+lemma₁ {s ⊗ s₁} rewrite 
+      *-comm (length s) (length s₁) 
+    | lemma₁ {s}
+    | lemma₁ {s₁} = refl
+
+--cast-length : ∀ {s : Shape} → Reshape (ι (length s)) (ι (length (recursive-transpose s)))
+--cast-length {s} rewrite lemma₁ {s} = eq
+
+_♯₂ : Reshape (ι (length s)) (recursive-transpose s)
+_♯₂ {s} rewrite lemma₁ {s} = _♯
+
+--_♯₂ {ι x} = _♯ 
+--_♯₂ {s ⊗ s₁} = ? ∙ split {length s} {length s}
+  --where
+  --  helper : length s * length s₁ ≡ length s₁ * length s → Reshape (ι (length s)) (recursive-transpose s)
+  --  helper x = ? ∙ split {length s} {length s₁}
+--_♯₂ {s ⊗ s₁} = (_♯₂ ⊕ _♯₂) ∙ swap ∙ split 
+
 length-invariance : 
     ∀ {s q : Shape} 
   → Reshape s q
@@ -123,6 +143,7 @@ length-invariance {.(_ ⊗ _)} {.(_ ⊗ _)} (r ⊕ r₁) rewrite length-invarian
 length-invariance {s} {q} split = refl
 length-invariance {s} {q} flat = refl
 length-invariance {.(s ⊗ p)} {.(p ⊗ s)} (swap {s} {p}) rewrite *-comm (length s) (length p) = refl
+
 
 
 

@@ -82,7 +82,7 @@ complex-03 : ℂ
 complex-03 = ℂfromℕ 3
 
 -- Matrix Stuff
-open import src.Matrix using (Ar; Shape; ι; _⊗_; ι-cons; nil; unnest; Position; length)
+open import src.Matrix using (Ar; Shape; ι; _⊗_; ι-cons; nil; unnest; Position; length; nest)
 open import src.MatrixShow using (showShape) renaming (show to showMatrix)
 
 small-matrix : Ar (ι 2) ℂ
@@ -123,8 +123,8 @@ dft-example-input (ι (fsuc (fsuc (fsuc fzero)))) = ℂfromℕ 1
 -- We should get  [10+0i, -2+2i, -2+0i, -2-2i] --
 -----------------------------------------------
 
-open import src.FFT builtinReals using (FFT; twiddles; FFT₁; position-sum)
-open import src.Reshape using (Reshape; eq; _∙_; _⊕_; split; flat; swap; _♭; _♯; _⟨_⟩)
+open import src.FFT builtinReals using (FFT; twiddles; FFT₁; position-sum; twiddles₂; FFT₂)
+open import src.Reshape using (Reshape; eq; _∙_; _⊕_; split; flat; swap; _♭; _♯; _⟨_⟩; _♯₂)
 open import src.Reshape using (reshape; rev; rev-eq; rev-rev; transpose; transposeᵣ;recursive-transpose; recursive-transposeᵣ; eq)
 open import src.FFTSpliter using (FFT-flattern)
 
@@ -221,7 +221,24 @@ giant-fft-split =
   ) $ nil
 
 
+--giant-fft-in-order : Ar (ι 4 ⊗ (ι 2 ⊗ ι 2)) ℂ
+--giant-fft-in-order = reshape ((eq ⊕ split {2} {2}) ∙ split {4} {4}) giant-fft
+--giant-fft-in-order = reshape ((eq ⊕ split {2} {2}) ∙ swap ∙ split {4} {4}) giant-fft
+--giant-fft-in-order : Ar ((ι 2 ⊗ ι 2) ⊗ ι 4) ℂ
+--giant-fft-in-order = reshape ((split {2} {2} ⊕ eq) ∙ split {4} {4}) giant-fft
 
+{-
+giant-fft-in-order : Ar (ι 4 ⊗ ι 4) ℂ
+giant-fft-in-order = reshape (split {4} {4}) giant-fft
+-}
+
+giant-fft-in-order : Ar (ι 4 ⊗ (ι 2 ⊗ ι 2)) ℂ
+giant-fft-in-order = reshape ((eq ⊕ split {2} {2}) ∙ split {4} {4}) giant-fft
+
+{-
+giant-fft-in-order : Ar ((ι 2 ⊗ ι 2) ⊗ ι 4) ℂ
+giant-fft-in-order = reshape ((split {2} {2} ⊕ eq) ∙ split {4} {4}) giant-fft
+-}
   
 step1 : Ar (ι 4) ℂ
 step1 = (
@@ -250,41 +267,42 @@ objectToPrint = ((3 ᵣ) + (7 ᵣ) i) + ((8 ᵣ) + (11 ᵣ) i)
 -- reshape (rev (swap ∙ split {2} {4})) $ 
 --testDFT = putStrLn (showMatrix showComplex (DFT step1))
 
-θ₂ : {s s₁ : Shape} → (pos : Position (ι (length s))) → (p : Fin (length s *ₙ length s₁)) → ℝ
-θ₂ {s} {s₁} pos p = (-ᵣ 2 ᵣ *ᵣ π *ᵣ
-                (position-sum {s} (pos ⟨ _♭ ⟩) *ₙ
-                 position-sum (ι (proj₁ (quotRem {length s} (length s₁) p))))
-                ᵣ) /ᵣ ((length s *ₙ length s₁) ᵣ)
-showθ₂ : IO {a} ⊤
-showθ₂ = putStrLn $ showReal $ θ₂ {ι 2} {ι 4} (ι (fsuc fzero)) (fsuc $ fzero)
-
-θ : {s s₁ : Shape} → (pos : Position (ι (length s))) → (p : Fin (length s *ₙ length s₁)) → ℝ
-θ {s} {s₁} pos p = ((-ᵣ 2 ᵣ *ᵣ π *ᵣ (posVec pos *ₙ toℕ (proj₂ (quotRem {length s} (length s₁) p))) ᵣ) /ᵣ (length s ᵣ))
-θ-tmp : {s s₁ : Shape} → (p : Fin (length s *ₙ length s₁)) → ℝ
-θ-tmp {s} {s₁} p = (((toℕ (proj₂ (quotRem {length s} (length s₁) p))) ᵣ))
-showθ : IO {a} ⊤
-showθ = putStrLn $ showReal $ cos $ θ {ι 40} {ι 3} (ι (fsuc fzero)) (fsuc $ fsuc $ fsuc $ fsuc $ fsuc fzero)
-
+tmp : (s : Shape) → Reshape (ι $ length $ recursive-transpose s) (ι $ length s)
+tmp (ι x) = eq
+tmp (s ⊗ s₁) = flat ∙ swap ∙ tmp s₁ ⊕ tmp s ∙ split
+ 
 showTwiddles : IO {a} ⊤ 
-showTwiddles = putStrLn $ showMatrix showComplex $ twiddles {ι 4 ⊗ (ι 2 ⊗ ι 2)}
+showTwiddles = putStrLn $ showMatrix showComplex $ twiddles {ι 2 ⊗ ι 2} {ι 2 ⊗ ι 2}
 
-showGiantFFTSplit : IO {a} ⊤
-showGiantFFTSplit = putStrLn $ showMatrix showComplex $ giant-fft-split
-showGiantFFTFlat : IO {a} ⊤
-showGiantFFTFlat = putStrLn $ showMatrix showComplex $ reshape (_♭ ∙ recursive-transposeᵣ) giant-fft-split
+--theorm : ∀ {s : Shape} {arr : Ar s ℂ} {pos : Position s}→  (reshape (_♯ ∙ reshape-length {s}) ∘ DFT ∘ reshape (_♭ ∙ recursive-transposeᵣ )) arr pos ≡ FFT {s} arr pos
 showProofLeft  : IO {a} ⊤
 showProofLeft  = putStrLn $ showMatrix showComplex 
-  $ reshape (_♭ ∙ recursive-transposeᵣ) (FFT giant-fft-split)
+  $ (FFT giant-fft-in-order)
+  --$ (DFT ∘ reshape (_♭)) giant-fft-in-order
 showProofRight : IO {a} ⊤
-showProofRight = putStrLn $ showMatrix showComplex $ DFT (reshape (_♭ ∙ recursive-transposeᵣ) giant-fft-split)
--- theorm : ∀ {s : Shape} → FFT {s} ≡ (reshape (recursive-transposeᵣ) ∘ reshape ( _♯ ) ∘ DFT ∘ reshape _♭)
+showProofRight = putStrLn $ showMatrix showComplex $ ((reshape {ι 16} {recursive-transpose (ι 4 ⊗ (ι 2 ⊗ ι 2))} _♯₂) ∘ DFT ∘ (reshape {ι 4 ⊗ (ι 2 ⊗ ι 2) } _♭)) giant-fft-in-order
+--showProofRight = putStrLn $ showMatrix showComplex $ ((reshape _♯)(reshape  _♯) ∘ DFT ∘ (reshape {ι 4 ⊗ (ι 2 ⊗ ι 2) } _♭)) giant-fft-in-order
 
+  --$ reshape {ι (length (ι 16))} {recursive-transpose (ι 4 ⊗ (ι 2 ⊗ ι 2)) } _♯₂ ((DFT ∘ (reshape {ι 4 ⊗ (ι 2 ⊗ ι 2) } (_♭))) giant-fft-in-order) 
+  --$ reshape (_♭) (FFT giant-fft-in-order)
+--showGiantFFTed : IO {a} ⊤
+--showGiantFFTed = putStrLn $ showMatrix showComplex $ FFT (giant-fft-split)
+
+  --00→ (FFT arr) (pos ⟨ rev recursive-transposeᵣ ⟩) ≡ reshape _♯ ((DFT ∘ (reshape {s} (_♭))) arr) pos
 showGiantShape : IO {a} ⊤
-showGiantShape = putStrLn $ showMatrix showComplex $  reshape _♭ (reshape recursive-transposeᵣ giant-fft-split)
+showGiantShape = putStrLn $ showMatrix showComplex $  reshape (_♭) giant-fft-in-order
+showGiantShape₂ : IO {a} ⊤
+showGiantShape₂ = putStrLn $ showMatrix showComplex $  (reshape recursive-transposeᵣ giant-fft-in-order)
 
 bunchOStuff : IO {a} ⊤
 bunchOStuff = do 
-  showθ
+ -- showTwiddles
+ showProofLeft
+ showProofRight
+ --showGiantFFTed
+-- showGiantShape
+-- showGiantShape₂
+
 
 main : Main
 main = run bunchOStuff 
