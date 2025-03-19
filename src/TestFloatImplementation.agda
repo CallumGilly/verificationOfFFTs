@@ -124,7 +124,7 @@ dft-example-input (ι (fsuc (fsuc (fsuc fzero)))) = ℂfromℕ 1
 -----------------------------------------------
 
 open import src.FFT builtinReals using (FFT; twiddles; FFT₁; position-sum; twiddles₂; FFT₂)
-open import src.Reshape using (Reshape; eq; _∙_; _⊕_; split; flat; swap; _♭; _♯; _⟨_⟩; _♯₂)
+open import src.Reshape using (Reshape; eq; _∙_; _⊕_; split; flat; swap; _♭; _♯; _⟨_⟩; _♭₂; cast-length)
 open import src.Reshape using (reshape; rev; rev-eq; rev-rev; transpose; transposeᵣ;recursive-transpose; recursive-transposeᵣ; eq)
 open import src.FFTSpliter using (FFT-flattern)
 
@@ -280,7 +280,7 @@ showProofLeft  = putStrLn $ showMatrix showComplex
   $ (FFT giant-fft-in-order)
   --$ (DFT ∘ reshape (_♭)) giant-fft-in-order
 showProofRight : IO {a} ⊤
-showProofRight = putStrLn $ showMatrix showComplex $ ((reshape {ι 16} {recursive-transpose (ι 4 ⊗ (ι 2 ⊗ ι 2))} _♯₂) ∘ DFT ∘ (reshape {ι 4 ⊗ (ι 2 ⊗ ι 2) } _♭)) giant-fft-in-order
+showProofRight = putStrLn $ showMatrix showComplex $ ((reshape {ι 16} {recursive-transpose (ι 4 ⊗ (ι 2 ⊗ ι 2))} _♯) ∘ DFT ∘ (reshape _♭₂)) giant-fft-in-order
 --showProofRight = putStrLn $ showMatrix showComplex $ ((reshape _♯)(reshape  _♯) ∘ DFT ∘ (reshape {ι 4 ⊗ (ι 2 ⊗ ι 2) } _♭)) giant-fft-in-order
 
   --$ reshape {ι (length (ι 16))} {recursive-transpose (ι 4 ⊗ (ι 2 ⊗ ι 2)) } _♯₂ ((DFT ∘ (reshape {ι 4 ⊗ (ι 2 ⊗ ι 2) } (_♭))) giant-fft-in-order) 
@@ -290,9 +290,11 @@ showProofRight = putStrLn $ showMatrix showComplex $ ((reshape {ι 16} {recursiv
 
   --00→ (FFT arr) (pos ⟨ rev recursive-transposeᵣ ⟩) ≡ reshape _♯ ((DFT ∘ (reshape {s} (_♭))) arr) pos
 showGiantShape : IO {a} ⊤
-showGiantShape = putStrLn $ showMatrix showComplex $  reshape (_♭) giant-fft-in-order
+showGiantShape = putStrLn $ showMatrix showComplex 
+  $ reshape _♭ giant-fft-in-order
 showGiantShape₂ : IO {a} ⊤
-showGiantShape₂ = putStrLn $ showMatrix showComplex $  (reshape recursive-transposeᵣ giant-fft-in-order)
+showGiantShape₂ = putStrLn $ showMatrix showComplex 
+  $ reshape (_♭₂) giant-fft-in-order
 
 bunchOStuff : IO {a} ⊤
 bunchOStuff = do 
@@ -300,8 +302,8 @@ bunchOStuff = do
  showProofLeft
  showProofRight
  --showGiantFFTed
--- showGiantShape
--- showGiantShape₂
+ --showGiantShape
+ --showGiantShape₂
 
 
 main : Main

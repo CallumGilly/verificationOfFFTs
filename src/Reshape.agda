@@ -1,7 +1,7 @@
 module src.Reshape where
 
 open import Data.Nat
-open import Data.Nat.Properties using (*-comm)
+open import Data.Nat.Properties using (*-comm; *-zeroʳ)
 open import Data.Fin as F using (Fin; combine; remQuot; quotRem; toℕ)
 open import Data.Fin.Properties using (remQuot-combine; combine-remQuot)
 
@@ -10,7 +10,7 @@ open import Relation.Binary.PropositionalEquality
 open import src.Matrix using (Shape; Position; Ar; ι; _⊗_; length)
 
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; refl; cong)
+open Eq using (_≡_; refl; cong; trans)
 open Eq.≡-Reasoning
 
 open import src.Extensionality using (extensionality)
@@ -31,6 +31,8 @@ data Reshape : Shape → Shape → Set where
   split  : Reshape (ι (m * n)) (ι m ⊗ ι n)
   flat   : Reshape (ι m ⊗ ι n) (ι (m * n))
   swap   : Reshape (s ⊗ p) (p ⊗ s)
+  comm-eq : n ≡ m → Reshape (ι n) (ι m)
+--comm-eq {n} {m} rewrite *-comm m n = eq
 
 -- For all shapes s and p
 _⟨_⟩ : ∀ {s p : Shape} → Position p → Reshape s p → Position s
@@ -40,6 +42,10 @@ i           ⟨ r ∙ r₁ ⟩ = i ⟨ r ⟩ ⟨ r₁ ⟩
 (ι i ⊗ ι j) ⟨ split  ⟩ = ι (combine i j)
 ι i         ⟨ flat   ⟩ = let a , b = remQuot _ i in ι a ⊗ ι b
 (i ⊗ j)     ⟨ swap   ⟩ = j ⊗ i
+i           ⟨ comm-eq refl ⟩ = i
+
+
+--cong-eq : ∀ {n m : ℕ} → n ≡ m → eq {?} ≡ eq
 
 reshape : Reshape s p → Ar s X → Ar p X
 reshape r a ix = a (ix ⟨ r ⟩ )
@@ -51,6 +57,7 @@ rev (r ∙ r₁) = rev r₁ ∙ rev r
 rev split = flat
 rev flat = split
 rev swap = swap
+rev (comm-eq refl) = comm-eq refl
 
 -- Reverse properties
 rev-eq : (r : Reshape s p) → ∀ (i : Position p) → i ⟨ r ∙ rev r ⟩ ≡ i
@@ -68,6 +75,7 @@ rev-eq (split {m = m} {n = n}) (ι x ⊗ ι x₁) with cong proj₁ (remQuot-com
   ∎
 rev-eq (flat {m = m} {n = n}) (ι x) rewrite combine-remQuot {m} n x = refl 
 rev-eq swap (i ⊗ i₁) = refl
+rev-eq (comm-eq refl) i = refl
 
 eq+eq : ∀ {X : Set} {n m : ℕ} (arr : Ar (ι n ⊗ ι m) X) → reshape (eq ⊕ eq) arr ≡ arr
 eq+eq {X} {n} {m} arr = extensionality λ{(ι x ⊗ ι y) → refl }
@@ -79,6 +87,7 @@ rev-rev (r ⊕ r₁) (i ⊗ i₁) rewrite rev-rev r i | rev-rev r₁ i₁ = refl
 rev-rev split i = refl
 rev-rev flat i = refl
 rev-rev swap i = refl
+rev-rev (comm-eq refl) i = refl
 
 -- Define transpose
 transpose : Shape → Shape
@@ -113,18 +122,32 @@ _♭ {s ⊗ s₁} = flat ∙ _♭ ⊕ _♭
 _♯ : Reshape (ι (length s)) s
 _♯ = rev _♭
 
-lemma₁ : ∀ {s : Shape} → length s ≡ length (recursive-transpose s)
-lemma₁ {ι x}    = refl
-lemma₁ {s ⊗ s₁} rewrite 
-      *-comm (length s) (length s₁) 
-    | lemma₁ {s}
-    | lemma₁ {s₁} = refl
+--lemma₁ : ∀ {s : Shape} → length s ≡ length (recursive-transpose s)
+--lemma₁ {ι x}    = refl
+--lemma₁ {s ⊗ s₁} rewrite 
+--      *-comm (length s) (length s₁) 
+--    | lemma₁ {s}
+--    | lemma₁ {s₁} = refl
 
---cast-length : ∀ {s : Shape} → Reshape (ι (length s)) (ι (length (recursive-transpose s)))
---cast-length {s} rewrite lemma₁ {s} = eq
 
-_♯₂ : Reshape (ι (length s)) (recursive-transpose s)
-_♯₂ {s} rewrite lemma₁ {s} = _♯
+--comm-eq : ∀ {n m : ℕ} → Reshape (ι (n * m)) (ι (m * n))
+--comm-eq {n} {m} rewrite *-comm m n = eq
+
+_♭₂ : Reshape (s) (ι (length (recursive-transpose s)))
+_♭₂ {ι x} = eq
+_♭₂ {s ⊗ s₁} = comm-eq (*-comm (length (recursive-transpose s)) (length (recursive-transpose s₁))) ∙ flat ∙ _♭₂ ⊕ _♭₂
+
+
+--_♭₂ {s ⊗ s₁} = comm-eq {length (recursive-transpose s)} {length (recursive-transpose s₁)} ∙ flat ∙ _♭₂ ⊕ _♭₂
+--_♯₂ {s ⊗ s₁} = (_♯₂ {s₁} ⊕ _♯₂ {s}) ∙ split₂ {length (recursive-transpose s₁)} {length ?}
+--_♯₂ {ι x} = eq
+--_♯₂ {s ⊗ s₁} with (lemma₁ {s ⊗ s₁})
+--... | tmp = ? ∙ split {length s₁} {length s} 
+--_♯₂ {s ⊗ s₁} with (lemma₁ {s}) | (lemma₁ {s₁})
+--... | tmp | tmp₁ = ? ∙ split {length s₁} {length s} 
+--_♯₂ {s} rewrite lemma₁ {s} = _♯
+
+
 
 --_♯₂ {ι x} = _♯ 
 --_♯₂ {s ⊗ s₁} = ? ∙ split {length s} {length s}
@@ -133,16 +156,16 @@ _♯₂ {s} rewrite lemma₁ {s} = _♯
   --  helper x = ? ∙ split {length s} {length s₁}
 --_♯₂ {s ⊗ s₁} = (_♯₂ ⊕ _♯₂) ∙ swap ∙ split 
 
-length-invariance : 
-    ∀ {s q : Shape} 
-  → Reshape s q
-  → length s ≡ length q
-length-invariance {s} {.s} eq = refl
-length-invariance {s} {q} (r ∙ r₁) rewrite length-invariance r₁ | length-invariance r = refl
-length-invariance {.(_ ⊗ _)} {.(_ ⊗ _)} (r ⊕ r₁) rewrite length-invariance r | length-invariance r₁ = refl
-length-invariance {s} {q} split = refl
-length-invariance {s} {q} flat = refl
-length-invariance {.(s ⊗ p)} {.(p ⊗ s)} (swap {s} {p}) rewrite *-comm (length s) (length p) = refl
+--length-invariance : 
+--    ∀ {s q : Shape} 
+--  → Reshape s q
+--  → length s ≡ length q
+--length-invariance {s} {.s} eq = refl
+--length-invariance {s} {q} (r ∙ r₁) rewrite length-invariance r₁ | length-invariance r = refl
+--length-invariance {.(_ ⊗ _)} {.(_ ⊗ _)} (r ⊕ r₁) rewrite length-invariance r | length-invariance r₁ = refl
+--length-invariance {s} {q} split = refl
+--length-invariance {s} {q} flat = refl
+--length-invariance {.(s ⊗ p)} {.(p ⊗ s)} (swap {s} {p}) rewrite *-comm (length s) (length p) = refl
 
 
 

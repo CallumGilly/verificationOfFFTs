@@ -7,7 +7,7 @@ open import Data.Fin.Properties using (cast-is-id)
 open import Data.Product.Base using (_×_; proj₁; proj₂) renaming ( _,_ to ⟨_,_⟩)
 
 open import src.Matrix using (Ar; Shape; _⊗_; ι; _==_; Position; nestedMap; zipWith; nest; map; unnest; head₁; tail₁; zip; iterate; ι-cons; nil; foldr; length; cong-foldr)
-open import src.Reshape using (reshape; Reshape; flat; _♭; _♯; recursive-transpose; recursive-transposeᵣ; _∙_; rev; _⊕_; swap; eq; split; _⟨_⟩; eq+eq; _♯₂)
+open import src.Reshape using (reshape; Reshape; flat; _♭; _♯; recursive-transpose; recursive-transposeᵣ; _∙_; rev; _⊕_; swap; eq; split; _⟨_⟩; eq+eq; _♭₂; comm-eq)
 open import src.Complex r using (ℂ; _*_; _+_; ℂfromℕ; -ω; +-identityʳ; ω-N-0; *-identityʳ; _+_i)
 open ℂ using (real; imaginary)
 open import src.FFT r using (FFT; twiddles; position-sum; offset-n)
@@ -23,21 +23,8 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym; cong₂; subst; cong-app)
 open Eq.≡-Reasoning
 
-lemma₁ : ∀ {s : Shape} → length s ≡ length (recursive-transpose s)
-lemma₁ {ι x}    = refl
-lemma₁ {s ⊗ s₁} rewrite 
-      *-comm (length s) (length s₁) 
-    | lemma₁ {s}
-    | lemma₁ {s₁} = refl
-
-
--- TODO: Workout if this is feasable, or find another way for theorm₅ (at time of writing), this is the reason I couldn't hop between the two forms...
-lemma₂ : ∀ {n : ℕ} {arr₁ : Ar (ι n) ℂ} → (λ p → arr₁ p) ≡ λ{(ι x) → arr₁ (ι x)}  
-lemma₂ {n} {arr₁} = ?
-
-
 theorm₅ : ∀ {n m : ℕ}
-  → FFT ≡ (reshape {ι (length (ι n ⊗ ι m))} {recursive-transpose (ι n ⊗ ι m)} _♯₂) ∘ DFT ∘ (reshape {ι n ⊗ ι m} _♭)
+  → FFT ≡ (reshape _♯) ∘ DFT ∘ (reshape {ι n ⊗ ι m} _♭₂)
 theorm₅ {n} {m} = 
   extensionality λ{ arr →
     extensionality λ{ (ι x ⊗ ι y) →
@@ -118,58 +105,14 @@ theorm₅ {n} {m} =
               )
             (posVec {m} p₀)
           )
-          
-      ≡⟨ cong-foldr
-          {m} 
-          {arr₁ = (λ p₀ → step {m} {x} ( ( foldr _+_ (ℂfromℕ 0) (λ p₁ → step {n} {y} (arr (p₁ ⊗ p₀)) (posVec {n} p₁))) * (twiddles (ι y ⊗ p₀))) (posVec {m} p₀))} 
-          ?
-      ⟩
-        foldr 
-          {m}
-          _+_ 
-          (ℂfromℕ 0) 
-          (λ{ (ι p₀) → 
-            step {m} {x}
-              (
-                (
-                  foldr 
-                    _+_ 
-                    (ℂfromℕ 0)
-                    (λ p₁ → step {n} {y} (arr (p₁ ⊗ (ι p₀))) (posVec {n} p₁))
-                )
-                * 
-                (twiddles (ι y ⊗ (ι p₀)))
-              )
-            (posVec {m} (ι p₀))
-          })
       ≡⟨⟩
-          
-      --  foldr 
-      --    _+_ 
-      --    (ℂfromℕ 0) 
-      --    (λ p₀ → 
-      --      step {m} {x}
-      --        (
-      --          (
-      --            foldr 
-      --              {n}
-      --              _+_ 
-      --              (ℂfromℕ 0)
-      --              λ{ (ι x) → ? } -- step {n} {y} (arr (? ⊗ p₀)) (posVec {n} ?)}
-      --          )
-      --          * 
-      --          (-ω (n *ₙ m) (position-sum (ι y ⊗ p₀)) )
-      --        )
-      --      (posVec {m} p₀)
-      --    )
-      --≡⟨⟩
         ?
     }
   }
 
 
 theorm₄ : ∀ {s : Shape}
-  → FFT ≡ (reshape {ι (length s)} {recursive-transpose s} _♯₂) ∘ DFT ∘ (reshape {s} _♭)
+  → FFT ≡ (reshape _♯) ∘ DFT ∘ (reshape {s} _♭₂)
 theorm₄ {ι x} = refl
 theorm₄ {s ⊗ s₁} =
   extensionality λ{ arr →
@@ -195,7 +138,7 @@ theorm₄ {s ⊗ s₁} =
         reshape 
           swap 
           (nestedMap 
-            ((reshape {ι (length s₁)} {recursive-transpose s₁} _♯₂) ∘ DFT ∘ (reshape {s₁} _♭)) 
+            ((reshape _♯) ∘ DFT ∘ (reshape {s₁} _♭₂)) 
             (zipWith 
               _*_ 
               (reshape 
@@ -207,21 +150,21 @@ theorm₄ {s ⊗ s₁} =
           )
         (p ⊗ p₁)
         
-      ≡⟨ cong (λ f → reshape swap (nestedMap ((reshape {ι (length s₁)} {recursive-transpose s₁} _♯₂) ∘ DFT ∘ (reshape {s₁} _♭)) (zipWith _*_ (reshape swap (nestedMap f (reshape swap arr))) twiddles)) (p ⊗ p₁)) (theorm₄ {s}) ⟩
+      ≡⟨ cong (λ f → reshape swap (nestedMap ((reshape _♯) ∘ DFT ∘ (reshape {s₁} _♭₂)) (zipWith _*_ (reshape swap (nestedMap f (reshape swap arr))) twiddles)) (p ⊗ p₁)) (theorm₄ {s}) ⟩
         reshape 
           swap 
           (nestedMap 
             (
-                (reshape {ι (length s₁)} {recursive-transpose s₁} _♯₂)
+                (reshape _♯)
               ∘ DFT 
-              ∘ (reshape {s₁} _♭)
+              ∘ (reshape {s₁} _♭₂)
             ) 
             (zipWith 
               _*_ 
               (reshape 
                 swap 
                 (nestedMap 
-                  ((reshape {ι (length s)} {recursive-transpose s} _♯₂) ∘ DFT ∘ (reshape {s} _♭)) 
+                  ((reshape _♯) ∘ DFT ∘ (reshape {s} _♭₂)) 
                   (reshape swap arr)
                 )
               )
@@ -233,9 +176,9 @@ theorm₄ {s ⊗ s₁} =
         (
           (
             (
-                (reshape {ι (length s₁)} {recursive-transpose s₁} _♯₂)
+                (reshape {ι (length (recursive-transpose s₁))} {recursive-transpose s₁} _♯)
               ∘ DFT 
-              ∘ (reshape {s₁} _♭)
+              ∘ (reshape {s₁} _♭₂)
             )
             ((nest 
               (zipWith 
@@ -243,7 +186,7 @@ theorm₄ {s ⊗ s₁} =
                 (reshape 
                   swap 
                   (nestedMap 
-                    ((reshape {ι (length s)} {recursive-transpose s} _♯₂) ∘ DFT ∘ (reshape {s} _♭)) 
+                    ((reshape _♯) ∘ DFT ∘ (reshape {s} _♭₂)) 
                     (reshape swap arr)
                   )
                 )
@@ -256,14 +199,14 @@ theorm₄ {s ⊗ s₁} =
       ≡⟨⟩
         (
             (
-                (reshape {ι (length s₁)} {recursive-transpose s₁} _♯₂)
+                (reshape {ι (length (recursive-transpose s₁))} {recursive-transpose s₁} _♯)
               ∘ DFT 
-              ∘ (reshape {s₁} _♭)
+              ∘ (reshape {s₁} _♭₂)
             )
             (
               (zipWith _*_ 
                 ((nest
-                  (reshape swap (nestedMap ((reshape {ι (length s)} {recursive-transpose s} _♯₂) ∘ DFT ∘ (reshape {s} _♭)) (reshape swap arr)))
+                  (reshape swap (nestedMap ((reshape _♯) ∘ DFT ∘ (reshape {s} _♭₂)) (reshape swap arr)))
                 ) p₁)
                 (( nest
                   twiddles
