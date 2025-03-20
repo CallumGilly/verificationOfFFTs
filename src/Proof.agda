@@ -19,9 +19,32 @@ open Real r using (ℝ; π; sin; cos; double-negative; _ᵣ; -ᵣ-identityʳ; *�
 
 open import Function.Base using (_$_; id; _∘_; flip; _∘₂_)
 
+open import src.MatrixEquality as MatEq
+open MatEq using (_≅_; mat-refl)
+open MatEq.≅-Reasoning
+
+
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym; cong₂; subst; cong-app)
 open Eq.≡-Reasoning
+
+-- This allows for pattern matching on the inside of zipWith
+lemma₂ : ∀ {n : ℕ} {arr : Ar (ι n) ℂ} → (λ p → arr p) ≡ λ{(ι x) → arr (ι x)}
+lemma₂ {n} {arr} = extensionality λ{(ι x) → refl}
+
+DFT≡DFT : ∀ {n : ℕ} (arr₁ arr₂ : Ar (ι n) ℂ) → arr₁ ≅ arr₂ → DFT arr₁ ≅ DFT arr₂
+DFT≡DFT arr₁ .arr₁ (mat-refl {i} x) = mat-refl {i = i} refl
+
+--FFT≅FFT : ∀ {s : Shape} {arr₁ arr₂ : Ar s ℂ} → ?
+
+theorm-new : ∀ {s : Shape} {arr : Ar s ℂ} {i : Position (recursive-transpose s)}
+  → FFT arr ≅ ((reshape _♯) ∘ DFT ∘ (reshape {s} _♭₂)) arr
+theorm-new {ι n} {arr} {i} = mat-refl {i = i} refl
+theorm-new {s ⊗ s₁} {arr} {i} =
+  ≅-begin
+    FFT arr
+  ≅⟨⟩
+    ?
 
 theorm₅ : ∀ {n m : ℕ}
   → FFT ≡ (reshape _♯) ∘ DFT ∘ (reshape {ι n ⊗ ι m} _♭₂)
@@ -106,10 +129,84 @@ theorm₅ {n} {m} =
             (posVec {m} p₀)
           )
       ≡⟨⟩
-        ?
+        foldr 
+          _+_ 
+          (ℂfromℕ 0) 
+          (λ p₀ → 
+            step {m} {x}
+              (
+                (
+                  foldr 
+                    _+_ 
+                    (ℂfromℕ 0)
+                    (λ p₁ → step {n} {y} (arr (p₁ ⊗ p₀)) (posVec {n} p₁))
+                )
+                * 
+                (twiddles (ι y ⊗ p₀))
+              )
+            (posVec {m} p₀)
+          )
+      ≡⟨ sym (flipped-thm n m arr x y) ⟩
+        (reshape _♯ ∘
+             DFT ∘ reshape (comm-eq (*-comm n m) ∙ flat ∙ eq ⊕ eq))
+            arr (ι x ⊗ ι y)
+      ∎
+
     }
   }
-
+  where
+    flipped-thm : ∀ 
+        (n   : ℕ)
+        (m   : ℕ)
+        (arr : Ar (ι n ⊗ ι m) ℂ)
+        (x   : Fin m)
+        (y   : Fin n)
+      → 
+        (reshape _♯ ∘ DFT ∘ reshape (comm-eq (*-comm n m) ∙ flat ∙ eq ⊕ eq)) arr (ι x ⊗ ι y)
+      ≡
+        foldr _+_ (ℂfromℕ 0) (λ p₀ → step {m} {x} (foldr _+_ (ℂfromℕ 0) (λ p₁ → step {n} {y} (arr (p₁ ⊗ p₀)) (posVec p₁)) * twiddles (ι y ⊗ p₀)) (posVec p₀)) 
+    flipped-thm n m arr x y = 
+      begin
+        (reshape _♯ ∘ DFT ∘ reshape (comm-eq (*-comm n m) ∙ flat ∙ eq ⊕ eq)) arr (ι x ⊗ ι y)
+      ≡⟨⟩
+        (( DFT ( reshape (comm-eq (*-comm n m) ∙ flat ∙ eq ⊕ eq) arr))) ((ι x ⊗ ι y) ⟨ rev _♭ ⟩ )
+      ≡⟨⟩
+        (( DFT ( reshape (comm-eq (*-comm n m) ∙ flat ∙ eq ⊕ eq) arr))) ((ι x ⊗ ι y) ⟨ rev (flat ∙ _♭ ⊕ _♭) ⟩ )
+      ≡⟨⟩
+        (( DFT ( reshape (comm-eq (*-comm n m) ∙ flat ∙ eq ⊕ eq) arr))) ((ι x ⊗ ι y) ⟨ (split) ⟩ )
+      ≡⟨⟩
+        (( DFT ( reshape (comm-eq (*-comm n m) ∙ flat ∙ eq ⊕ eq) arr))) (ι (combine x y))
+      ≡⟨⟩
+        foldr _+_ (ℂfromℕ 0)
+            (zipWith 
+              step
+              (reshape (comm-eq (*-comm n m) ∙ flat ∙ eq ⊕ eq) arr)
+              posVec
+            )
+      ≡⟨⟩
+        foldr {m *ₙ n} _+_ (ℂfromℕ 0)
+            (λ p₀ → 
+              step {m *ₙ n}
+              (reshape (comm-eq (*-comm n m) ∙ flat ∙ eq ⊕ eq) arr p₀)
+              (posVec p₀)
+            )
+--      ≡⟨ cong (foldr {m *ₙ n} _+_ (ℂfromℕ 0)) lemma₂ ⟩
+--        foldr {m *ₙ n} _+_ (ℂfromℕ 0)
+--            (λ{ (ι x) →
+--              step {m *ₙ n} {x}
+--              (reshape (comm-eq (*-comm n m) ∙ flat ∙ eq ⊕ eq) arr (ι x))
+--              (posVec (ι x))
+--            })
+        
+      --≡⟨ cong (λ f → foldr {m *ₙ n} _+_ (ℂfromℕ 0) f) (lemma₂ {?} {?}) ⟩
+      --  foldr {m *ₙ n} _+_ (ℂfromℕ 0)
+      --      (λ{ (ι x) → 
+      --        step {m *ₙ n} 
+      --        (reshape (comm-eq (*-comm n m) ∙ flat ∙ eq ⊕ eq) arr (ι x))
+      --        (posVec (ι x))
+      --      })
+      ≡⟨⟩
+        ?
 
 theorm₄ : ∀ {s : Shape}
   → FFT ≡ (reshape _♯) ∘ DFT ∘ (reshape {s} _♭₂)

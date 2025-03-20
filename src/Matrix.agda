@@ -51,10 +51,6 @@ length (s ⊗ s₁) = length s * length s₁
 map : (X → Y) → Ar s X → Ar s Y
 map f ar i = f (ar i)
 
--- Define my own version of equality
-_==_ : ∀ {s : Shape} {X : Set} → Ar s X → Ar s X → Set
-_==_ {s} xs ys = ∀ (p : Position s) → xs p ≡ ys p
-
 nest : Ar (s ⊗ p) X → Ar s (Ar p X)
 nest a i j = a (i ⊗ j)
 
@@ -103,6 +99,24 @@ cong-foldr : ∀
   → foldr f acc arr₁ ≡ foldr f acc arr₂
 cong-foldr {n} {X} {Y} {f} {acc} {arr₁} {.arr₁} refl = refl
 
+foldr-≡ : ∀
+  {n : ℕ} 
+  {X Y : Set}
+  {f : X → Y → Y}
+  {g : X → Y → Y}
+  {acc : Y}
+  {arr : Ar (ι n) X} 
+  (prf : ∀ {x : X} {y : Y} → f x y ≡ g x y)
+  → foldr {n} f acc arr ≡ foldr {n} g acc arr
+foldr-≡ {zero} {X} {Y} {f} {g} {acc} {arr} prf = refl
+foldr-≡ {suc n} {g = g} {acc = acc} {arr = arr} prf rewrite 
+    prf {arr (ι fzero)} {acc}
+  | foldr-≡ {g = g} {g (arr (ι fzero)) acc} {tail₁ arr} prf = refl
+
+
+
+
+
 zip : Ar (ι n) X → Ar (ι n) Y → Ar (ι n) (X × Y)
 zip xs ys pos = ⟨ xs pos , ys pos ⟩
 
@@ -144,8 +158,6 @@ _++_ {n} {X} {m} arr₁ arr₂ (ι pos) with splitAt n {m} pos
 iterate : (n : ℕ) → (X → X) → X → Ar (ι n) X
 iterate zero    f acc = nil
 iterate (suc n) f acc = ι-cons acc (iterate n f (f acc))
-
-
 
 
 

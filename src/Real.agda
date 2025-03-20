@@ -54,3 +54,11 @@ record Real : Set₁ where
     *-cancels-/ : ∀ (x y : ℝ) → x * (y / x) ≡ y
 
     show : ℝ → String
+
+
+--isℕ  = ?
+
+--data isℕ : ℝ → Set where
+--  directFromℝ : ∀ {r : ℝ} {n : ℕ} → (n ᵣ) ≡ r
+
+
