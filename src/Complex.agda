@@ -5,6 +5,7 @@ open Eq using (_≡_; refl; cong; sym)
 open Eq.≡-Reasoning
 
 open import Data.Nat.Base using (ℕ; zero; suc) renaming (_*_ to _*ₙ_; _+_ to _+ₙ_)
+open import Data.Nat.Properties using (*-comm)
 open import Function using (_∘_)
 
 open import Data.Product using (∃; ∃-syntax)
@@ -12,7 +13,7 @@ open import Data.Product using (∃; ∃-syntax)
 open import Data.Product.Base using (_×_; proj₁; proj₂) renaming ( _,_ to ⟨_,_⟩)
 
 module src.Complex (r : Real) where
-  open Real r using (ℝ; π; sin; cos; double-negative; _ᵣ; -ᵣ-identityʳ; *ᵣ-zeroᵣ; +ᵣ-identityˡ; *ᵣ-identityʳ; /ᵣ-zeroₜ; +ᵣ-identityʳ; *ᵣ-comm; *ᵣ-assoc; neg-distrib-*)
+  open Real r using (ℝ; π; sin; cos; double-negative; _ᵣ; -ᵣ-identityʳ; *ᵣ-zeroᵣ; *ᵣ-zeroₗ; +ᵣ-identityˡ; *ᵣ-identityʳ; /ᵣ-zeroₜ; +ᵣ-identityʳ; *ᵣ-comm; *ᵣ-assoc; neg-distrib-*)
     renaming (_+_ to _+ᵣ_; _-_ to _-ᵣ_; -_ to -ᵣ_; _/_ to _/ᵣ_; _*_ to _*ᵣ_)
 
   infixl 7 _*_
@@ -67,6 +68,18 @@ module src.Complex (r : Real) where
       real + imaginary i
     ∎
 
+  *-zeroₗ : ∀ (n : ℂ) → (ℂfromℕ 0) * n ≡ ℂfromℕ 0
+  *-zeroₗ (real + imaginary i) rewrite 
+      *ᵣ-zeroₗ real 
+    | *ᵣ-zeroₗ imaginary 
+    | -ᵣ-identityʳ (0 ᵣ) 
+    | +ᵣ-identityʳ (0 ᵣ) 
+    = refl
+    --begin
+    --  ((0 ᵣ) + (0 ᵣ) i) * (real + imaginary i) 
+    --≡⟨⟩
+    --  (((0 ᵣ) *ᵣ real) -ᵣ ((0 ᵣ) *ᵣ imaginary)) + (((0 ᵣ) )
+
   +-identityʳ : ∀ {n : ℂ} → n + (ℂfromℕ 0) ≡ n 
   +-identityʳ {real + imaginary i} rewrite +ᵣ-identityʳ real | +ᵣ-identityʳ imaginary = refl
     -- begin 
@@ -83,6 +96,9 @@ module src.Complex (r : Real) where
   e^i_ : ℝ → ℂ
   e^i_ x = (cos x) + (sin x) i
 
+
+  postulate
+    *-assoc : ∀ (x y z : ℂ) → (x * y) * z ≡ x * (y * z)
 
   postulate
     e^0 : e^i (0 ᵣ) ≡ ℂfromℕ 1 
@@ -138,6 +154,22 @@ module src.Complex (r : Real) where
     | sym (ᵣ-distributes-*ₙ 2 m) 
     | cos-2nπ (2 *ₙ m) ⟨ m , refl ⟩
     | sin-2nπ (2 *ₙ m)   = refl
+
+  postulate
+    xn/yn≡x/y : ∀ (n x y : ℝ) → (x *ᵣ n) /ᵣ (y *ᵣ n) ≡ x /ᵣ y
+  
+  ω-r₁x-r₁y : ∀ {r₁ x y : ℕ} → -ω (r₁ *ₙ x) (r₁ *ₙ y) ≡ -ω x y
+  ω-r₁x-r₁y {r₁} {x} {y} rewrite 
+      *-comm r₁ y 
+    | *-comm r₁ x 
+    | ᵣ-distributes-*ₙ y r₁ 
+    | ᵣ-distributes-*ₙ x r₁
+    | *ᵣ-assoc (-ᵣ 2 ᵣ) π (y ᵣ *ᵣ r₁ ᵣ)
+    | sym (*ᵣ-assoc π (y ᵣ) (r₁ ᵣ))
+    | sym (*ᵣ-assoc (-ᵣ 2 ᵣ) (π *ᵣ y ᵣ) (r₁ ᵣ))
+    | xn/yn≡x/y (r₁ ᵣ) (-ᵣ 2 ᵣ *ᵣ (π *ᵣ y ᵣ)) (x ᵣ) 
+    | *ᵣ-assoc (-ᵣ 2 ᵣ) π (y ᵣ)
+    = refl
     --    | e^i2nπ (2 *ₙ m) ⟨ m , refl ⟩ = refl
 
 --  ω-multi : ∀ {N₁ N₂ k₁ k₂ : ℕ} → (-ω (N₁ *ₙ N₂) (k₁ *ₙ k₂)) ≡ (-ω N₁ k₁) * (-ω N₂ k₂)

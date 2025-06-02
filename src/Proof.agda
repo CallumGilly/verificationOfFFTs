@@ -1,14 +1,14 @@
 open import src.Real using (Real)
 module src.Proof (r : Real) where
 open import Data.Nat.Base using (ℕ; suc; zero) renaming (_*_ to _*ₙ_; _+_ to _+ₙ_)
-open import Data.Nat.Properties using (*-zeroʳ; *-comm; _≟_)
+open import Data.Nat.Properties using (*-comm; _≟_) renaming (*-zeroʳ to *ₙ-zeroʳ; *-zeroˡ to *ₙ-zeroˡ)
 open import Data.Fin.Base using (Fin; quotRem; toℕ; combine; remQuot; quotient; remainder; cast) renaming (zero to fzero; suc to fsuc)
 open import Data.Fin.Properties using (cast-is-id)
 open import Data.Product.Base using (_×_; proj₁; proj₂) renaming ( _,_ to ⟨_,_⟩)
 
 open import src.Matrix using (Ar; Shape; _⊗_; ι; _==_; Position; nestedMap; zipWith; nest; map; unnest; head₁; tail₁; zip; iterate; ι-cons; nil; foldr; length; cong-foldr)
 open import src.Reshape using (reshape; Reshape; flat; _♭; _♯; recursive-transpose; recursive-transposeᵣ; _∙_; rev; _⊕_; swap; eq; split; _⟨_⟩; eq+eq; _♭₂; comm-eq)
-open import src.Complex r using (ℂ; _*_; _+_; ℂfromℕ; -ω; +-identityʳ; ω-N-0; *-identityʳ; _+_i)
+open import src.Complex r using (ℂ; _*_; _+_; ℂfromℕ; -ω; +-identityʳ; ω-N-0; *-identityʳ; _+_i; *-assoc; *-zeroₗ)
 open ℂ using (real; imaginary)
 open import src.FFT r using (FFT; twiddles; position-sum; offset-n)
 open import src.DFTMatrix r using (DFT; posVec; step)
@@ -37,14 +37,45 @@ DFT≡DFT arr₁ .arr₁ (mat-refl {i} x) = mat-refl {i = i} refl
 
 --FFT≅FFT : ∀ {s : Shape} {arr₁ arr₂ : Ar s ℂ} → ?
 
+from-ι : ∀ {n : ℕ} → Position (ι n) → Fin n
+from-ι (ι x) = x
+
+posVecIsToℕ : ∀ {n m : ℕ} → (p : Position (ι (m *ₙ n))) → posVec p ≡ toℕ (from-ι p)
+posVecIsToℕ {n} {m} (ι x) = refl
+
 theorm-new : ∀ {s : Shape} {arr : Ar s ℂ} {i : Position (recursive-transpose s)}
   → FFT arr ≅ ((reshape _♯) ∘ DFT ∘ (reshape {s} _♭₂)) arr
 theorm-new {ι n} {arr} {i} = mat-refl {i = i} refl
-theorm-new {s ⊗ s₁} {arr} {i} =
-  ≅-begin
-    FFT arr
-  ≅⟨⟩
-    ?
+theorm-new {s ⊗ s₁} {arr} {i} = ?
+
+nested-foldr : ∀ 
+  {n m : ℕ} 
+  (c₁ : Position (ι m) → ℂ)
+  (c₂ : Position (ι n) → Position (ι m) → ℂ)
+  → 
+    foldr {m} _+_ (ℂfromℕ 0) 
+      (λ x → 
+        (foldr {n} _+_ (ℂfromℕ 0) 
+          (λ y → 
+            (c₂ (y) (x))
+          )) 
+        * (c₁ (x))
+      ) 
+  ≡ 
+    foldr {m *ₙ n} _+_ (ℂfromℕ 0) 
+      (λ xy → 
+         (c₂  (ι (proj₂ (remQuot {m} n (from-ι xy)))) (ι (proj₁ (remQuot {m} n (from-ι xy)))))
+       * (c₁                                          (ι (proj₁ (remQuot {m} n (from-ι xy)))))
+      )
+nested-foldr {n} {m} c₁ c₂ = ?
+
+  where
+    xy-x : {xy : Fin (m *ₙ n)} → Fin m
+    xy-x {xy} = proj₁ (remQuot {m} n xy)
+
+    xy-y : {xy : Fin (m *ₙ n)} → Fin n
+    xy-y {xy} = proj₂ (remQuot {m} n xy)
+
 
 theorm₅ : ∀ {n m : ℕ}
   → FFT ≡ (reshape _♯) ∘ DFT ∘ (reshape {ι n ⊗ ι m} _♭₂)
@@ -146,15 +177,188 @@ theorm₅ {n} {m} =
               )
             (posVec {m} p₀)
           )
-      ≡⟨ sym (flipped-thm n m arr x y) ⟩
-        (reshape _♯ ∘
-             DFT ∘ reshape (comm-eq (*-comm n m) ∙ flat ∙ eq ⊕ eq))
-            arr (ι x ⊗ ι y)
-      ∎
+      --≡⟨ sym (flipped-thm n m arr x y) ⟩
+      --  (reshape _♯ ∘
+      --       DFT ∘ reshape (comm-eq (*-comm n m) ∙ flat ∙ eq ⊕ eq))
+      --      arr (ι x ⊗ ι y)
+      --∎
+      ≡⟨⟩
+        foldr 
+          _+_ 
+          (ℂfromℕ 0) 
+          (λ p₀ → 
+            (
+              (
+                foldr 
+                  _+_ 
+                  (ℂfromℕ 0)
+                  (λ p₁ → (arr (p₁ ⊗ p₀)) * (-ω n ((posVec {n} p₁) *ₙ (toℕ y)))) 
+              )
+              * 
+              (-ω (n *ₙ m) (position-sum (ι y ⊗ p₀)))
+            )
+            *
+            (-ω m ((posVec {m} p₀) *ₙ (toℕ x)))
+          )
+      ≡⟨⟩
+        foldr 
+          _+_ 
+          (ℂfromℕ 0) 
+          (λ p₀ → 
+              ( foldr 
+                  _+_ 
+                  (ℂfromℕ 0)
+                  (λ p₁ → (arr (p₁ ⊗ p₀)) * (-ω n ((posVec {n} p₁) *ₙ (toℕ y)))) 
+              )
+            * 
+              (-ω (n *ₙ m) (position-sum (ι y ⊗ p₀)))
+            *
+              (-ω m ((posVec {m} p₀) *ₙ (toℕ x)))
+          )
+      ≡⟨ helper 
+            m 
+            (λ { p₀ → ( foldr _+_ (ℂfromℕ 0) (λ p₁ → (arr (p₁ ⊗ p₀)) * (-ω n ((posVec {n} p₁) *ₙ (toℕ y)))) ) })
+            (λ { p₀ → (-ω (n *ₙ m) (position-sum (ι y ⊗ p₀))) })
+            (λ { p₀ → (-ω m ((posVec {m} p₀) *ₙ (toℕ x))) })
+          ⟩ 
+        foldr 
+          _+_ 
+          (ℂfromℕ 0) 
+          (λ p₀ → 
+              ( foldr 
+                  _+_ 
+                  (ℂfromℕ 0)
+                  (λ p₁ → (arr (p₁ ⊗ p₀)) * (-ω n ((posVec {n} p₁) *ₙ (toℕ y)))) 
+              )
+            * (
+              (-ω (n *ₙ m) (position-sum (ι y ⊗ p₀)))
+            *
+              (-ω m ((posVec {m} p₀) *ₙ (toℕ x)))
+              )
+          )
+          
+      ≡⟨ nested-foldr 
+            {n} 
+            {m} 
+            (λ { p₀ → ( (-ω (n *ₙ m) (position-sum (ι y ⊗ p₀))) * (-ω m ((posVec {m} p₀) *ₙ (toℕ x)))) })
+            (λ { p₁ p₀ → (arr (p₁ ⊗ p₀)) * (-ω n ((posVec {n} p₁) *ₙ (toℕ y))) })
+        ⟩
+        foldr {m *ₙ n} _+_ (ℂfromℕ 0)
+          (λ xy → 
+              (
+                  arr ((ι (proj₂ (remQuot {m} n (from-ι xy)))) ⊗ (ι (proj₁ (remQuot {m} n (from-ι xy))))) 
+                * 
+                  -ω n (posVec (ι (proj₂ (remQuot {m} n (from-ι xy)))) *ₙ toℕ y)
+              )
+            * 
+              (
+                  -ω (n *ₙ m) (position-sum (ι y ⊗ (ι (proj₁ (remQuot {m} n (from-ι xy)))))) 
+                * 
+                  -ω m (posVec (ι (proj₁ (remQuot {m} n (from-ι xy)))) *ₙ toℕ x)
+              )
+          )
+      ≡⟨⟩
+        foldr {m *ₙ n} _+_ (ℂfromℕ 0)
+          (λ xy → 
+              (
+                  arr ((ι (proj₂ (remQuot {m} n (from-ι xy)))) ⊗ (ι (proj₁ (remQuot {m} n (from-ι xy))))) 
+                * 
+                  -ω n ((toℕ (proj₂ (remQuot {m} n (from-ι xy)))) *ₙ toℕ y)
+              )
+            * 
+              (
+                  -ω (n *ₙ m) ((toℕ y *ₙ (toℕ (proj₁ (remQuot {m} n (from-ι xy)))))) 
+                * 
+                  -ω m (toℕ ((proj₁ (remQuot {m} n (from-ι xy)))) *ₙ toℕ x)
+              )
+          )
+      ≡⟨ cong-foldr {m *ₙ n} (getting-there {n} {m} arr y x) ⟩
+        foldr {m *ₙ n} _+_ (ℂfromℕ 0)
+          (λ xy → 
+            (
+                arr ((ι (proj₂ (remQuot {m} n (from-ι xy)))) ⊗ (ι (proj₁ (remQuot {m} n (from-ι xy))))) 
+              *
+                -ω (n *ₙ m) (toℕ (proj₂ (remQuot {m} n (from-ι xy))) *ₙ toℕ (proj₁ (remQuot {m} n (from-ι xy))) *ₙ toℕ x *ₙ toℕ y)
+            )
+          )
+      ≡⟨ cong (λ f → foldr {m *ₙ n} _+_ (ℂfromℕ 0) f) (sym (eq+eq ?)) ⟩
+        foldr {m *ₙ n} _+_ (ℂfromℕ 0)
+          ( reshape (eq ⊕ eq)
+          (λ xy → 
+            (
+                arr ((ι (proj₂ (remQuot {m} n (from-ι xy)))) ⊗ (ι (proj₁ (remQuot {m} n (from-ι xy))))) 
+              *
+                -ω (n *ₙ m) (toℕ (proj₂ (remQuot {m} n (from-ι xy))) *ₙ toℕ (proj₁ (remQuot {m} n (from-ι xy))) *ₙ toℕ x *ₙ toℕ y)
+            )
+          )
+          )
+      ≡⟨⟩
+        ?
+--nested-foldr : ∀ 
+--  {n m : ℕ} 
+--  (c₁ : Fin m → ℂ)
+--  (c₂ : Fin n → Fin m → ℂ)
+--  → 
+--    foldr {m} _+_ (ℂfromℕ 0) 
+--      (λ x → 
+--        (foldr {n} _+_ (ℂfromℕ 0) 
+--          (λ y → 
+--            (c₂ (from-ι y) (from-ι x))
+--          )) 
+--        * (c₁ (from-ι x))
+--      ) 
+--  ≡ 
+--    foldr {m *ₙ n} _+_ (ℂfromℕ 0) 
+--      (λ xy → 
+--       (c₂  (proj₂ (remQuot {m} n (from-ι xy))) (proj₁ (remQuot {m} n (from-ι xy)))) 
+--       * (c₁                                      (proj₁ (remQuot {m} n (from-ι xy))))
+--      )
 
     }
   }
   where
+    getting-there : ∀ {n m : ℕ} (arr : Ar (ι n ⊗ ι m) ℂ) (y : Fin n) (x : Fin m) → 
+        ( λ (xy  : Position (ι (m *ₙ n))) →
+            (
+                arr ((ι (proj₂ (remQuot {m} n (from-ι xy)))) ⊗ (ι (proj₁ (remQuot {m} n (from-ι xy))))) 
+              * 
+                -ω n ((toℕ (proj₂ (remQuot {m} n (from-ι xy)))) *ₙ toℕ y)
+            )
+          * 
+            (
+                -ω (n *ₙ m) ((toℕ y *ₙ (toℕ (proj₁ (remQuot {m} n (from-ι xy)))))) 
+              * 
+                -ω m (toℕ ((proj₁ (remQuot {m} n (from-ι xy)))) *ₙ toℕ x)
+            )
+        )
+      ≡
+        ( λ (xy  : Position (ι (m *ₙ n))) →
+            arr ((ι (proj₂ (remQuot {m} n (from-ι xy)))) ⊗ (ι (proj₁ (remQuot {m} n (from-ι xy))))) 
+          *
+            -ω (n *ₙ m) (toℕ (proj₂ (remQuot {m} n (from-ι xy))) *ₙ toℕ (proj₁ (remQuot {m} n (from-ι xy))) *ₙ toℕ x *ₙ toℕ y)
+        )
+    getting-there {n} {m} arr y x =
+      extensionality λ{(ι xy) → 
+        begin
+            (
+                arr (ι (proj₂ (remQuot {m} n xy)) ⊗ ι (proj₁ (remQuot {m} n xy))) 
+              *
+                -ω n (toℕ (proj₂ (remQuot {m} n xy)) *ₙ toℕ y) 
+            )
+          *
+            (
+                -ω (n *ₙ m) (toℕ y *ₙ toℕ (proj₁ (remQuot {m} n xy)))
+              *
+                -ω m (toℕ (proj₁ (remQuot {m} n xy)) *ₙ toℕ x)
+            )
+        ≡⟨⟩ 
+          ?
+      }    
+    helper : ∀ (n : ℕ) (c₁ c₂ c₃ : Position (ι n) → ℂ) →
+        foldr {n} _+_ (ℂfromℕ 0) (λ p₀ → (c₁ p₀) *   (c₂ p₀) * (c₃ p₀))
+      ≡
+        foldr {n} _+_ (ℂfromℕ 0) (λ p₀ → (c₁ p₀) * ( (c₂ p₀) * (c₃ p₀)))
+    helper n c₁ c₂ c₃ = ?
     flipped-thm : ∀ 
         (n   : ℕ)
         (m   : ℕ)
@@ -190,6 +394,36 @@ theorm₅ {n} {m} =
               (reshape (comm-eq (*-comm n m) ∙ flat ∙ eq ⊕ eq) arr p₀)
               (posVec p₀)
             )
+      ≡⟨⟩
+        foldr {m *ₙ n} _+_ (ℂfromℕ 0)
+            (λ p₀ → 
+              step {m *ₙ n} { combine x y }
+              (reshape (comm-eq (*-comm n m) ∙ flat) (reshape (eq ⊕ eq) arr) p₀)
+              (posVec p₀)
+            )
+      ≡⟨ cong (λ f → foldr {m *ₙ n} _+_ (ℂfromℕ 0) (λ p₀ → step {m *ₙ n} { combine x y } (reshape (comm-eq (*-comm n m) ∙ flat) (f) p₀) (posVec p₀))) (eq+eq arr) ⟩
+        foldr {m *ₙ n} _+_ (ℂfromℕ 0)
+            (λ p₀ → 
+              step {m *ₙ n} { combine x y }
+              (reshape (comm-eq (*-comm n m) ∙ flat) (arr) p₀)
+              (posVec p₀)
+            )
+      ≡⟨ cong (λ f → foldr {m *ₙ n} _+_ (ℂfromℕ 0) (λ p₀ → step {m *ₙ n} { combine x y } (reshape (comm-eq (*-comm n m) ∙ flat) (arr) p₀) (f))) (posVecIsToℕ ?) ⟩
+        foldr {m *ₙ n} _+_ (ℂfromℕ 0)
+            (λ p₀ → 
+              step {m *ₙ n} { combine x y }
+              (reshape (comm-eq (*-comm n m) ∙ flat) (arr) p₀)
+              (toℕ (from-ι p₀))
+            )
+      ≡⟨⟩
+        foldr {m *ₙ n} _+_ (ℂfromℕ 0)
+            (λ p₀ → 
+              (reshape (comm-eq (*-comm n m) ∙ flat) (arr) p₀) * (-ω (m *ₙ n) ((toℕ (from-ι p₀)) *ₙ (toℕ (combine x y)) ) )
+            )
+      ≡⟨⟩
+        ?
+  --step : {N : ℕ} → {Fin N} → ℂ → ℕ → ℂ
+  --step {N} {k} xₙ n = xₙ * (-ω N (n *ₙ (toℕ k)))
 --      ≡⟨ cong (foldr {m *ₙ n} _+_ (ℂfromℕ 0)) lemma₂ ⟩
 --        foldr {m *ₙ n} _+_ (ℂfromℕ 0)
 --            (λ{ (ι x) →
@@ -205,8 +439,7 @@ theorm₅ {n} {m} =
       --        (reshape (comm-eq (*-comm n m) ∙ flat ∙ eq ⊕ eq) arr (ι x))
       --        (posVec (ι x))
       --      })
-      ≡⟨⟩
-        ?
+
 
 theorm₄ : ∀ {s : Shape}
   → FFT ≡ (reshape _♯) ∘ DFT ∘ (reshape {s} _♭₂)

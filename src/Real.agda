@@ -30,6 +30,7 @@ record Real : Set₁ where
     double-negative : ∀ (x : ℝ) → - (- x) ≡ x
 
     *ᵣ-zeroᵣ : ∀ (x : ℝ) → x * (0 ᵣ)  ≡ 0 ᵣ
+    *ᵣ-zeroₗ : ∀ (x : ℝ) → (0 ᵣ) * x  ≡ 0 ᵣ
     /ᵣ-zeroₜ : ∀ (x : ℝ) → (0 ᵣ) / x  ≡ 0 ᵣ
     
     +ᵣ-comm : ∀ (x y   : ℝ) → (x + y) ≡ (y + x)
