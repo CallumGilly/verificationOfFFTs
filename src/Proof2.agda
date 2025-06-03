@@ -7,7 +7,7 @@ open import Data.Fin.Properties using (cast-is-id)
 open import Data.Product.Base using (_×_; proj₁; proj₂) renaming ( _,_ to ⟨_,_⟩)
 
 open import src.Matrix using (Ar; Shape; _⊗_; ι; Position; nestedMap; zipWith; nest; map; unnest; head₁; tail₁; zip; iterate; ι-cons; nil; foldr; length; cong-foldr)
-open import src.Reshape using (reshape; Reshape; flat; _♭; _♯; recursive-transpose; recursive-transposeᵣ; _∙_; rev; _⊕_; swap; eq; split; _⟨_⟩; eq+eq; _♭₂; comm-eq)
+open import src.Reshape using (reshape; Reshape; flat; _♭; _♯; recursive-transpose; recursive-transposeᵣ; _∙_; rev; _⊕_; swap; eq; split; _⟨_⟩; eq+eq; _♭₂; comm-eq; eq+eq-position-wrapper)
 open import src.Complex r using (ℂ; _*_; _+_; ℂfromℕ; -ω; +-identityʳ; ω-N-0; *-identityʳ; _+_i; *-assoc; *-zeroₗ)
 open ℂ using (real; imaginary)
 open import src.FFT r using (FFT; twiddles; position-sum; offset-n)
@@ -64,7 +64,7 @@ dft-fold-equiv : ∀
       _+_ 
       (ℂfromℕ 0) 
       (λ absPos → 
-        (arr (absPos ⟨ comm-eq (*-comm n m) ⟩ ⟨ flat ⟩ ⟨ eq ⊕ eq ⟩)) 
+        (arr (absPos ⟨ comm-eq (*-comm n m) ⟩ ⟨ flat ⟩)) 
         * 
         (-ω (m *ₙ n) ((posVec absPos) *ₙ (toℕ (combine y x))))
       )
@@ -76,17 +76,23 @@ dft-fold-equiv {n} {m} {arr} {x} {y} =
   ≡⟨⟩
     ((DFT (reshape (comm-eq (*-comm n m) ∙ flat ∙ eq ⊕ eq) arr))) ((ι y ⊗ ι x) ⟨ _♯ {ι m ⊗ ι n } ⟩ )
   ≡⟨⟩
-    foldr {m *ₙ n } _+_ (ℂfromℕ 0) (zipWith step (reshape (comm-eq (*-comm n m) ∙ flat ∙ eq ⊕ eq) arr) posVec)
+    ((DFT (reshape (comm-eq (*-comm n m) ∙ flat) (reshape (eq ⊕ eq) arr)))) ((ι y ⊗ ι x) ⟨ _♯ {ι m ⊗ ι n } ⟩ )
+  ≡⟨ cong
+      (λ f → ((DFT (reshape (comm-eq (*-comm n m) ∙ flat) (f)))) ((ι y ⊗ ι x) ⟨ _♯ {ι m ⊗ ι n } ⟩ ))
+      (eq+eq arr)
+   ⟩
+    ((DFT (reshape (comm-eq (*-comm n m) ∙ flat) arr))) ((ι y ⊗ ι x) ⟨ _♯ {ι m ⊗ ι n } ⟩ )
   ≡⟨⟩
-    foldr {m *ₙ n } _+_ (ℂfromℕ 0) (λ absPos → step (arr (absPos ⟨ comm-eq (*-comm n m) ⟩ ⟨ flat ⟩ ⟨ eq ⊕ eq ⟩)) (posVec absPos))
-  --step {N} {k} xₙ n = xₙ * (-ω N (n *ₙ (toℕ k)))
+    foldr {m *ₙ n } _+_ (ℂfromℕ 0) (zipWith step (reshape (comm-eq (*-comm n m) ∙ flat) arr) posVec)
+  ≡⟨⟩
+    foldr {m *ₙ n } _+_ (ℂfromℕ 0) (λ absPos → step (arr (absPos ⟨ comm-eq (*-comm n m) ⟩ ⟨ flat ⟩)) (posVec absPos))
   ≡⟨⟩
     foldr 
       {m *ₙ n } 
       _+_ 
       (ℂfromℕ 0) 
       (λ absPos → 
-        (arr (absPos ⟨ comm-eq (*-comm n m) ⟩ ⟨ flat ⟩ ⟨ eq ⊕ eq ⟩)) 
+        (arr (absPos ⟨ comm-eq (*-comm n m) ⟩ ⟨ flat ⟩)) 
         * 
         (-ω (m *ₙ n) ((posVec absPos) *ₙ (toℕ (combine y x))))
       )
@@ -122,7 +128,7 @@ theorm-on-folds : ∀
     _+_ 
     (ℂfromℕ 0) 
     (λ k → 
-      (arr (k ⟨ comm-eq (*-comm r₁ r₂) ⟩ ⟨ flat ⟩ ⟨ eq ⊕ eq ⟩)) 
+      (arr (k ⟨ comm-eq (*-comm r₁ r₂) ⟩ ⟨ flat ⟩)) 
       * 
       (-ω (r₂ *ₙ r₁) ((posVec k) *ₙ (toℕ (combine j₁ j₀))))
     )
@@ -181,7 +187,7 @@ theorm {n} {m} =
           _+_ 
           (ℂfromℕ 0) 
           (λ absPos → 
-            (arr (absPos ⟨ comm-eq (*-comm n m) ⟩ ⟨ flat ⟩ ⟨ eq ⊕ eq ⟩)) 
+            (arr (absPos ⟨ comm-eq (*-comm n m) ⟩ ⟨ flat ⟩)) 
             * 
             (-ω (m *ₙ n) ((posVec absPos) *ₙ (toℕ (combine y x))))
           )

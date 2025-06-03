@@ -80,6 +80,9 @@ rev-eq (comm-eq refl) i = refl
 eq+eq : ∀ {X : Set} {n m : ℕ} (arr : Ar (ι n ⊗ ι m) X) → reshape (eq ⊕ eq) arr ≡ arr
 eq+eq {X} {n} {m} arr = extensionality λ{(ι x ⊗ ι y) → refl }
 
+eq+eq-position-wrapper : ∀ {X : Set} {n m : ℕ} (arr : Ar (ι n ⊗ ι m) X) (pos : Position (ι n ⊗ ι m)) → arr (pos ⟨ eq ⊕ eq ⟩) ≡ arr pos
+eq+eq-position-wrapper arr (ι x ⊗ ι y) = refl
+
 rev-rev : (r : Reshape s p) → ∀ (i : Position p) → i ⟨ rev (rev r) ⟩ ≡ i ⟨ r ⟩
 rev-rev eq i = refl
 rev-rev (r ∙ r₁) i rewrite rev-rev r (i) | rev-rev r₁ (i ⟨ r ⟩) = refl
