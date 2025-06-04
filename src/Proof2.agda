@@ -28,6 +28,13 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym; cong₂; subst; cong-app)
 open Eq.≡-Reasoning
 
+private variable
+  r₁ r₂ : ℕ
+  arr : Ar (ι r₁ ⊗ ι r₂) ℂ
+  j₀ : Fin r₁
+  j₁ : Fin r₂
+  k₀ : Position (ι r₂)
+  k₁ : Position (ι r₁)
 
 dft-fold-equiv : ∀ 
   {n m : ℕ} 
@@ -77,6 +84,99 @@ dft-fold-equiv {n} {m} {arr} {x} {y} =
   ∎
 
 
+postulate
+  const*foldr : ∀ {n : ℕ} (ar : Ar (ι n) ℂ) (constant : ℂ) → (foldr _+_ (ℂfromℕ 0) (λ n → ar n)) * constant  ≡ foldr _+_ (ℂfromℕ 0) (λ n → constant * ar n)
+
+theorm-inside-Σk₀ : ∀
+  {r₁ r₂ : ℕ} 
+  {arr : Ar (ι r₁ ⊗ ι r₂) ℂ} 
+  {j₀ : Fin r₁} 
+  {j₁ : Fin r₂} 
+  (k₀ : Position (ι r₂))  
+  →
+        (
+           foldr 
+             _+_ 
+             (ℂfromℕ 0) 
+             (λ k₁ →  
+               (arr (k₁ ⊗ k₀))
+               * 
+               (-ω (r₁) ((posVec k₁) *ₙ (posVec (ι j₀))))
+             )
+           *
+             (-ω (r₁ *ₙ r₂) (position-sum ((ι j₀) ⊗ k₀)))
+        )
+      * 
+        (-ω r₂ ((posVec k₀) *ₙ (posVec (ι j₁))))
+    ≡
+      foldr 
+        _+_ 
+        (ℂfromℕ 0) 
+        (λ k₁ →  
+            (-ω r₂ ((posVec k₀) *ₙ (posVec (ι j₁))))
+          * 
+          (
+              (-ω (r₁ *ₙ r₂) (position-sum ((ι j₀) ⊗ k₀)))
+            *
+              (
+                (arr (k₁ ⊗ k₀))
+                * 
+                (-ω (r₁) ((posVec k₁) *ₙ (posVec (ι j₀))))
+              )
+          )
+        )
+theorm-inside-Σk₀ {r₁} {r₂} {arr} {j₀} {j₁} k₀ =
+  begin
+      (
+         foldr 
+           _+_ 
+           (ℂfromℕ 0) 
+           (λ k₁ →  
+             (arr (k₁ ⊗ k₀))
+             * 
+             (-ω (r₁) ((posVec k₁) *ₙ (posVec (ι j₀))))
+           )
+         *
+           (-ω (r₁ *ₙ r₂) (position-sum ((ι j₀) ⊗ k₀)))
+      )
+    * 
+      (-ω r₂ ((posVec k₀) *ₙ (posVec (ι j₁))))
+  ≡⟨ cong (_* (-ω r₂ ((posVec k₀) *ₙ (posVec (ι j₁))))) (const*foldr (λ k₁ → (arr (k₁ ⊗ k₀)) * (-ω (r₁) ((posVec k₁) *ₙ (posVec (ι j₀))))) (-ω (r₁ *ₙ r₂) (position-sum ((ι j₀) ⊗ k₀)))) ⟩
+    foldr 
+      _+_ 
+      (ℂfromℕ 0) 
+      (λ k₁ →  
+          (-ω (r₁ *ₙ r₂) (position-sum ((ι j₀) ⊗ k₀)))
+        *
+          (
+            (arr (k₁ ⊗ k₀))
+            * 
+            (-ω (r₁) ((posVec k₁) *ₙ (posVec (ι j₀))))
+          )
+      )
+    * 
+      (-ω r₂ ((posVec k₀) *ₙ (posVec (ι j₁))))
+  ≡⟨ const*foldr
+      (λ k₁ →  (-ω (r₁ *ₙ r₂) (position-sum ((ι j₀) ⊗ k₀))) * ((arr (k₁ ⊗ k₀)) * (-ω (r₁) ((posVec k₁) *ₙ (posVec (ι j₀))))))
+      (-ω r₂ ((posVec k₀) *ₙ (posVec (ι j₁))))
+   ⟩
+    foldr 
+      _+_ 
+      (ℂfromℕ 0) 
+      (λ k₁ →  
+          (-ω r₂ ((posVec k₀) *ₙ (posVec (ι j₁))))
+        * 
+        (
+            (-ω (r₁ *ₙ r₂) (position-sum ((ι j₀) ⊗ k₀)))
+          *
+            (
+              (arr (k₁ ⊗ k₀))
+              * 
+              (-ω (r₁) ((posVec k₁) *ₙ (posVec (ι j₀))))
+            )
+        )
+      )
+  ∎
 
 theorm-on-folds : ∀ 
   {r₁ r₂ : ℕ} 
@@ -113,9 +213,51 @@ theorm-on-folds : ∀
       * 
       (-ω (r₂ *ₙ r₁) ((posVec k) *ₙ (toℕ (combine j₁ j₀))))
     )
-theorm-on-folds {r₁} {r₂} {arr} {j₀} {j₁} = ?
-    
- 
+theorm-on-folds {r₁} {r₂} {arr} {j₀} {j₁} =
+  begin
+    foldr 
+      _+_
+      (ℂfromℕ 0)
+      (λ k₀ →  
+        (
+           foldr 
+             _+_ 
+             (ℂfromℕ 0) 
+             (λ k₁ →  
+               (arr (k₁ ⊗ k₀))
+               * 
+               (-ω (r₁) ((posVec k₁) *ₙ (posVec (ι j₀))))
+             )
+           *
+             (-ω (r₁ *ₙ r₂) (position-sum ((ι j₀) ⊗ k₀)))
+        )
+        * (-ω r₂ ((posVec k₀) *ₙ (posVec (ι j₁))))
+      )
+   ≡⟨ cong (λ f → foldr _+_ (ℂfromℕ 0) (λ k₀ → f k₀)) (? theorm-inside-Σk₀)  ⟩
+    foldr 
+      _+_
+      (ℂfromℕ 0)
+      (λ k₀ →  
+        foldr 
+          _+_ 
+          (ℂfromℕ 0) 
+          (λ k₁ →  
+              (-ω r₂ ((posVec k₀) *ₙ (posVec (ι j₁))))
+            * 
+            (
+                (-ω (r₁ *ₙ r₂) (position-sum ((ι j₀) ⊗ k₀)))
+              *
+                (
+                  (arr (k₁ ⊗ k₀))
+                  * 
+                  (-ω (r₁) ((posVec k₁) *ₙ (posVec (ι j₀))))
+                )
+            )
+          )
+      )
+   ≡⟨⟩
+    ?
+
 
 theorm : ∀ {r₁ r₂ : ℕ}
   → FFT ≡ (reshape _♯) ∘ DFT ∘ (reshape {ι r₁ ⊗ ι r₂} _♭₂)
