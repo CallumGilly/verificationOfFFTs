@@ -1,12 +1,13 @@
 open import src.Real using (Real)
+open import src.Complex.Base using (CplxBase)
 open import src.Matrix using (Ar; ι; foldr; zipWith; iterate)
 open import Data.Nat.Base using (ℕ; suc) renaming (_*_ to _*ₙ_)
 open import Data.Fin.Base using (toℕ; Fin)
 
 
 -- Definition of DFT using retricted matrices instead of Vectors
-module src.DFTMatrix (r : Real) where
-  open import src.Complex r using (ℂ; ℂfromℕ; _+_; _*_; -ω)
+module src.DFTMatrix (r : Real) (cplxBase : CplxBase r) where
+  open CplxBase cplxBase using (ℂ; ℂfromℕ; _+_; _*_; -ω)
   
   posVec : ∀ {N : ℕ} → Ar (ι N) ℕ
   posVec (ι x) = toℕ x
