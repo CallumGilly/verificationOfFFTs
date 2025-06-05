@@ -1,5 +1,23 @@
-open import src.Real using (Real)
-module src.Proof2 (r : Real) where
+open import src.Real.Base using (RealBase)
+open import src.Complex.Base using (CplxBase)
+
+open import src.Real.Properties using (RealProperties)
+open import src.Complex.Properties using (CplxProperties)
+
+module src.Proof2 
+  (realBase : RealBase)
+  (realProperties : RealProperties realBase)
+  (cplxBase : CplxBase realBase)
+  (cplxProperties : CplxProperties realBase cplxBase)
+  where
+
+open CplxBase cplxBase using (ℂ; _*_; _+_; ℂfromℕ; -ω)
+open CplxProperties cplxProperties using (+-identityʳ; ω-N-0; *-identityʳ; *-assoc; *-zeroˡ)
+--(;)
+open RealBase realBase using (ℝ; π; sin; cos; _ᵣ)
+  renaming (_+_ to _+ᵣ_; _-_ to _-ᵣ_; -_ to -ᵣ_; _/_ to _/ᵣ_; _*_ to _*ᵣ_)
+--open RealProperties realProperties using (double-negative; *ᵣ-zeroᵣ; +ᵣ-identityˡ; *ᵣ-identityʳ; /ᵣ-zeroₜ; +ᵣ-identityʳ; +ᵣ-assoc; +ᵣ-comm)
+
 open import Data.Nat.Base using (ℕ; suc; zero) renaming (_*_ to _*ₙ_; _+_ to _+ₙ_)
 open import Data.Nat.Properties using (*-comm; _≟_) renaming (*-zeroʳ to *ₙ-zeroʳ; *-zeroˡ to *ₙ-zeroˡ)
 open import Data.Fin.Base using (Fin; quotRem; toℕ; combine; remQuot; quotient; remainder; cast) renaming (zero to fzero; suc to fsuc)
@@ -8,14 +26,11 @@ open import Data.Product.Base using (_×_; proj₁; proj₂) renaming ( _,_ to �
 
 open import src.Matrix using (Ar; Shape; _⊗_; ι; Position; nestedMap; zipWith; nest; map; unnest; head₁; tail₁; zip; iterate; ι-cons; nil; foldr; length; cong-foldr)
 open import src.Reshape using (reshape; Reshape; flat; _♭; _♯; recursive-transpose; recursive-transposeᵣ; _∙_; rev; _⊕_; swap; eq; split; _⟨_⟩; eq+eq; _♭₂; comm-eq; eq+eq-position-wrapper)
-open import src.Complex r using (ℂ; _*_; _+_; ℂfromℕ; -ω; +-identityʳ; ω-N-0; *-identityʳ; _+_i; *-assoc; *-zeroₗ)
-open ℂ using (real; imaginary)
-open import src.FFT r using (FFT; twiddles; position-sum; offset-n)
-open import src.DFTMatrix r using (DFT; posVec; step)
+--open ℂ using (real; imaginary)
+open import src.FFT realBase cplxBase using (FFT; twiddles; position-sum; offset-n)
+open import src.DFTMatrix realBase cplxBase using (DFT; posVec; step)
 open import src.Extensionality using (extensionality)
 open import Relation.Nullary using (Dec; yes; no)
-open Real r using (ℝ; π; sin; cos; double-negative; _ᵣ; -ᵣ-identityʳ; *ᵣ-zeroᵣ; +ᵣ-identityˡ; *ᵣ-identityʳ; /ᵣ-zeroₜ; +ᵣ-identityʳ; +ᵣ-assoc; +ᵣ-comm)
-  renaming (_+_ to _+ᵣ_; _-_ to _-ᵣ_; -_ to -ᵣ_; _/_ to _/ᵣ_; _*_ to _*ᵣ_)
 
 open import Function.Base using (_$_; id; _∘_; flip; _∘₂_)
 
@@ -257,7 +272,6 @@ theorm-on-folds {r₁} {r₂} {arr} {j₀} {j₁} =
       )
    ≡⟨⟩
     ?
-
 
 theorm : ∀ {r₁ r₂ : ℕ}
   → FFT ≡ (reshape _♯) ∘ DFT ∘ (reshape {ι r₁ ⊗ ι r₂} _♭₂)
