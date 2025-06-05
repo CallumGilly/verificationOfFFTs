@@ -58,6 +58,5 @@ module src.Complex (real : Real) where
   
       ω-r₁x-r₁y : ∀ {r₁ x y : ℕ} → -ω (r₁ *ₙ x) (r₁ *ₙ y) ≡ -ω x y
 
-      -- 99.99% sure that the below is just straight up wrong... (But taken from old complex)
-      --ω-multi : ∀ {N₁ N₂ k₁ k₂ : ℕ} → (-ω (N₁ *ₙ N₂) (k₁ *ₙ k₂)) ≡ (-ω N₁ k₁) * (-ω N₂ k₂)
+      ω-N-k₀+k₁ : ∀ {N k₀ k₁ : ℕ} → -ω N (k₀ +ₙ k₁) ≡ (-ω N k₀) * (-ω N k₁)
 
