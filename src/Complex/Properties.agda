@@ -1,4 +1,4 @@
-open import src.Real using (Real)
+open import src.Real.Base using (RealBase)
 open import src.Complex.Base using (CplxBase)
 
 open import Data.Nat.Base using (ℕ) renaming (_*_ to _*ₙ_; _+_ to _+ₙ_)
@@ -9,8 +9,8 @@ open Eq.≡-Reasoning
 
 open import Level using (0ℓ) 
 
-module src.Complex.Properties (r : Real) (c : CplxBase r) where
-  open CplxBase c 
+module src.Complex.Properties (realBase : RealBase)  (cplxBase : CplxBase realBase) where
+  open CplxBase cplxBase
   open import Algebra.Structures {A = ℂ} _≡_
   open import Algebra.Definitions {A = ℂ} _≡_
   record CplxProperties : Set₁ where

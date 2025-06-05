@@ -1,12 +1,12 @@
 
-open import src.Real using (Real)
+open import src.Real.Base using (RealBase)
 
 open import Data.Nat.Base using (ℕ)
 
 
 
-module src.Complex.Base (r : Real) where
-  open Real r using (ℝ)
+module src.Complex.Base (realBase : RealBase) where
+  open RealBase realBase using (ℝ)
 
   record CplxBase : Set₁ where
     infix  8 -_

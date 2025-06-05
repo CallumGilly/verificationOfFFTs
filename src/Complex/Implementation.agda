@@ -1,4 +1,4 @@
-open import src.Real using (Real)
+open import src.Real.Base using (RealBase)
 open import src.Complex.Base using (CplxBase)
 open import src.Complex.Properties using (CplxProperties)
 
@@ -9,8 +9,8 @@ open Eq.≡-Reasoning
 open import Function using (_∘_)
 open import Data.Nat using (ℕ)
 
-module src.Complex.Implementation (real : Real) where
-  open Real real using (ℝ; _ᵣ; cos; sin; π) renaming (-_ to -ᵣ_; _+_ to _+ᵣ_; _-_ to _-ᵣ_; _*_ to _*ᵣ_; _/_ to _/ᵣ_)
+module src.Complex.Implementation (realBase : RealBase) where
+  open RealBase realBase using (ℝ; _ᵣ; cos; sin; π) renaming (-_ to -ᵣ_; _+_ to _+ᵣ_; _-_ to _-ᵣ_; _*_ to _*ᵣ_; _/_ to _/ᵣ_)
 
   module Base where
     private
@@ -57,7 +57,7 @@ module src.Complex.Implementation (real : Real) where
       -ω : ∀ (N : ℕ) (k : ℕ) → ℂ₁
       -ω N k = e^i (((-ᵣ (2 ᵣ)) *ᵣ π *ᵣ (k ᵣ)) /ᵣ (N ᵣ))
 
-    complexBaseImplementation : CplxBase real
+    complexBaseImplementation : CplxBase realBase
     complexBaseImplementation = record {
           ℂ = ℂ₁
 
@@ -124,7 +124,7 @@ module src.Complex.Implementation (real : Real) where
         ; *-comm = ?
         }
 
-    complexPropertiesImplementation : CplxProperties real complexBaseImplementation
+    complexPropertiesImplementation : CplxProperties realBase complexBaseImplementation
     complexPropertiesImplementation = record {
         +-identityʳ           = ?
       ; *-comm                = ?
