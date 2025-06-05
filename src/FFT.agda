@@ -1,15 +1,14 @@
-open import src.Real.Base using (RealBase)
-open import src.Complex.Base using (CplxBase)
+open import src.Real using (Real)
+open import src.Complex using (Cplx)
 
-module src.FFT (realBase : RealBase) (cplxBase : CplxBase realBase) where
-open CplxBase cplxBase using (ℂ; _*_; -ω; ℂfromℕ; e^i_)
-open import src.DFTMatrix realBase cplxBase using (DFT)
+module src.FFT (real : Real) (cplx : Cplx real) where
+open Cplx cplx using (ℂ; _*_; -ω; ℂfromℕ; e^i_)
+open import src.DFTMatrix real cplx using (DFT)
 
 open import Function using (_$_; _∘_)
 
 open import Data.Fin.Base using (Fin; toℕ; opposite) renaming (zero to fzero; suc to fsuc)
 open import Data.Nat.Base using (ℕ; suc) renaming (_+_ to _+ₙ_; _*_ to _*ₙ_)
-open RealBase realBase renaming (_*_ to _*ᵣ_; -_ to -ᵣ_; _/_ to _/ᵣ_)
 
 open import src.Matrix using (Ar; Shape; Position; ι; _⊗_; zipWith; nestedMap; length)
 open import src.Reshape using (Reshape; transpose; transposeᵣ; rev; recursive-transposeᵣ; recursive-transpose; reshape; flat; _∙_; swap; _⟨_⟩; _♯; _⊕_; eq)
