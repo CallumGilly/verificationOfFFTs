@@ -1,7 +1,6 @@
 {-# OPTIONS --guardedness #-}
 
-open import src.Real.Base using (RealBase)
-open import src.Real.Properties using (RealProperties)
+open import src.Real using (Real)
 
 import Agda.Builtin.Float as Float 
 
@@ -15,8 +14,8 @@ open Eq.≡-Reasoning
 
 module src.Real.Implementation where
   module Base where
-    realBaseImplementation : RealBase
-    realBaseImplementation = record
+    realImplementation : Real
+    realImplementation = record
      { ℝ               = Float
      ; 0ℝ              = (primNatToFloat 0)
      ; -1ℝ             = (primFloatNegate (primNatToFloat 1))
@@ -30,19 +29,24 @@ module src.Real.Implementation where
      ; -_              = primFloatNegate
      ; cos             = primFloatCos
      ; sin             = primFloatSin
+     ; double-negative = ?
+
+     ; *-comm      = ?
+     ; *-identityˡ = ?
+     ; *-identityʳ = ?
+     ; *-zeroˡ     = ?
+     ; *-zeroʳ     = ?
+     ; *ᵣ-assoc    = ?
+
+--   ;  /ᵣ-zeroₜ = ?
+
+     ; +-comm      = ?
+     ; +-identityˡ = ?
+     ; +-identityʳ = ?
+     ; +-assoc     = ?
      }
   open Base public
-  open RealBase realBaseImplementation
-
-  module Properties where
-    open import Algebra.Structures  {A = ℝ} _≡_
-    open import Algebra.Definitions {A = ℝ} _≡_
-
-    realPropertiesImplementation : RealProperties realBaseImplementation
-    realPropertiesImplementation = record {
-      }
-  open Properties public
-  open RealProperties realPropertiesImplementation
+  open Real realImplementation
 
 -- builtinReals : Real
 -- builtinReals = record

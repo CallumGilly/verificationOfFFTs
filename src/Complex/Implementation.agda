@@ -1,6 +1,5 @@
-open import src.Real.Base using (RealBase)
-open import src.Complex.Base using (CplxBase)
-open import src.Complex.Properties using (CplxProperties)
+open import src.Real using (Real)
+open import src.Complex using (Cplx)
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym)
@@ -9,8 +8,8 @@ open Eq.≡-Reasoning
 open import Function using (_∘_)
 open import Data.Nat using (ℕ)
 
-module src.Complex.Implementation (realBase : RealBase) where
-  open RealBase realBase using (ℝ; _ᵣ; cos; sin; π) renaming (-_ to -ᵣ_; _+_ to _+ᵣ_; _-_ to _-ᵣ_; _*_ to _*ᵣ_; _/_ to _/ᵣ_)
+module src.Complex.Implementation (real : Real) where
+  open Real real using (ℝ; _ᵣ; cos; sin; π) renaming (-_ to -ᵣ_; _+_ to _+ᵣ_; _-_ to _-ᵣ_; _*_ to _*ᵣ_; _/_ to _/ᵣ_)
 
   module Base where
     private
@@ -51,19 +50,12 @@ module src.Complex.Implementation (realBase : RealBase) where
       ℂ-conjugate : ℂ₁ → ℂ₁
       ℂ-conjugate (re + im i) = re + (-ᵣ im) i
 
-      +ω : ∀ (N : ℕ) (k : ℕ) → ℂ₁
-      +ω N k = e^i (((2 ᵣ) *ᵣ π *ᵣ (k ᵣ)) /ᵣ (N ᵣ))
-
       -ω : ∀ (N : ℕ) (k : ℕ) → ℂ₁
       -ω N k = e^i (((-ᵣ (2 ᵣ)) *ᵣ π *ᵣ (k ᵣ)) /ᵣ (N ᵣ))
 
-    complexBaseImplementation : CplxBase realBase
+    complexBaseImplementation : Cplx real
     complexBaseImplementation = record {
           ℂ = ℂ₁
-
-        ; 0ℂ  = 0ℂ
-        ; -1ℂ = -1ℂ
-        ; 1ℂ  = 1ℂ
 
         ; _+_ = _+_
         ; _-_ = _-_
@@ -76,76 +68,14 @@ module src.Complex.Implementation (realBase : RealBase) where
         ; e^i_ = e^i_
         ; ℂ-conjugate = ℂ-conjugate
 
-        ; +ω = +ω
         ; -ω = -ω
+
+        ; +-*-isCommutativeRing = ?
+        ; ω-N-0                 = ?
+        ; ω-N-mN                = ?
+        ; ω-r₁x-r₁y             = ?
       }
   open Base public
-  open CplxBase complexBaseImplementation
-
-  module Properties where
-    open import Algebra.Structures {A = ℂ} _≡_
-    open import Algebra.Definitions {A = ℂ} _≡_
-
-    private
-      *-cong           : Congruent₂ _*_
-      *-cong           = ?
-      *-assoc          : Associative _*_
-      *-assoc          = ?
-      *-identity       : Identity 1ℂ _*_
-      *-identity       = ?
-      distrib          : _*_ DistributesOver _+_
-      distrib          = ?
-
-      isGroup : IsGroup _+_ 0ℂ (-_)
-      isGroup = record {
-          isMonoid = ?
-        ; inverse  = ?
-        ; ⁻¹-cong  = ?
-        }
-
-      +-isAbelianGroup : IsAbelianGroup _+_ 0ℂ (-_)
-      +-isAbelianGroup = record {
-          isGroup = ?
-        ; comm = ?
-        }
-      
-      isRing : IsRing _+_ _*_ -_ 0ℂ 1ℂ
-      isRing = record {
-          +-isAbelianGroup = +-isAbelianGroup
-        ; *-cong           = *-cong
-        ; *-assoc          = *-assoc
-        ; *-identity       = *-identity
-        ; distrib          = distrib
-        }
-      
-      +-*-isCommutativeRing : IsCommutativeRing _+_ _*_ -_ 0ℂ 1ℂ
-      +-*-isCommutativeRing = record {
-          isRing = isRing
-        ; *-comm = ?
-        }
-
-    complexPropertiesImplementation : CplxProperties realBase complexBaseImplementation
-    complexPropertiesImplementation = record {
-        +-identityʳ           = ?
-      ; *-comm                = ?
-      ; *-identityʳ           = ?
-      ; *-zeroˡ               = ?
-      ; *-cong                = *-cong
-      ; *-assoc               = *-assoc
-      ; *-identity            = *-identity
-      ; distrib               = distrib
-      ; +-isAbelianGroup      = +-isAbelianGroup
-      ; isRing                = isRing
-      ; +-*-isCommutativeRing = +-*-isCommutativeRing
-      ; ω-N-0                 = ?
-      ; ω-N-mN                = ?
-      ; ω-r₁x-r₁y             = ?
-      }
-  open Properties public
-
-    
-
-
-
+  open Cplx complexBaseImplementation
 
 

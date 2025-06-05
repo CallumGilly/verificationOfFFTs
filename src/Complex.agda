@@ -29,8 +29,8 @@ module src.Complex (real : Real) where
       e^i_ : ℝ → ℂ
       ℂ-conjugate : ℂ → ℂ
 
-      +ω : ∀ (N : ℕ) (k : ℕ) → ℂ
-      -ω : ∀ (N : ℕ) (k : ℕ) → ℂ
+      --+ω : ∀ (N : ℕ) (k : ℕ) → ℂ
+      -ω : (N : ℕ) → (k : ℕ) → ℂ
 
 
     0ℂ  : ℂ
