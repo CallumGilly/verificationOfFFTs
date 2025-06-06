@@ -74,6 +74,7 @@ module src.Complex.Implementation (real : Real) where
         ; ω-N-0                 = ?
         ; ω-N-mN                = ?
         ; ω-r₁x-r₁y             = ?
+        ; ω-N-k₀+k₁             = ?
       }
   open Base public
   open Cplx complexBaseImplementation

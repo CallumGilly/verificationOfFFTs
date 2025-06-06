@@ -6,6 +6,8 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym)
 open Eq.≡-Reasoning
 
+open import Data.Product.Base using (_×_; proj₁; proj₂) renaming (_,_ to ⟨_,_⟩)
+
 module src.Complex (real : Real) where
   open Real real using (ℝ; 0ℝ; 1ℝ; -1ℝ)
 
@@ -59,4 +61,12 @@ module src.Complex (real : Real) where
       ω-r₁x-r₁y : ∀ {r₁ x y : ℕ} → -ω (r₁ *ₙ x) (r₁ *ₙ y) ≡ -ω x y
 
       ω-N-k₀+k₁ : ∀ {N k₀ k₁ : ℕ} → -ω N (k₀ +ₙ k₁) ≡ (-ω N k₀) * (-ω N k₁)
+
+    {- How to use properties from IsCommutativeRing:
+    open IsCommutativeRing +-*-isCommutativeRing using (zero)
+
+    my-zeroˡ : LeftZero 0ℂ  _*_
+    my-zeroˡ x rewrite (proj₁ zero) x = refl
+    -}
+
 
