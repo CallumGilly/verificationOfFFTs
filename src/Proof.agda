@@ -11,7 +11,7 @@ open Eq.≡-Reasoning
 module src.Proof (real : Real) (cplx : Cplx real) where
 
   open Real real
-    renaming (_+_ to _+ᵣ_; _-_ to _-ᵣ_; -_ to -ᵣ_; _/_ to _/ᵣ_; _*_ to _*ᵣ_)
+    renaming (_+_ to _+ᵣ_; _-_ to _-ᵣ_; -_ to -ᵣ_; _/_ to _/ᵣ_; _*_ to _*ᵣ_; *-comm to *ᵣ-comm)
   open Cplx cplx using (ℂ; _+_; fromℝ; _*_; -ω; 0ℂ; +-*-isCommutativeRing)
 
   open AlgebraStructures  {A = ℂ} _≡_
@@ -63,21 +63,76 @@ module src.Proof (real : Real) (cplx : Cplx real) where
   *-distribˡ-sum {zero } acc x ys = Eq.refl
   *-distribˡ-sum {suc N} acc x ys =
     begin
-      x * foldr _+_ (head₁ ys + acc) (tail₁ ys)
-    ≡⟨ *-distribˡ-foldr-acc acc x ys ⟩
-      foldr _+_ (x * (head₁ ys + acc)) (map (x *_) (tail₁ ys))
-    ≡⟨ cong (λ f → foldr _+_ f (map (x *_) (tail₁ ys))) (distribˡ x (head₁ ys) acc) ⟩
-      foldr _+_ (head₁ (map (x *_) ys) + x * acc) (map (x *_) (tail₁ ys))
-    ≡⟨ cong (foldr _+_ (head₁ (map (x *_) ys) + x * acc)) (map-tail₁ (x *_) ys) ⟩
+      x * foldr _+_ (head₁ ys + acc) (tail₁ ys)                           ≡⟨ *-distribˡ-foldr-acc acc x ys ⟩
+      foldr _+_ (x * (head₁ ys + acc))            (map (x *_) (tail₁ ys)) ≡⟨ cong (λ f → foldr _+_ f (map (x *_) (tail₁ ys))) (distribˡ x (head₁ ys) acc) ⟩
+      foldr _+_ (head₁ (map (x *_) ys) + x * acc) (map (x *_) (tail₁ ys)) ≡⟨ cong (foldr _+_ (head₁ (map (x *_) ys) + x * acc)) (map-tail₁ (x *_) ys) ⟩
       foldr _+_ (head₁ (map (x *_) ys) + x * acc) (tail₁ (map (x *_) ys))
     ∎
+
+  *-comm-on-ys : ∀ {N : ℕ} (ys : Ar (ι N) ℂ) (x : ℂ) → (λ i → x * ys i) ≡ (λ i → ys i * x)
+  *-comm-on-ys ys x = extensionality (λ i → *-comm x (ys i))
+
+  *-distribʳ-sum  : ∀ {N : ℕ} (acc : ℂ) (x : ℂ) (ys : Ar (ι N) ℂ) → (foldr _+_ acc ys) * x ≡ foldr _+_ (acc * x) (map (_* x) ys)
+  *-distribʳ-sum acc x ys rewrite 
+      *-comm (foldr _+_ acc ys) x
+    | *-distribˡ-sum acc x ys 
+    | *-comm x acc 
+    | *-comm-on-ys ys x = Eq.refl
   
+  *-distribʳ-sum-application : ∀ 
+    {r₁ r₂ : ℕ}
+    (arr : Ar ((ι r₁) ⊗ (ι r₂)) ℂ) 
+    (j₀  : Fin r₁)
+    (j₁  : Fin r₂)
+    (k₀  : Position (ι r₂))
+    → 
+       foldr _+_ 0ℂ (λ k₁ → 
+         arr (k₁ ⊗ k₀) * -ω r₁ (posVec k₁ *ₙ toℕ j₁)
+       ) 
+         * -ω (r₁ *ₙ r₂) (toℕ j₁ *ₙ (offset-n k₀)) 
+         * -ω r₂ (posVec k₀ *ₙ toℕ j₀)
+       ≡ 
+       foldr _+_ 0ℂ (λ k₁ → 
+         arr (k₁ ⊗ k₀) * -ω r₁ (posVec k₁ *ₙ toℕ j₁)
+         * -ω (r₁ *ₙ r₂) (toℕ j₁ *ₙ (offset-n k₀)) 
+         * -ω r₂ (posVec k₀ *ₙ toℕ j₀)
+       ) 
+  *-distribʳ-sum-application {r₁} {r₂} arr j₀ j₁ k₀ rewrite
+      *-distribʳ-sum 0ℂ 
+        (-ω (r₁ *ₙ r₂) (toℕ j₁ *ₙ (offset-n k₀))) 
+        (λ k₁ → arr (k₁ ⊗ k₀) * -ω r₁ (posVec k₁ *ₙ toℕ j₁)) 
+    | zeroˡ 
+       (-ω (r₁ *ₙ r₂) (toℕ j₁ *ₙ (offset-n k₀))) 
+    | *-distribʳ-sum 0ℂ 
+        (-ω r₂ (posVec k₀ *ₙ toℕ j₀)) 
+        (λ i → arr (i ⊗ k₀) * -ω r₁ (posVec i *ₙ toℕ j₁) * -ω (r₁ *ₙ r₂) (toℕ j₁ *ₙ (offset-n k₀))) 
+    | zeroˡ 
+      (-ω r₂ (posVec k₀ *ₙ toℕ j₀)) 
+    = Eq.refl
+
   theorm : ∀ {r₁ r₂ : ℕ}
     → FFT ≡ (reshape _♯) ∘ DFT ∘ (reshape {ι r₁ ⊗ ι r₂} _♭₂)
   theorm {r₁} {r₂} = -- I feel like half the point of the idea of using solvers was to remove these extensionalitys, todo: Ask AS
     extensionality (λ arr → 
       extensionality λ{ ((ι j₀) ⊗ (ι j₁)) →
-        ?
+        begin
+          foldr _+_ 0ℂ
+            (λ k₀ →
+               foldr _+_ 0ℂ (λ k₁ → arr (k₁ ⊗ k₀) * -ω r₁ (posVec k₁ *ₙ toℕ j₁))
+               * -ω (r₁ *ₙ r₂) (toℕ j₁ *ₙ (offset-n k₀))
+               * -ω r₂ (posVec k₀ *ₙ toℕ j₀))
+        ≡⟨ ? ⟩
+          foldr _+_ 0ℂ
+            (λ k₀ →
+               foldr _+_ 0ℂ (λ k₁ → 
+                   arr (k₁ ⊗ k₀) 
+                 * -ω r₁         (posVec k₁ *ₙ toℕ j₁)
+                 * -ω (r₁ *ₙ r₂) (toℕ j₁ *ₙ (offset-n k₀)) 
+                 * -ω r₂         (posVec k₀ *ₙ toℕ j₀)
+               )
+            ) 
+        ≡⟨⟩
+          ?
       }
     )
 
