@@ -11,16 +11,16 @@ open Eq.≡-Reasoning
 module src.Proof (real : Real) (cplx : Cplx real) where
 
   open Real real
-    renaming (_+_ to _+ᵣ_; _-_ to _-ᵣ_; -_ to -ᵣ_; _/_ to _/ᵣ_; _*_ to _*ᵣ_; *-comm to *ᵣ-comm)
-  open Cplx cplx using (ℂ; _+_; fromℝ; _*_; -ω; 0ℂ; +-*-isCommutativeRing)
+    renaming (_+_ to _+ᵣ_; _-_ to _-ᵣ_; -_ to -ᵣ_; _/_ to _/ᵣ_; _*_ to _*ᵣ_; *-comm to *ᵣ-comm; *-identityʳ to *ᵣ-identityʳ)
+  open Cplx cplx using (ℂ; _+_; fromℝ; _*_; -ω; 0ℂ; +-*-isCommutativeRing; ω-r₁x-r₁y; ω-N-mN; ω-N-k₀+k₁)
 
   open AlgebraStructures  {A = ℂ} _≡_
   open AlgebraDefinitions {A = ℂ} _≡_
 
-  open IsCommutativeRing +-*-isCommutativeRing
+  open IsCommutativeRing +-*-isCommutativeRing using (distribˡ; *-comm; zeroˡ; *-identityʳ; *-assoc)
 
-  open import Data.Nat.Base using (ℕ; zero; suc) renaming (_*_ to _*ₙ_)
-  open import Data.Nat.Properties renaming (*-comm to *ₙ-comm)
+  open import Data.Nat.Base using (ℕ; zero; suc) renaming (_*_ to _*ₙ_; _+_ to _+ₙ_)
+  open import Data.Nat.Properties renaming (*-comm to *ₙ-comm; *-identityʳ to *ₙ-identityʳ; *-assoc to *ₙ-assoc)
   open import Data.Fin.Base using (Fin; quotRem; toℕ; combine; remQuot; quotient; remainder; cast) renaming (zero to fzero; suc to fsuc)
   open import Data.Fin.Properties using (cast-is-id)
 
@@ -31,7 +31,7 @@ module src.Proof (real : Real) (cplx : Cplx real) where
 
   open import Function.Base using (_$_; id; _∘_; flip; _∘₂_)
 
-  open import src.FFT real cplx using (FFT; twiddles; position-sum; offset-n)
+  open import src.FFT real cplx using (FFT; twiddles; position-sum; offset-n; offset)
   open import src.DFTMatrix real cplx using (DFT; posVec; step)
 
   open import src.Extensionality using (extensionality)
@@ -79,6 +79,10 @@ module src.Proof (real : Real) (cplx : Cplx real) where
     | *-comm x acc 
     | *-comm-on-ys ys x = Eq.refl
   
+  offset-ιn≡posVec : ∀ {N : ℕ} (p : Position (ι N)) → offset-n p ≡ posVec p
+  offset-ιn≡posVec (ι x) with offset (ι x) 
+  ... | ι y = Eq.refl
+
   *-distribʳ-sum-application : ∀ 
     {r₁ r₂ : ℕ}
     (arr : Ar ((ι r₁) ⊗ (ι r₂)) ℂ) 
@@ -86,52 +90,148 @@ module src.Proof (real : Real) (cplx : Cplx real) where
     (j₁  : Fin r₂)
     (k₀  : Position (ι r₂))
     → 
-       foldr _+_ 0ℂ (λ k₁ → 
-         arr (k₁ ⊗ k₀) * -ω r₁ (posVec k₁ *ₙ toℕ j₁)
-       ) 
-         * -ω (r₁ *ₙ r₂) (toℕ j₁ *ₙ (offset-n k₀)) 
-         * -ω r₂ (posVec k₀ *ₙ toℕ j₀)
-       ≡ 
-       foldr _+_ 0ℂ (λ k₁ → 
-         arr (k₁ ⊗ k₀) * -ω r₁ (posVec k₁ *ₙ toℕ j₁)
-         * -ω (r₁ *ₙ r₂) (toℕ j₁ *ₙ (offset-n k₀)) 
-         * -ω r₂ (posVec k₀ *ₙ toℕ j₀)
-       ) 
-  *-distribʳ-sum-application {r₁} {r₂} arr j₀ j₁ k₀ rewrite
-      *-distribʳ-sum 0ℂ 
-        (-ω (r₁ *ₙ r₂) (toℕ j₁ *ₙ (offset-n k₀))) 
-        (λ k₁ → arr (k₁ ⊗ k₀) * -ω r₁ (posVec k₁ *ₙ toℕ j₁)) 
-    | zeroˡ 
-       (-ω (r₁ *ₙ r₂) (toℕ j₁ *ₙ (offset-n k₀))) 
-    | *-distribʳ-sum 0ℂ 
-        (-ω r₂ (posVec k₀ *ₙ toℕ j₀)) 
-        (λ i → arr (i ⊗ k₀) * -ω r₁ (posVec i *ₙ toℕ j₁) * -ω (r₁ *ₙ r₂) (toℕ j₁ *ₙ (offset-n k₀))) 
-    | zeroˡ 
-      (-ω r₂ (posVec k₀ *ₙ toℕ j₀)) 
+       foldr _+_ 0ℂ 
+         (λ k₁ → 
+              arr (k₁ ⊗ k₀) 
+            * -ω r₁ (posVec k₁ *ₙ toℕ j₀)
+         )
+       * -ω (r₁ *ₙ r₂) (toℕ j₀ *ₙ (offset-n k₀))
+       * -ω r₂ (posVec k₀ *ₙ toℕ j₁)
+       ≡
+       foldr _+_ 0ℂ 
+         (λ k₁ → 
+              arr (k₁ ⊗ k₀) 
+            * -ω r₁ (posVec k₁ *ₙ toℕ j₀)
+            * -ω (r₁ *ₙ r₂) (toℕ j₀ *ₙ (posVec k₀))
+            * -ω r₂ (posVec k₀ *ₙ toℕ j₁)
+         )
+  *-distribʳ-sum-application {r₁} {r₂} arr j₀ j₁ k₀ rewrite 
+        offset-ιn≡posVec k₀
+      | *-distribʳ-sum 0ℂ 
+        (-ω (r₁ *ₙ r₂) (toℕ j₀ *ₙ (posVec k₀))) 
+        (λ k₁ → arr (k₁ ⊗ k₀) * -ω r₁ (posVec k₁ *ₙ toℕ j₀)) 
+      | zeroˡ 
+         (-ω (r₁ *ₙ r₂) (toℕ j₀ *ₙ (posVec k₀))) 
+      | *-distribʳ-sum 0ℂ 
+          (-ω r₂ (posVec k₀ *ₙ toℕ j₁)) 
+          (λ k₁ → arr (k₁ ⊗ k₀) * -ω r₁ (posVec k₁ *ₙ toℕ j₀) * -ω (r₁ *ₙ r₂) (toℕ j₀ *ₙ (posVec k₀))) 
+      | zeroˡ 
+        (-ω r₂ (posVec k₀ *ₙ toℕ j₁)) 
     = Eq.refl
+
+  lambda-cong : ∀ {s : Shape} {X : Set} (ar₁ ar₂ : Ar s X) → (∀ (p : Position s) → ar₁ p ≡ ar₂ p) → ar₁ ≡ ar₂
+  lambda-cong ar₁ ar₂ prf = extensionality (λ p → prf p)
+
+  ω-power : ∀
+    {r₁ r₂ : ℕ}
+    (j₀  : Fin r₁)
+    (j₁  : Fin r₂)
+    (k₀  : Position (ι r₂))
+    (k₁  : Position (ι r₁))
+    → (r₂ *ₙ (posVec k₁ *ₙ toℕ j₀) +ₙ toℕ j₀ *ₙ posVec k₀ +ₙ r₁ *ₙ (posVec k₀ *ₙ toℕ j₁) +ₙ r₂ *ₙ (r₁ *ₙ (toℕ j₁ *ₙ posVec k₁)))
+      ≡ 
+      ((toℕ j₁ *ₙ r₁ +ₙ toℕ j₀) *ₙ (posVec k₁ *ₙ r₂ +ₙ posVec k₀))
+  ω-power j₀ j₁ k₀ k₁ = ? -- Good use for solve?
+
+  inner-rearange : ∀
+    {r₁ r₂ : ℕ}
+    (arr : Ar ((ι r₁) ⊗ (ι r₂)) ℂ) 
+    (j₀  : Fin r₁)
+    (j₁  : Fin r₂)
+    (k₀  : Position (ι r₂))
+    (k₁  : Position (ι r₁))
+    → 
+         arr (k₁ ⊗ k₀) 
+       * -ω r₁ (posVec k₁ *ₙ toℕ j₀)
+       * -ω (r₁ *ₙ r₂) (toℕ j₀ *ₙ (posVec k₀))
+       * -ω r₂ (posVec k₀ *ₙ toℕ j₁)
+      ≡
+       arr (k₁ ⊗ k₀) * 
+        -ω (r₁ *ₙ r₂) 
+           (((toℕ j₁ *ₙ r₁) +ₙ toℕ j₀) *ₙ ((posVec k₁ *ₙ r₂) +ₙ posVec k₀))
+  inner-rearange {r₁} {r₂} arr j₀ j₁ k₀ k₁ rewrite
+      Eq.sym (ω-r₁x-r₁y {r₂} {r₁} {posVec k₁ *ₙ toℕ j₀})
+    | Eq.sym (ω-r₁x-r₁y {r₁} {r₂} {posVec k₀ *ₙ toℕ j₁})
+    | Eq.sym (*-identityʳ (arr (k₁ ⊗ k₀) * -ω (r₂ *ₙ r₁) (r₂ *ₙ (posVec k₁ *ₙ toℕ j₀)) * -ω (r₁ *ₙ r₂) (toℕ j₀ *ₙ posVec k₀) * -ω (r₁ *ₙ r₂) (r₁ *ₙ (posVec k₀ *ₙ toℕ j₁)))) 
+    | Eq.sym (ω-N-mN {r₁} {toℕ j₁ *ₙ posVec k₁})
+    | Eq.sym (ω-r₁x-r₁y {r₂} {r₁} {r₁ *ₙ (toℕ j₁ *ₙ posVec k₁)})
+    | *ₙ-comm r₂ r₁
+    | *-assoc (arr (k₁ ⊗ k₀)) (-ω (r₁ *ₙ r₂) (r₂ *ₙ (posVec k₁ *ₙ toℕ j₀))) (-ω (r₁ *ₙ r₂) (toℕ j₀ *ₙ posVec k₀))
+    | Eq.sym (ω-N-k₀+k₁ {r₁ *ₙ r₂} {r₂ *ₙ (posVec k₁ *ₙ toℕ j₀)} {toℕ j₀ *ₙ posVec k₀})
+    | *-assoc (arr (k₁ ⊗ k₀)) (-ω (r₁ *ₙ r₂) (r₂ *ₙ (posVec k₁ *ₙ toℕ j₀) +ₙ toℕ j₀ *ₙ posVec k₀)) (-ω (r₁ *ₙ r₂) (r₁ *ₙ (posVec k₀ *ₙ toℕ j₁)))
+    | Eq.sym (ω-N-k₀+k₁ {r₁ *ₙ r₂} {r₂ *ₙ (posVec k₁ *ₙ toℕ j₀) +ₙ toℕ j₀ *ₙ posVec k₀} {r₁ *ₙ (posVec k₀ *ₙ toℕ j₁)})
+    | *-assoc (arr (k₁ ⊗ k₀)) (-ω (r₁ *ₙ r₂) (r₂ *ₙ (posVec k₁ *ₙ toℕ j₀) +ₙ toℕ j₀ *ₙ posVec k₀ +ₙ r₁ *ₙ (posVec k₀ *ₙ toℕ j₁))) (-ω (r₁ *ₙ r₂) (r₂ *ₙ (r₁ *ₙ (toℕ j₁ *ₙ posVec k₁))))
+    | Eq.sym (ω-N-k₀+k₁ {r₁ *ₙ r₂} {r₂ *ₙ (posVec k₁ *ₙ toℕ j₀) +ₙ toℕ j₀ *ₙ posVec k₀ +ₙ r₁ *ₙ (posVec k₀ *ₙ toℕ j₁)} {r₂ *ₙ (r₁ *ₙ (toℕ j₁ *ₙ posVec k₁))})
+    = ?
+      -- ω-N-k₀+k₁ : ∀ {N k₀ k₁ : ℕ} → -ω N (k₀ +ₙ k₁) ≡ (-ω N k₀) * (-ω N k₁)
+      --ω-N-mN : ∀ {N m : ℕ} → -ω N (N *ₙ m) ≡ 1ℂ
+
+      -- ω-r₁x-r₁y : ∀ {r₁ x y : ℕ} → -ω (r₁ *ₙ x) (r₁ *ₙ y) ≡ -ω x y
+      -- ω-r₁x-r₁y : ∀ {r₁ x y : ℕ} → -ω (r₁ *ₙ x) (r₁ *ₙ y) ≡ -ω x y
 
   theorm : ∀ {r₁ r₂ : ℕ}
     → FFT ≡ (reshape _♯) ∘ DFT ∘ (reshape {ι r₁ ⊗ ι r₂} _♭₂)
   theorm {r₁} {r₂} = -- I feel like half the point of the idea of using solvers was to remove these extensionalitys, todo: Ask AS
     extensionality (λ arr → 
-      extensionality λ{ ((ι j₀) ⊗ (ι j₁)) →
+      extensionality λ{ ((ι j₁) ⊗ (ι j₀)) →
         begin
-          foldr _+_ 0ℂ
+          foldr _+_ 0ℂ 
             (λ k₀ →
-               foldr _+_ 0ℂ (λ k₁ → arr (k₁ ⊗ k₀) * -ω r₁ (posVec k₁ *ₙ toℕ j₁))
-               * -ω (r₁ *ₙ r₂) (toℕ j₁ *ₙ (offset-n k₀))
-               * -ω r₂ (posVec k₀ *ₙ toℕ j₀))
-        ≡⟨ ? ⟩
-          foldr _+_ 0ℂ
-            (λ k₀ →
-               foldr _+_ 0ℂ (λ k₁ → 
-                   arr (k₁ ⊗ k₀) 
-                 * -ω r₁         (posVec k₁ *ₙ toℕ j₁)
-                 * -ω (r₁ *ₙ r₂) (toℕ j₁ *ₙ (offset-n k₀)) 
-                 * -ω r₂         (posVec k₀ *ₙ toℕ j₀)
-               )
+               foldr _+_ 0ℂ 
+                 (λ k₁ → 
+                      arr (k₁ ⊗ k₀) 
+                    * -ω r₁ (posVec k₁ *ₙ toℕ j₀)
+                 )
+               * -ω (r₁ *ₙ r₂) (toℕ j₀ *ₙ (offset-n k₀))
+               * -ω r₂ (posVec k₀ *ₙ toℕ j₁)
+            )
+        ≡⟨ cong 
+            (foldr _+_ 0ℂ) 
+            (lambda-cong 
+              (λ k₀ →
+                 foldr _+_ 0ℂ 
+                   (λ k₁ → 
+                        arr (k₁ ⊗ k₀) 
+                      * -ω r₁ (posVec k₁ *ₙ toℕ j₀)
+                   )
+                 * -ω (r₁ *ₙ r₂) (toℕ j₀ *ₙ (offset-n k₀))
+                 * -ω r₂ (posVec k₀ *ₙ toℕ j₁)
+              )
+              (λ k₀ →
+                 foldr _+_ 0ℂ 
+                   (λ k₁ → 
+                        arr (k₁ ⊗ k₀) 
+                      * -ω r₁ (posVec k₁ *ₙ toℕ j₀)
+                      * -ω (r₁ *ₙ r₂) (toℕ j₀ *ₙ (posVec k₀))
+                      * -ω r₂ (posVec k₀ *ₙ toℕ j₁)
+                   )
+              )
+              (*-distribʳ-sum-application arr j₀ j₁)
             ) 
+         ⟩
+          foldr _+_ 0ℂ 
+            (λ k₀ →
+               foldr _+_ 0ℂ 
+                 (λ k₁ → 
+                      arr (k₁ ⊗ k₀) 
+                    * -ω r₁ (posVec k₁ *ₙ toℕ j₀)
+                    * -ω (r₁ *ₙ r₂) (toℕ j₀ *ₙ (posVec k₀))
+                    * -ω r₂ (posVec k₀ *ₙ toℕ j₁)
+                 )
+            )
         ≡⟨⟩
+          foldr _+_ 0ℂ 
+            (λ k₀ →
+               foldr _+_ 0ℂ 
+                 (λ k₁ → 
+                      arr (k₁ ⊗ k₀) 
+                    * -ω r₁ (posVec k₁ *ₙ toℕ j₀)
+                    * -ω (r₁ *ₙ r₂) (toℕ j₀ *ₙ (posVec k₀))
+                    * -ω r₂ (posVec k₀ *ₙ toℕ j₁)
+                 )
+            )
+        ≡⟨⟩
+          ?
           ?
       }
     )
