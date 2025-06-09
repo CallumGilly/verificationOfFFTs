@@ -1,4 +1,4 @@
-module src.MatrixShow where
+module src.Matrix.Show where
 
 open import src.Matrix using (Ar; Shape; Position; ι; _⊗_; foldr; nest; map; head₁; tail₁)
 open import Agda.Builtin.String using (String; primStringAppend; primShowString)

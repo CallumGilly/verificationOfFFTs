@@ -1,4 +1,4 @@
-module src.MatrixToStdVector where
+module src.Matrix.ToStdVector where
 
 open import Data.Nat
 open import Data.Fin.Base using (Fin) renaming (zero to fzero; suc to fsuc)

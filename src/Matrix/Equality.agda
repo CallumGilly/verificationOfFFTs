@@ -1,4 +1,4 @@
-module src.MatrixEquality where
+module src.Matrix.Equality where
 
 open import src.Matrix using (Shape; Position; Ar)
 
