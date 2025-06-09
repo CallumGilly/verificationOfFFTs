@@ -21,6 +21,8 @@ module src.Proof (real : Real) (cplx : Cplx real) where
 
   open import Data.Nat.Base using (ℕ; zero; suc) renaming (_*_ to _*ₙ_; _+_ to _+ₙ_)
   open import Data.Nat.Properties renaming (*-comm to *ₙ-comm; *-identityʳ to *ₙ-identityʳ; *-assoc to *ₙ-assoc)
+  open import Data.Nat.Solver using (module +-*-Solver)
+  open +-*-Solver using (solve; _:*_; _:+_; con; _:=_)
   open import Data.Fin.Base using (Fin; quotRem; toℕ; combine; remQuot; quotient; remainder; cast) renaming (zero to fzero; suc to fsuc)
   open import Data.Fin.Properties using (cast-is-id)
 
@@ -119,8 +121,8 @@ module src.Proof (real : Real) (cplx : Cplx real) where
         (-ω r₂ (posVec k₀ *ₙ toℕ j₁)) 
     = Eq.refl
 
-  lambda-cong : ∀ {s : Shape} {X : Set} (ar₁ ar₂ : Ar s X) → (∀ (p : Position s) → ar₁ p ≡ ar₂ p) → ar₁ ≡ ar₂
-  lambda-cong ar₁ ar₂ prf = extensionality (λ p → prf p)
+  lambda-cong : ∀ {s : Shape} {X : Set} {ar₁ : Ar s X} {ar₂ : Ar s X} → (∀ (p : Position s) → ar₁ p ≡ ar₂ p) → ar₁ ≡ ar₂
+  lambda-cong {ar₁} {ar₂} prf = extensionality (λ p → prf p)
 
   ω-power : ∀
     {r₁ r₂ : ℕ}
@@ -131,7 +133,18 @@ module src.Proof (real : Real) (cplx : Cplx real) where
     → (r₂ *ₙ (posVec k₁ *ₙ toℕ j₀) +ₙ toℕ j₀ *ₙ posVec k₀ +ₙ r₁ *ₙ (posVec k₀ *ₙ toℕ j₁) +ₙ r₂ *ₙ (r₁ *ₙ (toℕ j₁ *ₙ posVec k₁)))
       ≡ 
       ((toℕ j₁ *ₙ r₁ +ₙ toℕ j₀) *ₙ (posVec k₁ *ₙ r₂ +ₙ posVec k₀))
-  ω-power j₀ j₁ k₀ k₁ = ? -- Good use for solve?
+  ω-power {r₁} {r₂} j₀ j₁ k₀ k₁ = solvable-form r₁ r₂ (toℕ j₀) (toℕ j₁) (posVec k₀) (posVec k₁)
+    where
+      solvable-form : ∀ (r₁ℕ r₂ℕ j₀ℕ j₁ℕ k₀ℕ k₁ℕ : ℕ) → 
+        (r₂ℕ *ₙ (k₁ℕ *ₙ j₀ℕ) +ₙ j₀ℕ *ₙ k₀ℕ +ₙ r₁ℕ *ₙ (k₀ℕ *ₙ j₁ℕ) +ₙ r₂ℕ *ₙ (r₁ℕ *ₙ (j₁ℕ *ₙ k₁ℕ)))
+        ≡ 
+        ((j₁ℕ *ₙ r₁ℕ +ₙ j₀ℕ) *ₙ (k₁ℕ *ₙ r₂ℕ +ₙ k₀ℕ))
+      solvable-form = solve 6 (λ r₁ℕ r₂ℕ j₀ℕ j₁ℕ k₀ℕ k₁ℕ → 
+        (r₂ℕ :* (k₁ℕ :* j₀ℕ) :+ j₀ℕ :* k₀ℕ :+ r₁ℕ :* (k₀ℕ :* j₁ℕ) :+ r₂ℕ :* (r₁ℕ :* (j₁ℕ :* k₁ℕ)))
+        := 
+        ((j₁ℕ :* r₁ℕ :+ j₀ℕ) :* (k₁ℕ :* r₂ℕ :+ k₀ℕ))
+        ) refl
+
 
   inner-rearange : ∀
     {r₁ r₂ : ℕ}
@@ -147,7 +160,7 @@ module src.Proof (real : Real) (cplx : Cplx real) where
        * -ω r₂ (posVec k₀ *ₙ toℕ j₁)
       ≡
        arr (k₁ ⊗ k₀) * 
-        -ω (r₁ *ₙ r₂) 
+        -ω (r₂ *ₙ r₁) 
            (((toℕ j₁ *ₙ r₁) +ₙ toℕ j₀) *ₙ ((posVec k₁ *ₙ r₂) +ₙ posVec k₀))
   inner-rearange {r₁} {r₂} arr j₀ j₁ k₀ k₁ rewrite
       Eq.sym (ω-r₁x-r₁y {r₂} {r₁} {posVec k₁ *ₙ toℕ j₀})
@@ -162,12 +175,9 @@ module src.Proof (real : Real) (cplx : Cplx real) where
     | Eq.sym (ω-N-k₀+k₁ {r₁ *ₙ r₂} {r₂ *ₙ (posVec k₁ *ₙ toℕ j₀) +ₙ toℕ j₀ *ₙ posVec k₀} {r₁ *ₙ (posVec k₀ *ₙ toℕ j₁)})
     | *-assoc (arr (k₁ ⊗ k₀)) (-ω (r₁ *ₙ r₂) (r₂ *ₙ (posVec k₁ *ₙ toℕ j₀) +ₙ toℕ j₀ *ₙ posVec k₀ +ₙ r₁ *ₙ (posVec k₀ *ₙ toℕ j₁))) (-ω (r₁ *ₙ r₂) (r₂ *ₙ (r₁ *ₙ (toℕ j₁ *ₙ posVec k₁))))
     | Eq.sym (ω-N-k₀+k₁ {r₁ *ₙ r₂} {r₂ *ₙ (posVec k₁ *ₙ toℕ j₀) +ₙ toℕ j₀ *ₙ posVec k₀ +ₙ r₁ *ₙ (posVec k₀ *ₙ toℕ j₁)} {r₂ *ₙ (r₁ *ₙ (toℕ j₁ *ₙ posVec k₁))})
-    = ?
-      -- ω-N-k₀+k₁ : ∀ {N k₀ k₁ : ℕ} → -ω N (k₀ +ₙ k₁) ≡ (-ω N k₀) * (-ω N k₁)
-      --ω-N-mN : ∀ {N m : ℕ} → -ω N (N *ₙ m) ≡ 1ℂ
-
-      -- ω-r₁x-r₁y : ∀ {r₁ x y : ℕ} → -ω (r₁ *ₙ x) (r₁ *ₙ y) ≡ -ω x y
-      -- ω-r₁x-r₁y : ∀ {r₁ x y : ℕ} → -ω (r₁ *ₙ x) (r₁ *ₙ y) ≡ -ω x y
+    | ω-power j₀ j₁ k₀ k₁
+    | *ₙ-comm r₁ r₂
+    = refl
 
   theorm : ∀ {r₁ r₂ : ℕ}
     → FFT ≡ (reshape _♯) ∘ DFT ∘ (reshape {ι r₁ ⊗ ι r₂} _♭₂)
@@ -187,27 +197,7 @@ module src.Proof (real : Real) (cplx : Cplx real) where
             )
         ≡⟨ cong 
             (foldr _+_ 0ℂ) 
-            (lambda-cong 
-              (λ k₀ →
-                 foldr _+_ 0ℂ 
-                   (λ k₁ → 
-                        arr (k₁ ⊗ k₀) 
-                      * -ω r₁ (posVec k₁ *ₙ toℕ j₀)
-                   )
-                 * -ω (r₁ *ₙ r₂) (toℕ j₀ *ₙ (offset-n k₀))
-                 * -ω r₂ (posVec k₀ *ₙ toℕ j₁)
-              )
-              (λ k₀ →
-                 foldr _+_ 0ℂ 
-                   (λ k₁ → 
-                        arr (k₁ ⊗ k₀) 
-                      * -ω r₁ (posVec k₁ *ₙ toℕ j₀)
-                      * -ω (r₁ *ₙ r₂) (toℕ j₀ *ₙ (posVec k₀))
-                      * -ω r₂ (posVec k₀ *ₙ toℕ j₁)
-                   )
-              )
-              (*-distribʳ-sum-application arr j₀ j₁)
-            ) 
+            (lambda-cong (*-distribʳ-sum-application arr j₀ j₁)) 
          ⟩
           foldr _+_ 0ℂ 
             (λ k₀ →
@@ -219,19 +209,22 @@ module src.Proof (real : Real) (cplx : Cplx real) where
                     * -ω r₂ (posVec k₀ *ₙ toℕ j₁)
                  )
             )
-        ≡⟨⟩
+        ≡⟨ cong 
+            (foldr _+_ 0ℂ) 
+            (lambda-cong (λ k₀ → cong 
+                (foldr _+_ 0ℂ) 
+                (lambda-cong (λ k₁ → inner-rearange arr j₀ j₁ k₀ k₁)) 
+            )) 
+         ⟩
           foldr _+_ 0ℂ 
             (λ k₀ →
                foldr _+_ 0ℂ 
                  (λ k₁ → 
-                      arr (k₁ ⊗ k₀) 
-                    * -ω r₁ (posVec k₁ *ₙ toℕ j₀)
-                    * -ω (r₁ *ₙ r₂) (toℕ j₀ *ₙ (posVec k₀))
-                    * -ω r₂ (posVec k₀ *ₙ toℕ j₁)
+                     arr (k₁ ⊗ k₀) 
+                   * -ω (r₂ *ₙ r₁) (((toℕ j₁ *ₙ r₁) +ₙ toℕ j₀) *ₙ ((posVec k₁ *ₙ r₂) +ₙ posVec k₀))
                  )
             )
         ≡⟨⟩
-          ?
           ?
       }
     )
