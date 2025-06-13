@@ -7,7 +7,7 @@ open import Data.Fin.Base using (toℕ; Fin)
 
 -- Definition of DFT using retricted matrices instead of Vectors
 module src.DFTMatrix (real : Real) (cplx : Cplx real) where
-  open Cplx cplx using (ℂ; ℂfromℕ; _+_; _*_; -ω; 0ℂ)
+  open Cplx cplx using (ℂ; _+_; _*_; -ω; 0ℂ)
   
   posVec : ∀ {N : ℕ} → Ar (ι N) ℕ
   posVec (ι x) = toℕ x

@@ -10,17 +10,18 @@ open Eq.≡-Reasoning
 
 module src.Proof (real : Real) (cplx : Cplx real) where
 
-  open Real real
+  open Real real using (_ᵣ)
     renaming (_+_ to _+ᵣ_; _-_ to _-ᵣ_; -_ to -ᵣ_; _/_ to _/ᵣ_; _*_ to _*ᵣ_; *-comm to *ᵣ-comm; *-identityʳ to *ᵣ-identityʳ)
   open Cplx cplx using (ℂ; _+_; fromℝ; _*_; -ω; 0ℂ; +-*-isCommutativeRing; ω-r₁x-r₁y; ω-N-mN; ω-N-k₀+k₁)
 
   open AlgebraStructures  {A = ℂ} _≡_
   open AlgebraDefinitions {A = ℂ} _≡_
 
-  open IsCommutativeRing +-*-isCommutativeRing using (distribˡ; *-comm; zeroˡ; *-identityʳ; *-assoc)
+  open IsCommutativeRing +-*-isCommutativeRing using (distribˡ; *-comm; zeroˡ; *-identityʳ; *-assoc; +-identityʳ)
 
   open import Data.Nat.Base using (ℕ; zero; suc) renaming (_*_ to _*ₙ_; _+_ to _+ₙ_)
-  open import Data.Nat.Properties renaming (*-comm to *ₙ-comm; *-identityʳ to *ₙ-identityʳ; *-assoc to *ₙ-assoc)
+  open import Data.Nat.Properties using () renaming (*-comm to *ₙ-comm; *-identityʳ to *ₙ-identityʳ; *-assoc to *ₙ-assoc; 
+    +-identityʳ to +ₙ-identityʳ; *-zeroˡ to *ₙ-zeroˡ)
   open import Data.Nat.Solver using (module +-*-Solver)
   open +-*-Solver using (solve; _:*_; _:+_; con; _:=_)
   open import Data.Fin.Base using (Fin; quotRem; toℕ; combine; remQuot; quotient; remainder; cast) renaming (zero to fzero; suc to fsuc)
@@ -28,7 +29,8 @@ module src.Proof (real : Real) (cplx : Cplx real) where
 
   open import Data.Product.Base using (_×_; proj₁; proj₂) renaming ( _,_ to ⟨_,_⟩)
 
-  open import src.Matrix using (Ar; Shape; _⊗_; ι; Position; nestedMap; zipWith; nest; map; unnest; head₁; tail₁; zip; iterate; ι-cons; nil; foldr; length; cong-foldr; sum)
+  open import src.Matrix using (Ar; Shape; _⊗_; ι; Position; nestedMap; zipWith; nest; map; unnest; head₁; tail₁; zip; iterate; ι-cons; nil; foldr; length; cong-foldr)
+  open import src.Matrix.Equality using (_≅_; foldr-cong; eq+eq≅arr)
   open import src.Reshape using (reshape; Reshape; flat; _♭; _♯; recursive-transpose; recursive-transposeᵣ; _∙_; rev; _⊕_; swap; eq; split; _⟨_⟩; eq+eq; _♭₂; comm-eq; eq+eq-position-wrapper)
 
   open import Function.Base using (_$_; id; _∘_; flip; _∘₂_)
@@ -36,7 +38,6 @@ module src.Proof (real : Real) (cplx : Cplx real) where
   open import src.FFT real cplx using (FFT; twiddles; position-sum; offset-n; offset)
   open import src.DFTMatrix real cplx using (DFT; posVec; step)
 
-  open import src.Extensionality using (extensionality)
   -- open import Algebra.Solver.Ring
 
   private 
@@ -44,21 +45,22 @@ module src.Proof (real : Real) (cplx : Cplx real) where
       N r₁ r₂ : ℕ -- Such that N ≡ r₁ * r₂
 
   
-  -- I really don't like having to use extensionality here
   double-nested-tail-equiv : ∀ {N : ℕ} (x : ℂ) (ys : Ar (ι (suc (suc N))) ℂ) → 
-    (λ i → x * tail₁ (tail₁ ys) i) ≡ (tail₁ (λ i → x * tail₁ ys i))
-  double-nested-tail-equiv {N} x ys = extensionality λ{(ι i) → Eq.refl }
+    (λ i → x * tail₁ (tail₁ ys) i) ≅ (tail₁ (λ i → x * tail₁ ys i))
+  double-nested-tail-equiv {N} x ys (ι pos) = refl
 
-  map-tail₁ : ∀ {N : ℕ} (f : ℂ → ℂ) (ys : Ar (ι (suc N)) ℂ) → (map f (tail₁ ys)) ≡ (tail₁ (map f ys))
-  map-tail₁ {N} x ys = extensionality λ{(ι i) → Eq.refl }
+  -- foldr-cong : ∀ {X Y : Set} {n : ℕ} → (f : X → Y → Y) → (acc : Y) → {xs ys : Ar (ι n) X} → xs ≅ ys → foldr f acc xs ≡ foldr f acc ys
+
+  map-tail₁ : ∀ {N : ℕ} (f : ℂ → ℂ) (ys : Ar (ι (suc N)) ℂ) → (map f (tail₁ ys)) ≅ (tail₁ (map f ys))
+  map-tail₁ {N} x ys (ι pos) = refl
 
   *-distribˡ-foldr-acc : ∀ {N : ℕ} (acc : ℂ) (x : ℂ) (ys : Ar (ι (suc N)) ℂ) → x * foldr _+_ (head₁ ys + acc) (tail₁ ys) ≡ foldr _+_ (x * (head₁ ys + acc)) (map (x *_) (tail₁ ys))
   *-distribˡ-foldr-acc {zero } acc x ys = Eq.refl
   *-distribˡ-foldr-acc {suc N} acc x ys rewrite 
       *-distribˡ-foldr-acc (head₁ ys + acc) x (tail₁ ys) 
     | distribˡ x (ys (ι (fsuc fzero))) (ys (ι fzero) + acc) 
-    | double-nested-tail-equiv x ys
-    = Eq.refl
+    | foldr-cong _+_ (x * ys (ι (fsuc fzero)) + x * (ys (ι fzero) + acc)) (double-nested-tail-equiv x ys)
+    = refl
 
   -- Attempt to implement https://agda.github.io/agda-stdlib/master/Algebra.Properties.Semiring.Sum.html 's *-distribˡ-sum
   *-distribˡ-sum : ∀ {N : ℕ} (acc : ℂ) (x : ℂ) (ys : Ar (ι N) ℂ) → x * (foldr _+_ acc ys) ≡ foldr _+_ (x * acc) (map (x *_) ys)
@@ -67,19 +69,21 @@ module src.Proof (real : Real) (cplx : Cplx real) where
     begin
       x * foldr _+_ (head₁ ys + acc) (tail₁ ys)                           ≡⟨ *-distribˡ-foldr-acc acc x ys ⟩
       foldr _+_ (x * (head₁ ys + acc))            (map (x *_) (tail₁ ys)) ≡⟨ cong (λ f → foldr _+_ f (map (x *_) (tail₁ ys))) (distribˡ x (head₁ ys) acc) ⟩
-      foldr _+_ (head₁ (map (x *_) ys) + x * acc) (map (x *_) (tail₁ ys)) ≡⟨ cong (foldr _+_ (head₁ (map (x *_) ys) + x * acc)) (map-tail₁ (x *_) ys) ⟩
+      foldr _+_ (head₁ (map (x *_) ys) + x * acc) (map (x *_) (tail₁ ys)) ≡⟨ foldr-cong _+_ (head₁ (map (x *_) ys) + x * acc) (map-tail₁ (x *_) ys) ⟩
       foldr _+_ (head₁ (map (x *_) ys) + x * acc) (tail₁ (map (x *_) ys))
     ∎
 
-  *-comm-on-ys : ∀ {N : ℕ} (ys : Ar (ι N) ℂ) (x : ℂ) → (λ i → x * ys i) ≡ (λ i → ys i * x)
-  *-comm-on-ys ys x = extensionality (λ i → *-comm x (ys i))
+  *-comm-on-ys : ∀ {N : ℕ} (ys : Ar (ι N) ℂ) (x : ℂ) → (λ i → x * ys i) ≅ (λ i → ys i * x)
+  *-comm-on-ys ys x (ι pos) = *-comm x (ys (ι pos))
 
   *-distribʳ-sum  : ∀ {N : ℕ} (acc : ℂ) (x : ℂ) (ys : Ar (ι N) ℂ) → (foldr _+_ acc ys) * x ≡ foldr _+_ (acc * x) (map (_* x) ys)
   *-distribʳ-sum acc x ys rewrite 
       *-comm (foldr _+_ acc ys) x
     | *-distribˡ-sum acc x ys 
     | *-comm x acc 
-    | *-comm-on-ys ys x = Eq.refl
+    | foldr-cong _+_ (acc * x) (*-comm-on-ys ys x)
+    = refl
+
   
   offset-ιn≡posVec : ∀ {N : ℕ} (p : Position (ι N)) → offset-n p ≡ posVec p
   offset-ιn≡posVec (ι x) with offset (ι x) 
@@ -120,9 +124,6 @@ module src.Proof (real : Real) (cplx : Cplx real) where
       | zeroˡ 
         (-ω r₂ (posVec k₀ *ₙ toℕ j₁)) 
     = Eq.refl
-
-  lambda-cong : ∀ {s : Shape} {X : Set} {ar₁ : Ar s X} {ar₂ : Ar s X} → (∀ (p : Position s) → ar₁ p ≡ ar₂ p) → ar₁ ≡ ar₂
-  lambda-cong {ar₁} {ar₂} prf = extensionality (λ p → prf p)
 
   ω-power : ∀
     {r₁ r₂ : ℕ}
@@ -179,11 +180,59 @@ module src.Proof (real : Real) (cplx : Cplx real) where
     | *ₙ-comm r₁ r₂
     = refl
 
-  theorm : ∀ {r₁ r₂ : ℕ}
-    → FFT ≡ (reshape _♯) ∘ DFT ∘ (reshape {ι r₁ ⊗ ι r₂} _♭₂)
-  theorm {r₁} {r₂} = -- I feel like half the point of the idea of using solvers was to remove these extensionalitys, todo: Ask AS
-    extensionality (λ arr → 
-      extensionality λ{ ((ι j₁) ⊗ (ι j₀)) →
+         --  foldr _+_ 0ℂ 
+         --    (λ k₀ →
+         --       foldr _+_ 0ℂ 
+         --         (λ k₁ → 
+         --             arr (k₁ ⊗ k₀) 
+         --           * -ω (r₂ *ₙ r₁) (((toℕ j₁ *ₙ r₁) +ₙ toℕ j₀) *ₙ ((posVec k₁ *ₙ r₂) +ₙ posVec k₀))
+         --         )
+         --    )
+
+         --  foldr _+_ 0ℂ
+         --    (λ k →
+         --         arr (k ⟨ comm-eq (*ₙ-comm r₁ r₂) ⟩ ⟨ flat ⟩)
+         --       * -ω (r₂ *ₙ r₁) (posVec k *ₙ toℕ (combine j₁ j₀))
+         --    )
+         -- k₀   : Position (ι r₂)
+         -- k₁   : Position (ι r₁)
+  pos-combine : (k₀ : Position (ι r₂)) → (k₁ : Position (ι r₁)) → Position (ι r₂ ⊗ ι r₁)
+  pos-combine (ι k₀) (ι k₁) = ι k₀ ⊗ ι k₁
+
+  split-foldr : ∀ 
+    {r₁ r₂ : ℕ} 
+    → (xs : Ar (ι r₁ ⊗ ι r₂) ℂ)
+    → foldr {r₂ *ₙ r₁} _+_ 0ℂ (λ k → xs (k ⟨ comm-eq (*ₙ-comm r₁ r₂) ⟩ ⟨ flat ⟩)) ≡ foldr {r₂} _+_ 0ℂ (λ k₀ → foldr {r₁} _+_ 0ℂ (λ k₁ → xs (k₁ ⊗ k₀)))
+  split-foldr {r₁} {r₂} xs = ?
+
+  --combine-foldr : ∀
+  --  {r₁ r₂ : ℕ} 
+  --  → (f : Position (ι r₂) → Position (ι r₁) → ℂ)
+  --  → foldr {r₂} _+_ 0ℂ (λ k₀ → foldr {r₁} _+_ 0ℂ (λ k₁ → f k₀ k₁)) ≡ foldr {r₂ *ₙ r₁} _+_ 0ℂ (λ k → (λ{ (k₀ ⊗ k₁) → ?}) k ⟨ ? ⟩)
+
+
+
+    -- {xs : Ar (ι r₁ ⊗ ι r₂) ℂ } 
+    -- → (r : Reshape (ι r₁ ⊗ ι r₂) (ι (r₂ *ₙ r₁) ))
+    -- → foldr {r₂ *ₙ r₁} _+_ 0ℂ (λ k → reshape (comm-eq (*ₙ-comm r₁ r₂) ∙ flat) xs k ) ≡ foldr {r₂} _+_ 0ℂ (λ k₀ → foldr {r₁} _+_ 0ℂ (λ k₁ → (xs (k₁ ⊗ k₀))))
+   
+   --tmp : ∀ {N : ℕ} → posVec k ≡ (posVec k₁ *ₙ r₂) + posVec k₀
+   
+  innerVal : ∀ {r₁ r₂ : ℕ} (arr : Ar (ι r₁ ⊗ ι r₂) ℂ) (j : Position (ι r₂ ⊗ ι r₁)) (k₀ : Position (ι r₂)) (k₁ : Position (ι r₁)) → ℂ
+  innerVal {r₁} {r₂} arr (ι j₁ ⊗ ι j₀) k₀ k₁ = arr (k₁ ⊗ k₀) * -ω (r₂ *ₙ r₁) (((toℕ j₁ *ₙ r₁) +ₙ toℕ j₀) *ₙ ((posVec k₁ *ₙ r₂) +ₙ posVec k₀))
+
+  mergeFoldr : ∀ {r₁ r₂ : ℕ} → (f : Position (ι r₂) → Position (ι r₁) → ℂ) → 
+    foldr {r₂ *ₙ r₁} _+_ 0ℂ (λ k → (unnest f) (k ⟨ flat ⟩ ) )
+    ≡
+    foldr {r₂} _+_ 0ℂ (λ k₀ → foldr {r₁} _+_ 0ℂ (λ k₁ → f k₀ k₁)) 
+  mergeFoldr {r₁} {zero} f = refl
+  mergeFoldr {zero} {suc r₂} f rewrite mergeFoldr {zero} {r₂} (tail₁ f) = ?
+  mergeFoldr {suc r₁} {suc r₂} f = ?
+
+
+  theorm : ∀ {r₁ r₂ : ℕ} → ∀ (arr : Ar ((ι r₁) ⊗ (ι r₂)) ℂ)
+    → FFT arr ≅ ((reshape _♯) ∘ DFT ∘ (reshape {ι r₁ ⊗ ι r₂} _♭₂)) arr
+  theorm {r₁} {r₂} arr ((ι j₁) ⊗ (ι j₀)) =
         begin
           foldr _+_ 0ℂ 
             (λ k₀ →
@@ -195,10 +244,7 @@ module src.Proof (real : Real) (cplx : Cplx real) where
                * -ω (r₁ *ₙ r₂) (toℕ j₀ *ₙ (offset-n k₀))
                * -ω r₂ (posVec k₀ *ₙ toℕ j₁)
             )
-        ≡⟨ cong 
-            (foldr _+_ 0ℂ) 
-            (lambda-cong (*-distribʳ-sum-application arr j₀ j₁)) 
-         ⟩
+        ≡⟨ foldr-cong _+_ 0ℂ (*-distribʳ-sum-application arr j₀ j₁) ⟩
           foldr _+_ 0ℂ 
             (λ k₀ →
                foldr _+_ 0ℂ 
@@ -209,13 +255,7 @@ module src.Proof (real : Real) (cplx : Cplx real) where
                     * -ω r₂ (posVec k₀ *ₙ toℕ j₁)
                  )
             )
-        ≡⟨ cong 
-            (foldr _+_ 0ℂ) 
-            (lambda-cong (λ k₀ → cong 
-                (foldr _+_ 0ℂ) 
-                (lambda-cong (λ k₁ → inner-rearange arr j₀ j₁ k₀ k₁)) 
-            )) 
-         ⟩
+        ≡⟨ foldr-cong _+_ 0ℂ (λ k₀ → foldr-cong _+_ 0ℂ (inner-rearange arr j₀ j₁ k₀)) ⟩
           foldr _+_ 0ℂ 
             (λ k₀ →
                foldr _+_ 0ℂ 
@@ -225,8 +265,36 @@ module src.Proof (real : Real) (cplx : Cplx real) where
                  )
             )
         ≡⟨⟩
+          foldr _+_ 0ℂ 
+            (λ k₀ →
+               foldr _+_ 0ℂ 
+                 (λ k₁ → innerVal arr (ι j₁ ⊗ ι j₀) k₀ k₁)
+            )
+        ≡⟨ ? ⟩
           ?
-      }
-    )
+        ≡⟨⟩
+          foldr _+_ 0ℂ
+            (λ k →
+                 arr (k ⟨ comm-eq (*ₙ-comm r₁ r₂) ⟩ ⟨ flat ⟩)
+               * -ω (r₂ *ₙ r₁) (posVec k *ₙ toℕ (combine j₁ j₀))
+            )
+        ≡⟨⟩
+          foldr _+_ 0ℂ
+            (λ k →
+                 arr (k ⟨ comm-eq (*ₙ-comm r₁ r₂) ⟩ ⟨ flat ⟩)
+               * -ω (r₂ *ₙ r₁) (posVec k *ₙ toℕ (combine j₁ j₀))
+            )
+        ≡⟨⟩
+          (DFT (reshape (comm-eq (*ₙ-comm r₁ r₂) ∙ flat) arr)) (ι (combine j₁ j₀))
+        ≡⟨⟩
+          (DFT (reshape (comm-eq (*ₙ-comm r₁ r₂) ∙ flat) arr)) ((ι j₁ ⊗ ι j₀) ⟨ split ⟩)
+        ≡⟨⟩
+          (reshape _♯ (DFT (reshape (comm-eq (*ₙ-comm r₁ r₂) ∙ flat) arr))) (ι j₁ ⊗ ι j₀)
+        ≡⟨ cong (λ f → (reshape _♯ (DFT ((reshape (comm-eq (*ₙ-comm r₁ r₂) ∙ flat) (f))))) (ι j₁ ⊗ ι j₀)) (sym (eq+eq arr)) ⟩
+          (reshape {ι (length (ι r₂ ⊗ ι r₁))} {ι r₂ ⊗ ι r₁} _♯ (DFT ((reshape (comm-eq (*ₙ-comm r₁ r₂) ∙ flat) (reshape (eq ⊕ eq) arr))))) (ι j₁ ⊗ ι j₀)
+        ≡⟨⟩
+          (reshape _♯ (DFT ((reshape (comm-eq (*ₙ-comm r₁ r₂) ∙ flat ∙ eq ⊕ eq)) arr))) (ι j₁ ⊗ ι j₀)
+        ∎
 
 
+-- eq+eq≅arr : ∀ {n m : ℕ} {X : Set} {xs : Ar (ι n ⊗ ι m) X} → reshape (eq ⊕ eq) xs ≅ xs

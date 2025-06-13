@@ -2,7 +2,7 @@ open import src.Real using (Real)
 open import src.Complex using (Cplx)
 
 module src.FFT (real : Real) (cplx : Cplx real) where
-open Cplx cplx using (ℂ; _*_; -ω; ℂfromℕ; e^i_)
+open Cplx cplx using (ℂ; _*_; -ω; e^i_)
 open import src.DFTMatrix real cplx using (DFT)
 
 open import Function using (_$_; _∘_)
