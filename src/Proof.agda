@@ -257,17 +257,11 @@ module src.Proof (real : Real) (cplx : Cplx real) where
     {j₀ : Fin r₁}
     {j₁ : Fin r₂}
     → toℕ j₁ *ₙ r₁ +ₙ toℕ j₀ ≡ toℕ (combine j₁ j₀)
-  j₁*r₁+j₀-is-combine {r₁} {suc r₂} {j₀} {fzero} rewrite toℕ-↑ˡ j₀ (r₂ *ₙ r₁) = refl
-  j₁*r₁+j₀-is-combine {r₁} {.(suc _)} {j₀} {fsuc j₁} rewrite
-      toℕ-↑ʳ r₁ (combine j₁ j₀) 
-    | toℕ-combine j₁ j₀
-    = solve 3 
-        (λ r₁ℕ j₁ℕ j₀ℕ → 
-          r₁ℕ :+ j₁ℕ :* r₁ℕ :+ j₀ℕ 
-          := 
-          r₁ℕ :+ (r₁ℕ :* j₁ℕ :+ j₀ℕ)
-        ) 
-      refl r₁ (toℕ j₁) (toℕ j₀)
+  j₁*r₁+j₀-is-combine {r₁} {r₂} {j₀} {j₁} rewrite
+      toℕ-combine j₁ j₀ = solve 3 
+        (λ r₁ℕ j₁ℕ j₀ℕ → j₁ℕ :* r₁ℕ :+ j₀ℕ := r₁ℕ :* j₁ℕ :+ j₀ℕ) 
+        refl 
+        r₁ (toℕ j₁) (toℕ j₀)
   
   sub-proof₁ : ∀
     {r₁ r₂ : ℕ}
