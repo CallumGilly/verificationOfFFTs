@@ -21,13 +21,13 @@ module src.Proof (real : Real) (cplx : Cplx real) where
 
   open import Data.Nat.Base using (ℕ; zero; suc) renaming (_*_ to _*ₙ_; _+_ to _+ₙ_)
   open import Data.Nat.Properties using () renaming (*-comm to *ₙ-comm; *-identityʳ to *ₙ-identityʳ; *-assoc to *ₙ-assoc; 
-    +-identityʳ to +ₙ-identityʳ; *-zeroˡ to *ₙ-zeroˡ)
+    +-identityʳ to +ₙ-identityʳ; *-zeroˡ to *ₙ-zeroˡ; *-zeroʳ to *ₙ-zeroʳ)
   open import Data.Nat.Solver using (module +-*-Solver)
   open +-*-Solver using (solve; _:*_; _:+_; con; _:=_)
-  open import Data.Fin.Base using (Fin; quotRem; toℕ; combine; remQuot; quotient; remainder; cast; fromℕ<; _↑ˡ_; _↑ʳ_) renaming (zero to fzero; suc to fsuc)
-  open import Data.Fin.Properties using (cast-is-id; remQuot-combine; splitAt-↑ˡ; splitAt-↑ʳ; toℕ-↑ˡ; toℕ-↑ʳ; toℕ-combine)
+  open import Data.Fin.Base using (Fin; quotRem; toℕ; combine; remQuot; quotient; remainder; cast; fromℕ<; _↑ˡ_; _↑ʳ_; splitAt) renaming (zero to fzero; suc to fsuc)
+  open import Data.Fin.Properties using (cast-is-id; remQuot-combine; splitAt-↑ˡ; splitAt-↑ʳ; toℕ-↑ˡ; toℕ-↑ʳ; toℕ-combine; combine-remQuot; combine-surjective)
 
-  open import Data.Product.Base using (_×_; proj₁; proj₂; map₁; map₂) renaming ( _,_ to ⟨_,_⟩)
+  open import Data.Product.Base using (∃; ∃₂; _×_; proj₁; proj₂; map₁; map₂; uncurry) renaming ( _,_ to ⟨_,_⟩)
 
   open import src.Matrix using (Ar; Shape; _⊗_; ι; Position; nestedMap; zipWith; nest; map; unnest; head₁; tail₁; zip; iterate; ι-cons; nil; foldr; length; cong-foldr)
   open import src.Matrix.Equality using (_≅_; foldr-cong; eq+eq≅arr)
@@ -262,6 +262,25 @@ module src.Proof (real : Real) (cplx : Cplx real) where
         (λ r₁ℕ j₁ℕ j₀ℕ → j₁ℕ :* r₁ℕ :+ j₀ℕ := r₁ℕ :* j₁ℕ :+ j₀ℕ) 
         refl 
         r₁ (toℕ j₁) (toℕ j₀)
+
+  j₁*r₁+j₀-is-combine-applied : ∀
+    {r₁ r₂ : ℕ}
+    {j₀ : Fin r₁}
+    {j₁ : Fin r₂}
+    (arr : Ar (ι r₁ ⊗ ι r₂) ℂ)
+    →
+         reshape flat (unnest
+         (λ k₀ k₁ →
+            arr (k₁ ⊗ k₀) *
+            -ω (r₂ *ₙ r₁) ((toℕ j₁ *ₙ r₁ +ₙ toℕ j₀) *ₙ (posVec k₁ *ₙ r₂ +ₙ posVec k₀))))
+      ≅
+         reshape flat (unnest
+         (λ k₀ k₁ →
+            arr (k₁ ⊗ k₀) *
+            -ω (r₂ *ₙ r₁) (toℕ (combine j₁ j₀) *ₙ (posVec k₁ *ₙ r₂ +ₙ posVec k₀))))
+  j₁*r₁+j₀-is-combine-applied {r₁} {r₂} {j₀} {j₁} arr i rewrite 
+    j₁*r₁+j₀-is-combine {r₁} {r₂} {j₀} {j₁} = refl
+
   
   sub-proof₁ : ∀
     {r₁ r₂ : ℕ}
@@ -279,27 +298,193 @@ module src.Proof (real : Real) (cplx : Cplx real) where
           *
           reshape flat (unnest g) ix
         )
-  sub-proof₁ {r₁} {r₂} f g (ι x) = ?
+  sub-proof₁ {r₁} {r₂} f g (ι x) = refl
+
+  sub-sub-proof₂ : ∀ 
+    {r₁ r₂ : ℕ} 
+    (arr : Ar (ι r₁ ⊗ ι r₂) ℂ)
+    (x : Fin (r₂ *ₙ r₁)) 
+    → ((reshape (comm-eq (*ₙ-comm r₁ r₂) ∙ flat) arr) (ι x)) ≡ ((reshape flat (unnest (λ k₀ k₁ → arr (k₁ ⊗ k₀)))) (ι x))
+  sub-sub-proof₂ {r₁} {suc r₂} arr x = ?
 
   sub-proof₂ : ∀ 
     {r₁ r₂ : ℕ} 
-    (ix : Position (ι (r₂ *ₙ r₁)))
     (arr : Ar (ι r₁ ⊗ ι r₂) ℂ)
-    → (unnest (λ k₀ k₁ → arr (k₁ ⊗ k₀) ) (ix ⟨ flat ⟩)) ≡ ( arr (ix ⟨ comm-eq (*ₙ-comm r₁ r₂) ⟩ ⟨ flat ⟩) )
-  sub-proof₂ {r₁} {r₂} (ι x) arr = ?
+    → (reshape (comm-eq (*ₙ-comm r₁ r₂) ∙ flat) arr) ≅ (reshape flat (unnest (λ k₀ k₁ → arr (k₁ ⊗ k₀)))) 
+  sub-proof₂ {r₁} {r₂} arr (ι ix) = ?
+
+  posVec-proj₁-is-toℕ : ∀ 
+    {r₁ r₂ : ℕ} 
+    (k : Fin (r₂ *ₙ r₁))
+    → posVec (ι (proj₁ (remQuot {r₂} r₁ k))) ≡ toℕ (proj₁ (remQuot {r₂} r₁ k))
+  posVec-proj₁-is-toℕ {zero} {r₂} k = refl
+  posVec-proj₁-is-toℕ {suc r₁} {r₂} k = refl
+
+  posVec-proj₂-is-toℕ : ∀ 
+    {r₁ r₂ : ℕ} 
+    (k : Fin (r₂ *ₙ r₁))
+    → posVec (ι (proj₂ (remQuot {r₂} r₁ k))) ≡ toℕ (proj₂ (remQuot {r₂} r₁ k))
+  posVec-proj₂-is-toℕ {zero} {r₂} k = refl
+  posVec-proj₂-is-toℕ {suc r₁} {r₂} k = refl
+
+  tmp : ∀
+    {r₁ r₂ : ℕ}
+    (x : Fin (r₂ *ₙ r₁))
+    →
+       toℕ (combine {r₂} {r₁} (proj₂ (quotRem r₁ x)) (proj₁ (quotRem {r₂} r₁ x)))
+      ≡
+       toℕ (combine {r₁} {r₂} (proj₁ (quotRem {r₂} r₁ x)) (proj₂ (quotRem r₁ x)))
+  tmp {r₁} {r₂} x with quotRem {r₂} r₁ x
+  ... | ⟨ fzero , fzero ⟩ = refl
+  tmp {.(suc n)} {.(suc m)} x | ⟨ fzero {n} , fsuc {m} snd ⟩ rewrite 
+      toℕ-↑ˡ snd (n *ₙ suc m) 
+    | toℕ-↑ʳ n (combine snd (fzero {n})) 
+    | toℕ-combine snd (fzero {n})
+    = begin
+        suc (n +ₙ (toℕ snd +ₙ (n *ₙ toℕ snd) +ₙ 0))
+      ≡⟨⟩
+        ?
+  ... | ⟨ fsuc fst , snd ⟩ = ?
+  --tmp {r₁} {r₂} x rewrite
+  --    toℕ-combine {r₂} (proj₂ (quotRem {r₂} r₁ x)) (proj₁ (quotRem {r₂} r₁ x))
+  --  | toℕ-combine {r₁} (proj₁ (quotRem {r₂} r₁ x)) (proj₂ (quotRem {r₂} r₁ x))
+  --  = ?
+
+  tmp₂ : ∀ {n m : ℕ} (i : Fin n) (j : Fin m) → toℕ {n *ₙ m} (combine i j) ≡ toℕ {m *ₙ n} (combine j i)
+  tmp₂ {suc n} {suc m} i j with *ₙ-comm (suc n) (suc m)
+  ... | prf = ?
+      
+    
 
   sub-proof₃ : ∀
       {r₁ r₂ : ℕ}
       {j₀ : Fin r₁}
       {j₁ : Fin r₂}
       (ix : Position (ι (r₂ *ₙ r₁)))
-    → (unnest
+    → 
+      -ω (r₂ *ₙ r₁) (toℕ (combine j₁ j₀) *ₙ posVec ix)
+    ≡ 
+      (unnest
       (λ k₀ k₁ →
          -ω (r₂ *ₙ r₁) (toℕ (combine j₁ j₀) *ₙ (posVec {r₁} k₁ *ₙ r₂ +ₙ posVec {r₂} k₀))
       ) (ix ⟨ flat ⟩))
-    ≡ 
-      -ω (r₂ *ₙ r₁) (toℕ (combine j₁ j₀) *ₙ posVec ix)
-  sub-proof₃ = ?
+  sub-proof₃ {r₁} {r₂} {j₀} {j₁} (ι x) rewrite
+      posVec-proj₁-is-toℕ {r₁} {r₂} x
+    | posVec-proj₂-is-toℕ {r₁} {r₂} x
+    = 
+    begin 
+      -ω (r₂ *ₙ r₁) (toℕ (combine j₁ j₀) *ₙ toℕ x)
+    ≡⟨ cong (λ f → -ω (r₂ *ₙ r₁) (toℕ (combine j₁ j₀) *ₙ toℕ f)) (sym (combine-remQuot {r₂} r₁ x)) ⟩
+      -ω 
+        (r₂ *ₙ r₁)
+        (toℕ (combine j₁ j₀) *ₙ toℕ (combine {r₂} (proj₁ (remQuot r₁ x)) (proj₂ (remQuot {r₂} r₁ x))))
+    ≡⟨ cong (λ f → -ω (r₂ *ₙ r₁) (toℕ (combine j₁ j₀) *ₙ f)) (tmp {r₁} {r₂} x) ⟩
+      -ω 
+        (r₂ *ₙ r₁)
+        (    toℕ (combine j₁ j₀) 
+          *ₙ toℕ (combine {r₁} {r₂} (proj₁ (quotRem {r₂} r₁ x)) (proj₂ (quotRem r₁ x))))
+    ≡⟨ cong 
+        (λ f → -ω (r₂ *ₙ r₁) ((toℕ (combine j₁ j₀)) *ₙ f) )
+        (toℕ-combine {r₁} {r₂} (proj₁ (quotRem {r₂} r₁ x)) (proj₂ (quotRem r₁ x)))
+     ⟩
+      -ω 
+        (r₂ *ₙ r₁)
+        (     toℕ (combine j₁ j₀) 
+          *ₙ (r₂ *ₙ toℕ (proj₁ (quotRem {r₂} r₁ x)) +ₙ toℕ {r₂} (proj₂ (quotRem r₁ x))))
+    ≡⟨ cong 
+        (λ f → -ω (r₂ *ₙ r₁) ((toℕ (combine j₁ j₀)) *ₙ f) )
+        (cong (_+ₙ (toℕ {r₂} (proj₂ (quotRem r₁ x)))) (*ₙ-comm r₂ (toℕ (proj₁ (quotRem {r₂} r₁ x)))))
+    ⟩
+      -ω 
+        (r₂ *ₙ r₁)
+        (     toℕ (combine j₁ j₀) 
+          *ₙ (toℕ (proj₁ (quotRem {r₂} r₁ x)) *ₙ r₂ +ₙ toℕ {r₂} (proj₂ (quotRem r₁ x))))
+    ∎
+
+  finalPart : ∀
+      {r₁ r₂ : ℕ}
+      {j₀ : Fin r₁}
+      {j₁ : Fin r₂}
+      {arr  : Ar (ι r₁ ⊗ ι r₂) ℂ}
+      →
+        (λ k →
+           unnest (λ k₀ k₁ → arr (k₁ ⊗ k₀)) (k ⟨ flat ⟩) 
+          *
+           unnest
+           (λ k₀ k₁ →
+              -ω (r₂ *ₙ r₁)
+              (toℕ (combine j₁ j₀) *ₙ (posVec {r₁} k₁ *ₙ r₂ +ₙ posVec {r₂} k₀)))
+           (k ⟨ flat ⟩)
+        )
+        ≅
+        (λ k →
+           arr ((k ⟨ comm-eq (*ₙ-comm r₁ r₂) ⟩) ⟨ flat ⟩)
+          *
+           -ω (r₂ *ₙ r₁) 
+           (toℕ (combine j₁ j₀) *ₙ posVec k)
+        )
+  finalPart {r₁} {r₂} {j₀} {j₁} {arr} i = ?
+  
+  tmp₄ : ∀
+      {r₁ r₂ : ℕ}
+      {j₀ : Fin r₁}
+      {j₁ : Fin r₂}
+      {arr  : Ar (ι r₁ ⊗ ι r₂) ℂ}
+      →
+        (λ k → 
+          unnest
+            (λ k₀ k₁ →
+               posVec {r₁} k₁ *ₙ r₂ +ₙ posVec {r₂} k₀)
+            (k ⟨ flat ⟩)
+        )
+        ≅
+        (λ k → 
+          posVec {r₂ *ₙ r₁} k
+        )
+  tmp₄ {r₁} {r₂} {j₀} {j₁} {arr} (ι k) =
+      begin
+        toℕ (proj₁ (quotRem {r₂} r₁ k)) *ₙ r₂ +ₙ toℕ (proj₂ (quotRem {r₂} r₁ k))
+      ≡⟨ cong 
+            ( _+ₙ (toℕ (proj₂ (quotRem {r₂} r₁ k)))) 
+            (*ₙ-comm (toℕ (proj₁ (quotRem {r₂} r₁ k))) r₂) ⟩
+        r₂ *ₙ toℕ (proj₁ (quotRem {r₂} r₁ k)) +ₙ toℕ (proj₂ (quotRem {r₂} r₁ k))
+      ≡⟨ sym (toℕ-combine (proj₁ (quotRem {r₂} r₁ k)) (proj₂ (quotRem {r₂} r₁ k))) ⟩
+        toℕ (combine (proj₁ (quotRem {r₂} r₁ k)) (proj₂ (quotRem {r₂} r₁ k)))
+      ≡⟨ ? ⟩
+        ?
+      ≡⟨⟩
+      --  r₁ *ₙ toℕ (proj₂ (quotRem {r₂} r₁ k)) +ₙ toℕ (proj₁ (quotRem {r₂} r₁ k))
+      --≡⟨ sym (toℕ-combine (proj₂ (quotRem {r₂} r₁ k)) (proj₁ (quotRem {r₂} r₁ k))) ⟩
+        toℕ (combine {r₂} (proj₂ (quotRem {r₂} r₁ k)) (proj₁ (quotRem {r₂} r₁ k)))
+      ≡⟨⟩
+        toℕ (combine {r₂} (proj₂ (quotRem {r₂} r₁ k)) (proj₁ (quotRem {r₂} r₁ k)))
+      ≡⟨⟩
+        toℕ (combine {r₂} (proj₁ (remQuot {r₂} r₁ k)) (proj₂ (remQuot {r₂} r₁ k)))
+      ≡⟨ cong toℕ (combine-remQuot {r₂} r₁ k) ⟩
+        toℕ k
+      ∎
+
+
+
+  tmp₃ : ∀ 
+      {r₁ r₂ : ℕ}
+      {j₀ : Fin r₁}
+      {j₁ : Fin r₂}
+      {arr  : Ar (ι r₁ ⊗ ι r₂) ℂ}
+      → 
+        (λ k →
+           unnest
+           (λ k₀ k₁ →
+              -ω (r₂ *ₙ r₁)
+              (toℕ (combine j₁ j₀) *ₙ (posVec {r₁} k₁ *ₙ r₂ +ₙ posVec {r₂} k₀)))
+           (k ⟨ flat ⟩)
+        )
+        ≅
+        (λ k →
+           -ω (r₂ *ₙ r₁) (toℕ (combine j₁ j₀) *ₙ posVec k)
+        )
+  tmp₃ {r₁} {r₂} {j₀} {j₁} {arr} k = ?
+        
 
   theorm : ∀ {r₁ r₂ : ℕ} → ∀ (arr : Ar ((ι r₁) ⊗ (ι r₂)) ℂ)
     → FFT arr ≅ ((reshape _♯) ∘ DFT ∘ (reshape {ι r₁ ⊗ ι r₂} _♭₂)) arr
@@ -353,7 +538,7 @@ module src.Proof (real : Real) (cplx : Cplx real) where
                   arr (k₁ ⊗ k₀) *
                   -ω (r₂ *ₙ r₁) ((toℕ j₁ *ₙ r₁ +ₙ toℕ j₀) *ₙ (posVec k₁ *ₙ r₂ +ₙ posVec k₀)))
                (ix ⟨ flat ⟩))
-        ≡⟨ ? ⟩ -- j₁*r₁+j₀-is-combine
+        ≡⟨ foldr-cong _+_ 0ℂ (j₁*r₁+j₀-is-combine-applied arr)  ⟩ -- j₁*r₁+j₀-is-combine
           foldr _+_ 0ℂ
             (λ ix →
                unnest
@@ -382,22 +567,6 @@ module src.Proof (real : Real) (cplx : Cplx real) where
                ) (ix ⟨ flat ⟩))
             )
         ≡⟨ ? ⟩ -- sub-proof₂
-          foldr _+_ 0ℂ
-            (λ ix →
-               ( arr (ix ⟨ comm-eq (*ₙ-comm r₁ r₂) ⟩ ⟨ flat ⟩) )
-               *
-               (unnest
-               (λ k₀ k₁ →
-                  -ω (r₂ *ₙ r₁) (toℕ (combine j₁ j₀) *ₙ (posVec {r₁} k₁ *ₙ r₂ +ₙ posVec {r₂} k₀))
-               ) (ix ⟨ flat ⟩))
-            )
-        ≡⟨ ? ⟩ -- sub-proof₃
-          foldr _+_ 0ℂ
-            (λ ix →
-               ( arr (ix ⟨ comm-eq (*ₙ-comm r₁ r₂) ⟩ ⟨ flat ⟩) )
-               * -ω (r₂ *ₙ r₁) (toℕ (combine j₁ j₀) *ₙ posVec ix)
-            )
-        ≡⟨⟩
           foldr _+_ 0ℂ
             (λ k →
                  arr (k ⟨ comm-eq (*ₙ-comm r₁ r₂) ⟩ ⟨ flat ⟩)
