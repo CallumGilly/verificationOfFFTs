@@ -2,8 +2,8 @@ module src.Reshape where
 
 open import Data.Nat
 open import Data.Nat.Properties using (*-comm; *-zeroʳ)
-open import Data.Fin as F using (Fin; combine; remQuot; quotRem; toℕ)
-open import Data.Fin.Properties using (remQuot-combine; combine-remQuot)
+open import Data.Fin as F using (Fin; combine; remQuot; quotRem; toℕ; cast)
+open import Data.Fin.Properties using (remQuot-combine; combine-remQuot; cast-is-id)
 
 open import Data.Product using (Σ; ∃; _,_; _×_; proj₁; proj₂)
 open import Relation.Binary.PropositionalEquality
@@ -31,7 +31,7 @@ data Reshape : Shape → Shape → Set where
   split  : Reshape (ι (m * n)) (ι m ⊗ ι n)
   flat   : Reshape (ι m ⊗ ι n) (ι (m * n))
   swap   : Reshape (s ⊗ p) (p ⊗ s)
-  comm-eq : n ≡ m → Reshape (ι n) (ι m)
+  comm-eq : m ≡ n → Reshape (ι n) (ι m)
 --comm-eq {n} {m} rewrite *-comm m n = eq
 
 -- For all shapes s and p
@@ -42,7 +42,7 @@ i           ⟨ r ∙ r₁ ⟩ = i ⟨ r ⟩ ⟨ r₁ ⟩
 (ι i ⊗ ι j) ⟨ split  ⟩ = ι (combine i j)
 ι i         ⟨ flat   ⟩ = let a , b = remQuot _ i in ι a ⊗ ι b
 (i ⊗ j)     ⟨ swap   ⟩ = j ⊗ i
-i           ⟨ comm-eq refl ⟩ = i
+ι i         ⟨ comm-eq prf ⟩ = ι (cast prf i) 
 
 
 --cong-eq : ∀ {n m : ℕ} → n ≡ m → eq {?} ≡ eq
@@ -75,7 +75,9 @@ rev-eq (split {m = m} {n = n}) (ι x ⊗ ι x₁) with cong proj₁ (remQuot-com
   ∎
 rev-eq (flat {m = m} {n = n}) (ι x) rewrite combine-remQuot {m} n x = refl 
 rev-eq swap (i ⊗ i₁) = refl
-rev-eq (comm-eq refl) i = refl
+rev-eq (comm-eq refl) (ι i) rewrite 
+    cast-is-id refl i 
+  | cast-is-id refl i = refl
 
 eq+eq : ∀ {X : Set} {n m : ℕ} (arr : Ar (ι n ⊗ ι m) X) → reshape (eq ⊕ eq) arr ≡ arr
 eq+eq {X} {n} {m} arr = extensionality λ{(ι x ⊗ ι y) → refl }
@@ -138,7 +140,7 @@ _♯ = rev _♭
 
 _♭₂ : Reshape (s) (ι (length (recursive-transpose s)))
 _♭₂ {ι x} = eq
-_♭₂ {s ⊗ s₁} = comm-eq (*-comm (length (recursive-transpose s)) (length (recursive-transpose s₁))) ∙ flat ∙ _♭₂ ⊕ _♭₂
+_♭₂ {s ⊗ s₁} = comm-eq (*-comm (length (recursive-transpose s₁)) (length (recursive-transpose s))) ∙ flat ∙ _♭₂ ⊕ _♭₂
 
 
 --_♭₂ {s ⊗ s₁} = comm-eq {length (recursive-transpose s)} {length (recursive-transpose s₁)} ∙ flat ∙ _♭₂ ⊕ _♭₂
