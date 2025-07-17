@@ -3,7 +3,7 @@ module src.Reshape where
 open import Data.Nat
 open import Data.Nat.Properties using (*-comm; *-zeroʳ)
 open import Data.Fin as F using (Fin; combine; remQuot; quotRem; toℕ; cast)
-open import Data.Fin.Properties using (remQuot-combine; combine-remQuot; cast-is-id)
+open import Data.Fin.Properties using (remQuot-combine; combine-remQuot; cast-is-id; cast-trans)
 
 open import Data.Product using (Σ; ∃; _,_; _×_; proj₁; proj₂)
 open import Relation.Binary.PropositionalEquality
@@ -32,6 +32,7 @@ data Reshape : Shape → Shape → Set where
   flat   : Reshape (ι m ⊗ ι n) (ι (m * n))
   swap   : Reshape (s ⊗ p) (p ⊗ s)
   comm-eq : m ≡ n → Reshape (ι n) (ι m)
+  reindex : Reshape (ι (m * n)) (ι (n * m))
 --comm-eq {n} {m} rewrite *-comm m n = eq
 
 -- For all shapes s and p
@@ -43,6 +44,7 @@ i           ⟨ r ∙ r₁ ⟩ = i ⟨ r ⟩ ⟨ r₁ ⟩
 ι i         ⟨ flat   ⟩ = let a , b = remQuot _ i in ι a ⊗ ι b
 (i ⊗ j)     ⟨ swap   ⟩ = j ⊗ i
 ι i         ⟨ comm-eq prf ⟩ = ι (cast prf i) 
+ι i ⟨ reindex {m} {n} ⟩ = ι (cast (*-comm n m) i)
 
 
 --cong-eq : ∀ {n m : ℕ} → n ≡ m → eq {?} ≡ eq
@@ -58,6 +60,7 @@ rev split = flat
 rev flat = split
 rev swap = swap
 rev (comm-eq refl) = comm-eq refl
+rev (reindex {m} {n}) = reindex {n} {m}
 
 -- Reverse properties
 rev-eq : (r : Reshape s p) → ∀ (i : Position p) → i ⟨ r ∙ rev r ⟩ ≡ i
@@ -78,6 +81,9 @@ rev-eq swap (i ⊗ i₁) = refl
 rev-eq (comm-eq refl) (ι i) rewrite 
     cast-is-id refl i 
   | cast-is-id refl i = refl
+rev-eq (reindex {m} {n}) (ι i) rewrite 
+    cast-trans (*-comm n m) (*-comm m n) i 
+  | cast-is-id refl i = refl
 
 eq+eq : ∀ {X : Set} {n m : ℕ} (arr : Ar (ι n ⊗ ι m) X) → reshape (eq ⊕ eq) arr ≡ arr
 eq+eq {X} {n} {m} arr = extensionality λ{(ι x ⊗ ι y) → refl }
@@ -93,6 +99,7 @@ rev-rev split i = refl
 rev-rev flat i = refl
 rev-rev swap i = refl
 rev-rev (comm-eq refl) i = refl
+rev-rev reindex i = refl
 
 -- Define transpose
 transpose : Shape → Shape
@@ -142,7 +149,14 @@ _♭₂ : Reshape (s) (ι (length (recursive-transpose s)))
 _♭₂ {ι x} = eq
 _♭₂ {s ⊗ s₁} = comm-eq (*-comm (length (recursive-transpose s₁)) (length (recursive-transpose s))) ∙ flat ∙ _♭₂ ⊕ _♭₂
 
+_♭₃ : Reshape (s) (ι (length (recursive-transpose s)))
+_♭₃ {ι x} = eq
+_♭₃ {s ⊗ s₁} = (reindex {length (recursive-transpose s)} {length (recursive-transpose s₁)}) ∙ flat ∙ _♭₂ ⊕ _♭₂
 
+            -- (ι
+            --  (length (recursive-transpose s) * length (recursive-transpose s₁)))
+            -- (ι
+            --  (length (recursive-transpose s₁) * length (recursive-transpose s)))
 --_♭₂ {s ⊗ s₁} = comm-eq {length (recursive-transpose s)} {length (recursive-transpose s₁)} ∙ flat ∙ _♭₂ ⊕ _♭₂
 --_♯₂ {s ⊗ s₁} = (_♯₂ {s₁} ⊕ _♯₂ {s}) ∙ split₂ {length (recursive-transpose s₁)} {length ?}
 --_♯₂ {ι x} = eq

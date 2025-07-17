@@ -3,10 +3,10 @@ module src.Matrix where
 open import Data.Nat using (ℕ; _≡ᵇ_; suc; zero; _+_; _*_)
 open import Data.Nat.Properties using (*-assoc; *-comm)
 open import Data.Nat.DivMod using (_divMod_; _div_;_mod_)
-open import Data.Fin as F using (Fin; toℕ; fromℕ; splitAt; remQuot) renaming (zero to fzero; suc to fsuc)
+open import Data.Fin as F using (Fin; toℕ; fromℕ; splitAt; remQuot; join) renaming (zero to fzero; suc to fsuc)
 open import Data.Bool using (true; false)
 open import Data.Product.Base using (_×_; proj₁; proj₂) renaming ( _,_ to ⟨_,_⟩)
-open import Data.Sum.Base using (inj₁; inj₂)
+open import Data.Sum.Base using (inj₁; inj₂; [_,_])
 
 open import Function.Base using (_$_; id; _∘_)
 
@@ -76,6 +76,15 @@ head₁ ar = ar (ι fzero)
 
 tail₁ : Ar (ι (suc n)) X → Ar (ι n) X
 tail₁ ar (ι x) = ar (ι (fsuc x))
+
+splitArₗ : Ar (ι (n + m)) X → Ar (ι n) X
+splitArₗ {n} {m} xs (ι i) = xs (ι (join n m (inj₁ i)))
+
+splitArᵣ : Ar (ι (n + m)) X → Ar (ι m) X
+splitArᵣ {n} {m} xs (ι i) = xs (ι (join n m (inj₂ i)))
+
+splitAr : Ar (ι (n + m)) X → Ar (ι n) X × Ar (ι m) X
+splitAr xs = ⟨ splitArₗ xs , splitArᵣ xs ⟩
 
 foldr : ∀ {n : ℕ} {X Y : Set} → (X → Y → Y) → Y → Ar (ι n) X → Y
 foldr {zero } f acc ar = acc
@@ -159,7 +168,8 @@ iterate : (n : ℕ) → (X → X) → X → Ar (ι n) X
 iterate zero    f acc = nil
 iterate (suc n) f acc = ι-cons acc (iterate n f (f acc))
 
-
+toFin : Position (ι n) → Fin n
+toFin (ι x) = x
 
 
 
