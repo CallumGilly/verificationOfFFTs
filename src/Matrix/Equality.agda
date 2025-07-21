@@ -29,6 +29,9 @@ foldr-cong {X} {Y} {suc n} f acc {xs} {ys} prf rewrite
   | foldr-cong {X} {Y} {n} f (f (ys (ι fzero)) acc) {tail₁ xs} {tail₁ ys} (reduce-≅ prf)
   = refl
 
+tail₁-cong : ∀ {n : ℕ} → {xs ys : Ar (ι (suc n)) X} → xs ≅ ys → tail₁ xs ≅ tail₁ ys 
+tail₁-cong {n} {xs} {ys} prf (ι i) = prf (ι (fsuc i))
+
 -- New eq+eq
 eq+eq≅arr : ∀ {n m : ℕ} {X : Set} {xs : Ar (ι n ⊗ ι m) X} → reshape (eq ⊕ eq) xs ≅ xs
 eq+eq≅arr (ι x ⊗ ι y) = refl

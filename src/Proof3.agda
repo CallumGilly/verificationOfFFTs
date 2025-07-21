@@ -5,7 +5,7 @@ import Algebra.Structures as AlgebraStructures
 import Algebra.Definitions as AlgebraDefinitions
 
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; refl; cong; sym; cong₂; subst; cong-app)
+open Eq using (_≡_; refl; cong; sym; cong₂; subst; cong-app; trans)
 open Eq.≡-Reasoning
 
 module src.Proof3 (real : Real) (cplx : Cplx real) where
@@ -17,7 +17,7 @@ module src.Proof3 (real : Real) (cplx : Cplx real) where
   open AlgebraStructures  {A = ℂ} _≡_
   open AlgebraDefinitions {A = ℂ} _≡_
 
-  open IsCommutativeRing +-*-isCommutativeRing using (distribˡ; *-comm; zeroˡ; *-identityʳ; *-assoc; +-identityʳ; +-assoc; +-comm)
+  open IsCommutativeRing +-*-isCommutativeRing using (distribˡ; *-comm; zeroˡ; *-identityʳ; *-assoc; +-identityʳ; +-assoc; +-comm; +-identityˡ)
 
   open import Data.Nat.Base using (ℕ; zero; suc) renaming (_*_ to _*ₙ_; _+_ to _+ₙ_)
   open import Data.Nat.Properties using (suc-injective) renaming (*-comm to *ₙ-comm; *-identityʳ to *ₙ-identityʳ; *-assoc to *ₙ-assoc; 
@@ -31,7 +31,7 @@ module src.Proof3 (real : Real) (cplx : Cplx real) where
   open import Data.Sum.Base using (inj₁; inj₂ )
 
   open import src.Matrix using (Ar; Shape; _⊗_; ι; Position; nestedMap; zipWith; nest; map; unnest; head₁; tail₁; zip; iterate; ι-cons; nil; foldr; length; cong-foldr; splitAr; splitArₗ; splitArᵣ; toFin)
-  open import src.Matrix.Equality using (_≅_; foldr-cong; eq+eq≅arr)
+  open import src.Matrix.Equality using (_≅_; foldr-cong; eq+eq≅arr; reduce-≅; tail₁-cong)
   open import src.Reshape using (reshape; Reshape; flat; _♭; _♯; recursive-transpose; recursive-transposeᵣ; _∙_; rev; _⊕_; swap; eq; split; _⟨_⟩; eq+eq; _♭₃; comm-eq; eq+eq-position-wrapper; reindex; rev-eq)
 
   open import Function.Base using (_$_; id; _∘_; flip; _∘₂_)
@@ -227,6 +227,120 @@ module src.Proof3 (real : Real) (cplx : Cplx real) where
   --  foldr {r₂ *ₙ r₁} _+_ 0ℂ arr
   --flattenFoldLemma {r₁} {r₂} arr = ?
 
+  sum : ∀ {m : ℕ} → (arr : Ar (ι m) ℂ) → ℂ
+  sum {zero} arr = 0ℂ
+  sum {suc m} arr = (arr (ι fzero)) + (sum ∘ tail₁) arr
+
+  sum-nil : ∀ {n : ℕ} (arr : Ar (ι n) ℂ) (prf : n ≡ 0) → sum arr ≡ 0ℂ
+  sum-nil {zero} arr prf = refl
+
+  tail₁-const : ∀ {n : ℕ} {c : ℂ} → tail₁ {n} (λ i → c) ≅ (λ j → c)
+  tail₁-const {zero} {c} (ι x) = refl
+  tail₁-const {suc n} {c} (ι x) = refl
+
+  sum-cong : ∀ {n : ℕ} → {xs ys : Ar (ι n) ℂ} → xs ≅ ys → sum xs ≡ sum ys
+  sum-cong {zero } {xs} {ys} prf = refl
+  sum-cong {suc n} {xs} {ys} prf = cong₂ _+_ (prf (ι fzero)) (sum-cong {n} {tail₁ xs} {tail₁ ys} (reduce-≅ prf))
+
+  sum-zeros : ∀ {n : ℕ} → sum {n} (λ i → 0ℂ) ≡ 0ℂ 
+  sum-zeros {zero} = refl
+  sum-zeros {suc n} rewrite 
+      sum-cong {n} (tail₁-const {n} {0ℂ}) 
+    | sum-zeros {n}
+    | +-identityʳ 0ℂ
+    = refl
+
+  foldr≡sum : ∀ {m : ℕ} (arr : Ar (ι m) ℂ) → foldr {m} _+_ 0ℂ arr ≡ sum {m} arr
+  foldr≡sum {zero} arr = refl
+  foldr≡sum {suc m} arr rewrite 
+      foldr-pull-out {m} (arr (ι fzero)) 0ℂ (tail₁ arr) 
+    | foldr≡sum {m} (tail₁ arr)
+    = refl
+
+  splitArᵣ-zero : ∀ {n : ℕ} (arr : Ar (ι n) ℂ) → splitArᵣ {0} arr ≅ arr
+  splitArᵣ-zero {n} arr (ι i) = refl
+  
+  splitSum : ∀ {m n : ℕ} → (arr : Ar (ι (n +ₙ m)) ℂ) → sum arr ≡ sum (splitArₗ {n} arr) + sum (splitArᵣ {n} arr)
+  splitSum {m} {zero} arr rewrite
+      +-identityˡ (sum (splitArᵣ {0} arr)) = sum-cong {m} (λ{(ι i) → refl })
+  splitSum {m} {suc n} arr rewrite
+      +-assoc (arr (ι fzero)) (sum (tail₁ (splitArₗ {suc n} arr))) (sum (splitArᵣ {suc n} arr))
+    = cong₂ _+_ refl 
+        ( trans 
+            (splitSum {m} {n} (tail₁ arr)) 
+            ( cong₂ _+_ 
+              (sum-cong {n} λ{(ι i) → refl }) 
+              (sum-cong {m} λ{(ι j) → refl }) 
+            )
+        )
+
+  mergeSumₗ : ∀ {m n : ℕ} → (arr : Ar (ι (suc m *ₙ suc n)) ℂ) → (tail₁ (λ j → arr ((ι (fzero {m}) ⊗ j) ⟨ split ⟩))) ≅ (splitArₗ {n} (tail₁ arr))
+  mergeSumₗ {m} {n} arr (ι i) = cong (arr ∘ ι) refl
+
+  --mergeSumᵣ : ∀ {m n : ℕ} → (arr : Ar (ι (suc (n +ₙ m *ₙ suc n))) ℂ) → 
+  --      (tail₁ {?} (λ i → arr ((i ⊗ ι (fzero {?} )) ⟨ split {?} {?} ⟩) + sum (tail₁ {?} (λ j → arr ((i ⊗ j) ⟨ split {?} {?} ⟩)))))
+  --    ≅ 
+  --      (splitArᵣ {n} {m *ₙ suc n} (tail₁ arr))
+
+  
+  sum-tail₁ : ∀ {n : ℕ} (arr : Ar (ι (suc n)) ℂ) → sum {n} (tail₁ (λ i → arr i)) ≡ sum {n} (λ i → (splitArᵣ (tail₁ arr)) i)
+  sum-tail₁ {zero} arr = refl
+  sum-tail₁ {suc n} arr rewrite 
+      sum-tail₁ {n} (tail₁ arr) 
+    | sum-cong (splitArᵣ-zero (tail₁ (tail₁ arr))) 
+    | sum-cong (tail₁-cong (splitArᵣ-zero (tail₁ arr)))
+    = refl
+
+    
+  mergeSum : ∀ {m n : ℕ} → (arr : Ar (ι (m *ₙ n)) ℂ) → sum {m} (λ i → sum {n} (λ j → arr ((i ⊗ j) ⟨ split ⟩ ))) ≡ sum arr
+  mergeSum {zero} {n} arr = refl
+  mergeSum {suc m} {zero} arr rewrite 
+      sum-nil arr (*ₙ-zeroʳ m) 
+    | +-identityˡ (sum {m} (tail₁ (λ i → 0ℂ)))
+    | sum-cong (tail₁-const {m} {0ℂ})
+    | sum-zeros {m}
+    = refl
+  mergeSum {suc m} {suc n} arr 
+    rewrite splitSum {m *ₙ suc n} {n} (tail₁ arr) rewrite 
+        sym (+-assoc (arr (ι fzero)) (sum (splitArₗ {n} (tail₁ arr))) (sum (splitArᵣ {n} (tail₁ arr))))
+      | sum-cong (mergeSumₗ {m} {n} arr)
+      = cong₂ _+_ refl 
+        (trans 
+          (sum-cong {m} (λ{ (ι i) → cong₂ _+_ refl (sum-cong {n} (λ{(ι j) → refl})) }))
+          (mergeSum {m} {suc n} (splitArᵣ {n} (tail₁ arr)))
+        )
+
+  sumSwap : ∀ {m n : ℕ} → (a : Position (ι m) → Position (ι n) → ℂ) → sum {m} (λ i → sum {n} (λ j → a i j)) ≡ sum {n} (λ j → sum {m} (λ i → a i j))
+  sumSwap {zero} {n} a rewrite sum-zeros {n} = refl
+  sumSwap {suc m} {zero} a rewrite
+      sum-cong {m} (tail₁-const {m} {0ℂ}) 
+    | sum-zeros {m} 
+    | +-identityʳ 0ℂ = refl
+  sumSwap {suc m} {suc n} a rewrite
+      +-assoc (a (ι fzero) (ι fzero)) (sum (tail₁ (a (ι fzero))))         (sum (tail₁ (λ i → a i (ι fzero) + sum (tail₁ (a i)))))
+    | +-assoc (a (ι fzero) (ι fzero)) (sum (tail₁ (λ i → a i (ι fzero)))) (sum (tail₁ (λ j → a (ι fzero) j + sum (tail₁ (λ i → a i j)))))
+    = cong₂ _+_ refl
+          ( cong₂ _+_ 
+            ?
+            ?
+          )
+
+  
+  ext : ∀ {m n : ℕ} → (arr : Ar (ι m) ℂ) → (prf : m ≡ n)
+      → subst (λ s → Ar (ι s) ℂ) prf arr ≅ (reshape (comm-eq (sym prf)) arr)
+  ext arr refl (ι x) = cong arr (cong ι (sym (cast-is-id refl x)))
+
+
+  cong-sum-comm-eq : ∀ {m n : ℕ} (arr : Ar (ι m) ℂ) (prf : m ≡ n)
+           → sum arr ≡ sum (reshape (comm-eq (sym prf)) arr)
+  cong-sum-comm-eq {m} {n} arr refl = sum-cong {m} {arr} {reshape (comm-eq refl) arr} (ext arr refl)
+
+  reindex-is-comm-eq : ∀ {m n : ℕ} {arr : Ar (ι (m *ₙ n)) ℂ} → reshape (comm-eq (sym (*ₙ-comm m n))) arr ≅ reshape (reindex {m}) arr
+  reindex-is-comm-eq {m} {n} (ι x) = refl
+
+  sumReindex : ∀ {m n : ℕ} → (arr : Ar (ι (m *ₙ n)) ℂ) → sum arr ≡ sum (reshape (reindex {m}) arr)
+  sumReindex {m} {n} arr = trans (cong-sum-comm-eq arr (*ₙ-comm m n)) (sum-cong (reindex-is-comm-eq {m} {n} {arr}))
+
   newMergeFoldr : ∀ {r₁ r₂ : ℕ} (arr : Ar (ι (r₂ *ₙ r₁)) ℂ) →
       foldr {r₂} _+_ 0ℂ 
         (λ k₀ →
@@ -237,17 +351,14 @@ module src.Proof3 (real : Real) (cplx : Cplx real) where
         )
     ≡
       foldr {r₂ *ₙ r₁} _+_ (0ℂ) (arr)
-  newMergeFoldr {r₁} {r₂} arr =
-    begin
-      foldr {r₂} _+_ 0ℂ 
-        (λ k₀ →
-           foldr {r₁} _+_ 0ℂ 
-             (λ k₁ → 
-                arr ((k₁ ⊗ k₀) ⟨ split ⟩ ⟨ reindex {r₂} {r₁} ⟩ )
-             )
-        )
-    ≡⟨⟩
-      ?
+  newMergeFoldr {r₁} {r₂} arr rewrite 
+      foldr≡sum arr 
+    | foldr≡sum (λ k₀ → foldr {r₁} _+_ 0ℂ (λ k₁ → arr ((k₁ ⊗ k₀) ⟨ split ⟩ ⟨ reindex {r₂} {r₁} ⟩ )))
+    | sum-cong  (λ k₀ → foldr≡sum {r₁} (λ k₁ → arr ((k₁ ⊗ k₀) ⟨ split ⟩ ⟨ reindex {r₂} {r₁} ⟩ )))
+    | sumSwap {r₂} {r₁} (λ i j → arr ((j ⊗ i) ⟨ split ∙ reindex {r₂} ⟩ ))
+    | mergeSum {r₁} (reshape (reindex {r₂}) arr)
+    | sumReindex {r₂} arr
+    = refl
 
 
 
