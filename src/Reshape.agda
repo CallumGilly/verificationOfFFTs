@@ -151,7 +151,7 @@ _♭₂ {s ⊗ s₁} = comm-eq (*-comm (length (recursive-transpose s₁)) (leng
 
 _♭₃ : Reshape (s) (ι (length (recursive-transpose s)))
 _♭₃ {ι x} = eq
-_♭₃ {s ⊗ s₁} = (reindex {length (recursive-transpose s)} {length (recursive-transpose s₁)}) ∙ flat ∙ _♭₂ ⊕ _♭₂
+_♭₃ {s ⊗ s₁} = (reindex {length (recursive-transpose s)} {length (recursive-transpose s₁)}) ∙ flat ∙ _♭₃ ⊕ _♭₃
 
             -- (ι
             --  (length (recursive-transpose s) * length (recursive-transpose s₁)))
