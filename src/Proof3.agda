@@ -10,7 +10,7 @@ open Eq.≡-Reasoning
 
 module src.Proof3 (real : Real) (cplx : Cplx real) where
 
-  open Real real using (_ᵣ)
+  open Real real using (_ᵣ; ℝ)
     renaming (_+_ to _+ᵣ_; _-_ to _-ᵣ_; -_ to -ᵣ_; _/_ to _/ᵣ_; _*_ to _*ᵣ_; *-comm to *ᵣ-comm; *-identityʳ to *ᵣ-identityʳ)
   open Cplx cplx using (ℂ; _+_; fromℝ; _*_; -ω; 0ℂ; +-*-isCommutativeRing; ω-r₁x-r₁y; ω-N-mN; ω-N-k₀+k₁)
 
@@ -565,3 +565,159 @@ module src.Proof3 (real : Real) (cplx : Cplx real) where
       (reshape _♯ ∘ DFT ∘ reshape (reindex {r₁} {r₂} ∙ flat ∙ eq ⊕ eq)) arr
       (ι j₁ ⊗ ι j₀)
     ∎
+
+  zipWith-congˡ : ∀ {s : Shape} {X Y Z : Set} {xs ys : Ar s X} {zs : Ar s Y} {f : X → Y → Z} → xs ≅ ys → zipWith f xs zs ≅ zipWith f ys zs
+  zipWith-congˡ {s} {X} {Y} {Z} {xs} {ys} {zs} {f} prf i = cong₂ f (prf i) refl
+
+  zipWith-congʳ : ∀ {s : Shape} {X Y Z : Set} {xs : Ar s X} {ys zs : Ar s Y} {f : X → Y → Z} → ys ≅ zs → zipWith f xs ys ≅ zipWith f xs zs
+  zipWith-congʳ {s} {X} {Y} {Z} {xs} {ys} {zs} {f} prf i = cong₂ f refl    (prf i)
+
+  DFT-cong : ∀ {n : ℕ} {xs ys : Ar (ι n) ℂ} → xs ≅ ys → DFT xs ≅ DFT ys
+  DFT-cong {n} {xs} {ys} prf (ι x) = foldr-cong {ℂ} {ℂ} {n} _+_ 0ℂ (zipWith-congˡ {zs = posVec} {f = (λ xₙ n₁ → xₙ * -ω n (n₁ *ₙ toℕ x))} prf )
+
+  FFT-cong : ∀ {s : Shape} {xs ys : Ar s ℂ} → xs ≅ ys → FFT xs ≅ FFT ys
+  FFT-cong {ι x   } {xs} {ys} prf i = DFT-cong prf i
+  FFT-cong {s ⊗ s₁} {xs} {ys} prf (i ⊗ i₁) = (FFT-cong {s₁} λ { j₁ → (cong₂ _*_ ((FFT-cong {s} λ {j₂ → prf (j₂ ⊗ j₁) }) i₁ ) refl) }) i
+
+  main-theorm : ∀ {s : Shape} → ∀ (arr : Ar s ℂ)
+    → FFT arr ≅ ((reshape _♯) ∘ DFT ∘ (reshape {s} _♭₃)) arr
+  main-theorm {ι r} arr i = refl
+  main-theorm {ι r₁ ⊗ ι r₂} arr i = theorm arr i
+  main-theorm {ι r₁ ⊗ (s₁ ⊗ s₂)} arr ((i₁ ⊗ i₂) ⊗ ι i₃) = 
+    trans 
+      ( FFT-cong (λ j → 
+        cong₂ _*_ 
+          (main-theorm (nest (reshape swap (nest (zipWith _*_ (reshape swap (nestedMap FFT (reshape swap arr))) twiddles) (ι i₃))) j) i₂) 
+          refl
+        ) i₁
+      )
+      ( trans
+        (main-theorm (λ z →
+                         (reshape {(ι (length (recursive-transpose s₁)))} {recursive-transpose s₁} _♯ ∘ DFT ∘ reshape _♭₃)
+                         (nest
+                          (reshape swap
+                           (nest
+                            (zipWith _*_ (reshape swap (nestedMap FFT (reshape swap arr)))
+                             twiddles)
+                            (ι i₃)))
+                          z)
+                         i₂
+                         * twiddles (i₂ ⊗ z)) i₁)
+        ( begin
+            ( reshape {ι (length (recursive-transpose s₂))} {recursive-transpose s₂} _♯ 
+              ( DFT 
+                ( reshape _♭₃
+                  (λ z →
+                    reshape _♯
+                      ( DFT
+                        ( reshape _♭₃
+                          ( nest
+                            ( reshape swap
+                              ( nest
+                                ( zipWith _*_
+                                  ( reshape swap (nestedMap (λ arr₁ → DFT arr₁) (reshape swap arr)))
+                                  twiddles
+                                ) (ι i₃)
+                              )
+                            ) z
+                          )
+                        )
+                      ) i₂
+                    * twiddles (i₂ ⊗ z)
+                  )
+                )
+              ) i₁
+            )
+          ≡⟨⟩ 
+            ( reshape {ι (length (recursive-transpose s₂))} {recursive-transpose s₂} _♯ 
+              ( DFT 
+                ( reshape _♭₃
+                  (λ z →
+                    reshape _♯
+                      ( DFT
+                        ( reshape _♭₃
+                          ( nest
+                            ( reshape swap
+                              ( nest
+                                ( zipWith _*_
+                                  ( reshape swap (nestedMap (λ arr₁ → DFT arr₁) (reshape swap arr)))
+                                  twiddles
+                                ) (ι i₃)
+                              )
+                            ) z
+                          )
+                        )
+                      ) i₂
+                    * twiddles (i₂ ⊗ z)
+                  )
+                )
+              ) i₁
+            )
+          ≡⟨⟩
+            DFT
+            (λ ix →
+               DFT
+               (λ ix₁ →
+                  foldr _+_ (fromℝ (0 ᵣ))
+                  (λ pos →
+                     arr (pos ⊗ ((ix₁ ⟨ _♭₃ ⟩) ⊗ (ix ⟨ _♭₃ ⟩))) *
+                     -ω r₁ (posVec pos *ₙ toℕ i₃))
+                  *
+                  -ω (r₁ *ₙ (length s₁ *ₙ length s₂))
+                  (toℕ i₃ *ₙ
+                   (offset-n ((ix₁ ⟨ _♭₃ ⟩) ⊗ (ix ⟨ _♭₃ ⟩)))))
+               (i₂ ⟨ rev _♭ ⟩)
+               *
+               -ω (length (recursive-transpose s₁) *ₙ length s₂)
+               ((offset-n i₂) *ₙ (offset-n {s₂} (ix ⟨ _♭₃ ⟩))))
+            (i₁ ⟨ rev _♭ ⟩)
+          ≡⟨⟩
+            ?
+
+
+        )
+      )
+    --begin
+    --  FFT (λ j →
+    --    FFT (λ j₁ →
+    --      foldr _+_ (fromℝ (0 ᵣ)) (λ pos →
+    --        arr (pos ⊗ (j₁ ⊗ j)) * -ω r₁ (posVec pos *ₙ toℕ i₃)
+    --      )
+    --      * -ω (r₁ *ₙ (length s₁ *ₙ length s₂)) (toℕ i₃ *ₙ (offset-n (j₁ ⊗ j)))
+    --    ) i₂
+    --    *
+    --    -ω (length (recursive-transpose s₁) *ₙ length s₂) ((offset-n i₂) *ₙ (offset-n j ))
+    --  ) i₁
+    --≡⟨ FFT-cong ? i₁ ⟩
+    --  FFT (λ j →
+    --    FFT (λ j₁ →
+    --      foldr _+_ (fromℝ (0 ᵣ)) (λ pos →
+    --        arr (pos ⊗ (j₁ ⊗ j)) * -ω r₁ (posVec pos *ₙ toℕ i₃)
+    --      )
+    --      * -ω (r₁ *ₙ (length s₁ *ₙ length s₂)) (toℕ i₃ *ₙ (offset-n (j₁ ⊗ j)))
+    --    ) i₂
+    --    *
+    --    -ω (length (recursive-transpose s₁) *ₙ length s₂) ((offset-n i₂) *ₙ (offset-n j ))
+    --  ) i₁
+    --≡⟨⟩
+    --  ?
+
+  main-theorm {(s ⊗ s₂) ⊗ s₁} arr i = ?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
