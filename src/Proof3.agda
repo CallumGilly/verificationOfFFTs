@@ -310,6 +310,68 @@ module src.Proof3 (real : Real) (cplx : Cplx real) where
           (mergeSum {m} {suc n} (splitArᵣ {n} (tail₁ arr)))
         )
 
+  distrib-tail₁ : ∀ {n : ℕ} (xs ys : Ar (ι (suc n)) ℂ) → sum (tail₁ (λ i → xs i + ys i)) ≡ sum (λ i → (tail₁ xs) i + (tail₁ ys) i)
+  distrib-tail₁ {n} xs ys = sum-cong {n} λ{(ι i) → refl }
+
+
+  expand-sum : ∀ {n : ℕ} (xs ys : Ar (ι (n)) ℂ) → sum (λ i → xs i + ys i) ≡ sum (λ i → xs i) + sum (λ i → ys i)
+  expand-sum {zero} xs ys rewrite +-identityʳ 0ℂ = refl
+  expand-sum {suc n} xs ys rewrite
+      +-assoc (xs (ι fzero)) (ys (ι fzero)) (sum (tail₁ (λ i → xs i + ys i)))
+    | +-assoc (xs (ι fzero)) (sum (tail₁ xs)) (ys (ι fzero) + sum (tail₁ ys))
+    | +-comm  (sum (tail₁ xs)) (ys (ι fzero) + sum (tail₁ ys))
+    | +-assoc (ys (ι fzero)) (sum (tail₁ ys)) (sum (tail₁ xs))
+    | distrib-tail₁ xs ys
+    | expand-sum (tail₁ xs) (tail₁ ys)
+    | +-comm (sum (tail₁ xs)) (sum (tail₁ ys))
+    = refl
+
+
+  {-
+  expandˡ-tail₁ : ∀ {m n : ℕ} → (a : Position (ι (suc m)) → Position (ι (suc n)) → ℂ) → (p : Position (ι (suc m))) → tail₁ (a p) ≅ (λ{(ι j) → a p (ι (fsuc j))})
+  expandˡ-tail₁ a p (ι x) = refl
+
+  expandʳ-tail₁ : ∀ {m n : ℕ} → (a : Position (ι (suc m)) → Position (ι (suc n)) → ℂ) → (p : Position (ι (suc n))) → tail₁ (λ i → a i p) ≅ (λ{(ι i) → a (ι (fsuc i)) p})
+  expandʳ-tail₁ a p (ι x) = refl
+
+  sumSwap-helperˡ : ∀ {m n : ℕ} → (a : Position (ι (suc m)) → Position (ι (suc n)) → ℂ) → (p : Position (ι (suc n))) → tail₁ (λ i → a i p + sum (tail₁ (a i))) ≅ (λ{(ι i) → a (ι (fsuc i)) p + sum (λ{(ι j) → a (ι (fsuc i)) (ι (fsuc j))})})
+  sumSwap-helperˡ {m} {n} a p (ι x) rewrite sum-cong (expandˡ-tail₁ a (ι (fsuc x))) = cong₂ _+_ refl (sum-cong {n} (λ{(ι j) → refl }))
+
+  sumSwap-helperʳ : ∀ {m n : ℕ} → (a : Position (ι (suc m)) → Position (ι (suc n)) → ℂ) → (p : Position (ι (suc n))) → tail₁ (λ j → a (ι fzero) j + sum (tail₁ (λ i → a i j))) ≅ (λ{ (ι j) → a (ι fzero) (ι (fsuc j)) + sum (λ{ (ι i) → a (ι (fsuc i)) (ι (fsuc j))})})
+  sumSwap-helperʳ {m} {n} a p (ι x) rewrite sum-cong (expandʳ-tail₁ a (ι (fsuc x))) = cong₂ _+_ refl (sum-cong {m} (λ{(ι i) → refl }))
+  -}
+
+  {-
+  expandˡ-tail₁ : ∀ {m n : ℕ} → (a : Position (ι (suc m)) → Position (ι (suc n)) → ℂ) → (p : Position (ι (suc m))) → tail₁ (a p) ≅ (λ j → (tail₁ (a p)) j)
+  expandˡ-tail₁ a p (ι x) = refl
+
+  expandʳ-tail₁ : ∀ {m n : ℕ} → (a : Position (ι (suc m)) → Position (ι (suc n)) → ℂ) → (p : Position (ι (suc n))) → tail₁ (λ i → a i p) ≅ (λ i → (tail₁ a) i p)
+  expandʳ-tail₁ a p (ι x) = refl
+  -}
+
+  sumSwap-helperˡ : ∀ {m n : ℕ} → (a : Position (ι (suc m)) → Position (ι (suc n)) → ℂ) → (p : Position (ι (suc n))) → tail₁ (λ i → a i p + sum (tail₁ (a i))) ≅ (λ i → (tail₁ a) i p + sum (λ j → (tail₁ ((tail₁ a) i)) j))
+  sumSwap-helperˡ {m} {n} a p (ι x) = cong₂ _+_ refl (sum-cong {n} (λ{(ι j) → refl }))
+
+  sumSwap-helperʳ : ∀ {m n : ℕ} → (a : Position (ι (suc m)) → Position (ι (suc n)) → ℂ) → (p : Position (ι (suc n))) → tail₁ (λ j → a (ι fzero) j + sum (tail₁ (λ i → a i j))) ≅ (λ j → (tail₁ (a (ι fzero))) j + sum (λ i → tail₁ ((tail₁ a) i) j))
+  sumSwap-helperʳ {m} {n} a p (ι x) = cong₂ _+_ refl (sum-cong {m} (λ{(ι i) → refl }))
+
+
+  --expand-sum-applicationˡ : ∀ {m n : ℕ} → (a : Position (ι (suc m)) → Position (ι (suc n)) → ℂ) →
+  --          sum {m} (λ { (ι i) → 
+  --              a (ι (fsuc i)) (ι fzero) 
+  --            + sum (λ { (ι j) → a (ι (fsuc i)) (ι (fsuc j)) })
+  --          })
+  --          ≡
+  --          sum {m} (λ { (ι i) → 
+  --              a (ι (fsuc i)) (ι fzero) 
+  --          })
+  --          +
+  --          sum {m} (λ { (ι i) → 
+  --            sum (λ { (ι j) → a (ι (fsuc i)) (ι (fsuc j)) })
+  --          })
+  --expand-sum-applicationˡ {m} {n} a = trans (expand-sum {m} ? ?) ?
+
+
   sumSwap : ∀ {m n : ℕ} → (a : Position (ι m) → Position (ι n) → ℂ) → sum {m} (λ i → sum {n} (λ j → a i j)) ≡ sum {n} (λ j → sum {m} (λ i → a i j))
   sumSwap {zero} {n} a rewrite sum-zeros {n} = refl
   sumSwap {suc m} {zero} a rewrite
@@ -319,11 +381,14 @@ module src.Proof3 (real : Real) (cplx : Cplx real) where
   sumSwap {suc m} {suc n} a rewrite
       +-assoc (a (ι fzero) (ι fzero)) (sum (tail₁ (a (ι fzero))))         (sum (tail₁ (λ i → a i (ι fzero) + sum (tail₁ (a i)))))
     | +-assoc (a (ι fzero) (ι fzero)) (sum (tail₁ (λ i → a i (ι fzero)))) (sum (tail₁ (λ j → a (ι fzero) j + sum (tail₁ (λ i → a i j)))))
-    = cong₂ _+_ refl
-          ( cong₂ _+_ 
-            ?
-            ?
-          )
+    | sum-cong (sumSwap-helperˡ a (ι fzero))
+    | sum-cong (sumSwap-helperʳ a (ι fzero))
+    | expand-sum (λ z → tail₁ a z (ι fzero)) (λ z → sum (tail₁ (tail₁ a z)))        -- z here is a horrible varaible name but it was auto assigned and works
+    | expand-sum (tail₁ (a (ι fzero)))  (λ z → sum (λ i → (tail₁ (tail₁ a i) z)))
+    | sym (+-assoc (sum (tail₁ (a (ι fzero))))         (sum (λ z → tail₁ a z (ι fzero))) (sum (λ z → sum (tail₁ (tail₁ a z)))))
+    | sym (+-assoc (sum (tail₁ (λ i → a i (ι fzero)))) (sum (tail₁ (a (ι fzero))))       (sum (λ z → sum (λ i → tail₁ (tail₁ a i) z))))
+    | +-comm (sum (tail₁ (a (ι fzero)))) (sum (λ z → tail₁ a z (ι fzero)))
+    = cong₂ _+_ refl (cong₂ _+_ (cong₂ _+_ (sum-cong {m} (λ{(ι z) → refl })) refl) (trans (sumSwap (λ z → (tail₁ (tail₁ a z)))) refl))
 
   
   ext : ∀ {m n : ℕ} → (arr : Ar (ι m) ℂ) → (prf : m ≡ n)
