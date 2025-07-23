@@ -17,7 +17,7 @@ open Cplx cplx using (ℂ; _+_; fromℝ; _*_; -ω; 0ℂ; +-*-isCommutativeRing; 
 open AlgebraStructures  {A = ℂ} _≡_
 open AlgebraDefinitions {A = ℂ} _≡_
 
-open IsCommutativeRing +-*-isCommutativeRing using (distribˡ; *-comm; zeroˡ; *-identityʳ; *-assoc; +-identityʳ; +-assoc; +-comm; +-identityˡ)
+open IsCommutativeRing +-*-isCommutativeRing using (+-isCommutativeMonoid; distribˡ; *-comm; zeroˡ; *-identityʳ; *-assoc; +-identityʳ; +-assoc; +-comm; +-identityˡ)
 
 open import Data.Nat.Base using (ℕ; zero; suc) renaming (_*_ to _*ₙ_; _+_ to _+ₙ_)
 open import Data.Nat.Properties using (suc-injective) renaming (*-comm to *ₙ-comm; *-identityʳ to *ₙ-identityʳ; *-assoc to *ₙ-assoc; 
@@ -32,7 +32,7 @@ open import Data.Sum.Base using (inj₁; inj₂ )
 
 open import src.Matrix using (Ar; Shape; _⊗_; ι; Position; nestedMap; zipWith; nest; map; unnest; head₁; tail₁; zip; iterate; ι-cons; nil; foldr; length; cong-foldr; splitAr; splitArₗ; splitArᵣ)
 open import src.Matrix.Equality using (_≅_; foldr-cong; eq+eq≅arr; reduce-≅; tail₁-cong)
-open import src.Matrix.Sum real cplx using (sum; sum-cong; sum-nil; sum-zeros; split-sum; foldr≡sum)
+open import src.Matrix.Sum _+_ 0ℂ +-isCommutativeMonoid using (sum; sum-cong; sum-nil; sum-zeros; split-sum; foldr≡sum)
 open import src.Matrix.Properties using (splitArᵣ-zero; tail₁-const; zipWith-congˡ)
 open import src.Reshape using (reshape; Reshape; flat; _♭; _♯; recursive-transpose; recursive-transposeᵣ; _∙_; rev; _⊕_; swap; eq; split; _⟨_⟩; eq+eq; eq+eq-position-wrapper; reindex; rev-eq; flatten-reindex; |s|≡|sᵗ|)
 
@@ -42,7 +42,7 @@ open import FFT real cplx
 
 private
   variable
-    s : Shape
+    s s₁ s₂ : Shape
 
 ---------------------------------
 --- Properties of DFT and FFT ---
@@ -55,15 +55,40 @@ FFT-cong : ∀ {s : Shape} {xs ys : Ar s ℂ} → xs ≅ ys → FFT xs ≅ FFT y
 FFT-cong {ι x   } {xs} {ys} prf i = DFT-cong prf i
 FFT-cong {s ⊗ s₁} {xs} {ys} prf (i ⊗ i₁) = (FFT-cong {s₁} λ { j₁ → (cong₂ _*_ ((FFT-cong {s} λ {j₂ → prf (j₂ ⊗ j₁) }) i₁ ) refl) }) i
 
+tmp : ∀ (arr : Ar (s₁ ⊗ s₂) ℂ) → (i : Position (recursive-transpose s₂)) (j : Position (recursive-transpose s₁))
+          →
+            DFT
+            (λ z →
+               (reshape {ι (length (recursive-transpose s₁)) } {recursive-transpose s₁} _♯ ∘ DFT ∘ reshape flatten-reindex)
+               (nest (reshape swap arr) ((z ⟨ reindex (|s|≡|sᵗ| {s₂}) ⟩) ⟨ _♭ ⟩)) j
+               * twiddles {s₂} (((z ⟨ reindex (|s|≡|sᵗ| {s₂}) ⟩) ⟨ _♭ {s₂} ⟩) ⊗ j))
+            (i ⟨ rev _♭ ⟩)
+            ≡ (reshape _♯ ∘ DFT ∘ reshape flatten-reindex) arr (i ⊗ j)
+tmp {s₁} {s₂} arr i j =
+  begin
+    DFT {length (recursive-transpose s₂) } (λ z → 
+        DFT (λ ix → 
+          arr (((ix ⟨ subst (λ t → Reshape (ι (length s₁)) (ι t)) (|s|≡|sᵗ| {s₁}) eq ⟩) ⟨ _♭ ⟩) ⊗ ((z ⟨ subst (λ t → Reshape (ι (length s₂)) (ι t)) (|s|≡|sᵗ| {s₂}) eq ⟩) ⟨ _♭ ⟩))
+        ) (j ⟨ rev _♭ ⟩) 
+      * 
+        -ω 
+          (length s₂ *ₙ length (recursive-transpose s₁)) 
+          ((offset-n {s₂} ((z ⟨ subst (λ t → Reshape (ι (length s₂)) (ι t)) (|s|≡|sᵗ| {s₂}) eq ⟩) ⟨ _♭ ⟩)) *ₙ (offset-n j ))
+    ) (i ⟨ rev _♭ ⟩)
+  ≡⟨ ? ⟩
+    (λ z → sum {length (recursive-transpose s₂)} ?) (i ⟨ rev _♭ ⟩)
+  ≡⟨⟩
+    ?
+
+--DFT {N} xs (ι k) = sum (zipWith (step {N} {k}) xs offset-n)
+
 fft-ok : ∀ (arr : Ar s ℂ) → FFT arr ≅ ((reshape _♯) ∘ DFT ∘ (reshape flatten-reindex)) arr
-fft-ok {ι x} arr i = refl
-fft-ok {s ⊗ s₁} arr (i ⊗ j) =
+fft-ok {ι x    } arr  i = refl
+fft-ok {s₁ ⊗ s₂} arr (i ⊗ j) =
   begin
     _ ≡⟨ fft-ok _ i ⟩
     _ ≡⟨ DFT-cong (λ x → cong₂ _*_ (fft-ok _ j) refl) (i ⟨ rev _♭ ⟩ ) ⟩
-    _ ≡⟨⟩ ?
-
-
+    _ ≡⟨ tmp arr i j ⟩ refl
 
 
 
