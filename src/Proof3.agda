@@ -45,6 +45,12 @@ module src.Proof3 (real : Real) (cplx : Cplx real) where
     variable
       N r₁ r₂ : ℕ -- Such that N ≡ r₁ * r₂
 
+  twiddle-thm : ∀ {s p : Shape} → (a : Ar (s ⊗ p) ℂ) → zipWith _*_ (reshape swap a) twiddles ≅ reshape swap (zipWith _*_ a twiddles)
+  twiddle-thm {s} {p} a (i ⊗ j) rewrite 
+      *ₙ-comm (length   p) (length   s) 
+    | *ₙ-comm (offset-n i) (offset-n j)
+    = refl
+
   double-nested-tail-equiv : ∀ {N : ℕ} (x : ℂ) (ys : Ar (ι (suc (suc N))) ℂ) → 
     (λ i → x * tail₁ (tail₁ ys) i) ≅ (tail₁ (λ i → x * tail₁ ys i))
   double-nested-tail-equiv {N} x ys (ι pos) = refl
