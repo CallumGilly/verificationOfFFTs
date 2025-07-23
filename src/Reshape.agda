@@ -31,8 +31,8 @@ data Reshape : Shape → Shape → Set where
   split  : Reshape (ι (m * n)) (ι m ⊗ ι n)
   flat   : Reshape (ι m ⊗ ι n) (ι (m * n))
   swap   : Reshape (s ⊗ p) (p ⊗ s)
-  comm-eq : m ≡ n → Reshape (ι n) (ι m)
-  reindex : Reshape (ι (m * n)) (ι (n * m))
+--  comm-eq : m ≡ n → Reshape (ι n) (ι m)
+--  reindex : Reshape (ι (m * n)) (ι (n * m))
 --comm-eq {n} {m} rewrite *-comm m n = eq
 
 -- For all shapes s and p
@@ -43,8 +43,8 @@ i           ⟨ r ∙ r₁ ⟩ = i ⟨ r ⟩ ⟨ r₁ ⟩
 (ι i ⊗ ι j) ⟨ split  ⟩ = ι (combine i j)
 ι i         ⟨ flat   ⟩ = let a , b = remQuot _ i in ι a ⊗ ι b
 (i ⊗ j)     ⟨ swap   ⟩ = j ⊗ i
-ι i         ⟨ comm-eq prf ⟩ = ι (cast prf i) 
-ι i ⟨ reindex {m} {n} ⟩ = ι (cast (*-comm n m) i)
+--ι i         ⟨ comm-eq prf ⟩ = ι (cast prf i) 
+--ι i ⟨ reindex {m} {n} ⟩ = ι (cast (*-comm n m) i)
 
 
 --cong-eq : ∀ {n m : ℕ} → n ≡ m → eq {?} ≡ eq
@@ -59,8 +59,8 @@ rev (r ∙ r₁) = rev r₁ ∙ rev r
 rev split = flat
 rev flat = split
 rev swap = swap
-rev (comm-eq refl) = comm-eq refl
-rev (reindex {m} {n}) = reindex {n} {m}
+--rev (comm-eq refl) = comm-eq refl
+--rev (reindex {m} {n}) = reindex {n} {m}
 
 -- Reverse properties
 rev-eq : (r : Reshape s p) → ∀ (i : Position p) → i ⟨ r ∙ rev r ⟩ ≡ i
@@ -78,12 +78,12 @@ rev-eq (split {m = m} {n = n}) (ι x ⊗ ι x₁) with cong proj₁ (remQuot-com
   ∎
 rev-eq (flat {m = m} {n = n}) (ι x) rewrite combine-remQuot {m} n x = refl 
 rev-eq swap (i ⊗ i₁) = refl
-rev-eq (comm-eq refl) (ι i) rewrite 
-    cast-is-id refl i 
-  | cast-is-id refl i = refl
-rev-eq (reindex {m} {n}) (ι i) rewrite 
-    cast-trans (*-comm n m) (*-comm m n) i 
-  | cast-is-id refl i = refl
+--rev-eq (comm-eq refl) (ι i) rewrite 
+--    cast-is-id refl i 
+--  | cast-is-id refl i = refl
+--rev-eq (reindex {m} {n}) (ι i) rewrite 
+--    cast-trans (*-comm n m) (*-comm m n) i 
+--  | cast-is-id refl i = refl
 
 eq+eq : ∀ {X : Set} {n m : ℕ} (arr : Ar (ι n ⊗ ι m) X) → reshape (eq ⊕ eq) arr ≡ arr
 eq+eq {X} {n} {m} arr = extensionality λ{(ι x ⊗ ι y) → refl }
@@ -98,8 +98,8 @@ rev-rev (r ⊕ r₁) (i ⊗ i₁) rewrite rev-rev r i | rev-rev r₁ i₁ = refl
 rev-rev split i = refl
 rev-rev flat i = refl
 rev-rev swap i = refl
-rev-rev (comm-eq refl) i = refl
-rev-rev reindex i = refl
+--rev-rev (comm-eq refl) i = refl
+--rev-rev reindex i = refl
 
 -- Define transpose
 transpose : Shape → Shape
@@ -134,24 +134,33 @@ _♭ {s ⊗ s₁} = flat ∙ _♭ ⊕ _♭
 _♯ : Reshape (ι (length s)) s
 _♯ = rev _♭
 
---lemma₁ : ∀ {s : Shape} → length s ≡ length (recursive-transpose s)
---lemma₁ {ι x}    = refl
---lemma₁ {s ⊗ s₁} rewrite 
---      *-comm (length s) (length s₁) 
---    | lemma₁ {s}
---    | lemma₁ {s₁} = refl
+reindex : m ≡ n → Reshape (ι m) (ι n)
+reindex {m} {n} prf = subst (λ t → Reshape (ι m) (ι t)) prf eq
 
+reindex-cast : (prf : n ≡ m) → (i : Fin m) → (ι i ⟨ reindex prf ⟩) ≡ (ι (cast (sym prf) i))
+reindex-cast {n} {m} refl i = cong ι (sym (cast-is-id refl i))
 
---comm-eq : ∀ {n m : ℕ} → Reshape (ι (n * m)) (ι (m * n))
---comm-eq {n} {m} rewrite *-comm m n = eq
+ext : (arr : Ar (ι m) X) → (prf : m ≡ n) → ∀ i → subst (λ s → Ar (ι s) X) prf arr i ≡ reshape (reindex prf) arr i
+ext arr refl (ι x) = refl
 
-_♭₂ : Reshape (s) (ι (length (recursive-transpose s)))
-_♭₂ {ι x} = eq
-_♭₂ {s ⊗ s₁} = comm-eq (*-comm (length (recursive-transpose s₁)) (length (recursive-transpose s))) ∙ flat ∙ _♭₂ ⊕ _♭₂
+|s|≡|sᵗ| : length s ≡ length (recursive-transpose s)
+|s|≡|sᵗ| {ι x} = refl
+|s|≡|sᵗ| {s ⊗ r} rewrite
+    *-comm (length s) (length r)
+  | |s|≡|sᵗ| {s} 
+  | |s|≡|sᵗ| {r} 
+  = refl
 
-_♭₃ : Reshape (s) (ι (length (recursive-transpose s)))
-_♭₃ {ι x} = eq
-_♭₃ {s ⊗ s₁} = (reindex {length (recursive-transpose s)} {length (recursive-transpose s₁)}) ∙ flat ∙ _♭₃ ⊕ _♭₃
+flatten-reindex : Reshape s (ι (length (recursive-transpose s)))
+flatten-reindex {s} = reindex (|s|≡|sᵗ| {s}) ∙ _♭
+
+--_♭₂ : Reshape (s) (ι (length (recursive-transpose s)))
+--_♭₂ {ι x} = eq
+--_♭₂ {s ⊗ s₁} = comm-eq (*-comm (length (recursive-transpose s₁)) (length (recursive-transpose s))) ∙ flat ∙ _♭₂ ⊕ _♭₂
+
+-- _♭₃ : Reshape (s) (ι (length (recursive-transpose s)))
+-- _♭₃ {ι x} = eq
+-- _♭₃ {s ⊗ s₁} = (reindex {length (recursive-transpose s)} {length (recursive-transpose s₁)}) ∙ flat ∙ _♭₃ ⊕ _♭₃
 
             -- (ι
             --  (length (recursive-transpose s) * length (recursive-transpose s₁)))

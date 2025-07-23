@@ -122,10 +122,6 @@ foldr-≡ {suc n} {g = g} {acc = acc} {arr = arr} prf rewrite
     prf {arr (ι fzero)} {acc}
   | foldr-≡ {g = g} {g (arr (ι fzero)) acc} {tail₁ arr} prf = refl
 
-
-
-
-
 zip : Ar (ι n) X → Ar (ι n) Y → Ar (ι n) (X × Y)
 zip xs ys pos = ⟨ xs pos , ys pos ⟩
 
@@ -137,39 +133,12 @@ _++_ {n} {X} {m} arr₁ arr₂ (ι pos) with splitAt n {m} pos
 ... | inj₁ finN = arr₁ (ι finN)
 ... | inj₂ finM = arr₂ (ι finM)
 
--- foldZip : ∀ {n : ℕ} → (X → Y → Z → Z ) → Z → Ar (ι n) X → Ar (ι n) Y → Z
--- foldZip {X} {Y} {Z} {zero} f acc xs ys = acc
--- foldZip {X} {Y} {Z} {suc n} f acc xs ys = foldr f (f (head₁ xs) (head₁ ys) acc) (tail₁ xs) (tail₁ ys)
-
--- ar-⊗-assoc : ∀ {s t u : Shape} → Ar ((s ⊗ t) ⊗ u) X → Ar (s ⊗ (t ⊗ u)) X
--- ar-⊗-assoc arr (p ⊗ (p₁ ⊗ p₂)) = arr ((p ⊗ p₁) ⊗ p₂)
--- 
--- flattern-less-general : Ar (ι n ⊗ s) X → Ar (ι (n * length s)) X
--- flattern-less-general {n} {ι x₁} arr = flattern arr
--- flattern-less-general {n} {ι x₁ ⊗ s₁} {X} arr rewrite *-assoc n x₁ (length s₁) = flattern (unnest (map flattern-less-general (nest arr)))
--- flattern-less-general {n} {(s ⊗ s₂) ⊗ ι x₁} arr with 
--- flattern-less-general {n} {(s ⊗ s₂) ⊗ (s₁ ⊗ s₃)} arr x = ?
--- 
-
---flattern-general : Ar s X → Ar (ι (length s)) X
---flattern-general {ι x} arr = arr
---flattern-general {ι x ⊗ s} arr (ι p) with remQuot {x} (length s) p
---... | ⟨ fst , snd ⟩ = let sub-arr = (nest arr) (ι fst) in flattern-general sub-arr (ι snd)
---flattern-general {(s ⊗ s₁) ⊗ s₂} arr (ι p) with map flattern-general (nest arr) | remQuot {length (s ⊗ s₁)} (length s₂) p
---... | tmp1 | ⟨ fst , snd ⟩ = let tmp0 = map (λ arr → arr (ι snd)) tmp1 in flattern-general tmp0 (ι ?)
-
--- flattern-general {ι x} arr = arr
--- flattern-general {ι x ⊗ s₁} arr = flattern (unnest (map flattern-general (nest arr)))
--- flattern-general {(s ⊗ s₂) ⊗ s₁} arr rewrite *-assoc (length s) (length s₂) (length s₁) = flattern-general (unnest (map flattern-general (nest (ar-⊗-assoc arr)))) 
--- 
--- 
--- 
 iterate : (n : ℕ) → (X → X) → X → Ar (ι n) X
 iterate zero    f acc = nil
 iterate (suc n) f acc = ι-cons acc (iterate n f (f acc))
 
-toFin : Position (ι n) → Fin n
-toFin (ι x) = x
+-- toFin : Position (ι n) → Fin n
+-- toFin (ι x) = x
 
 
 
