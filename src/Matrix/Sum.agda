@@ -61,26 +61,6 @@ module src.Matrix.Sum {A : Set} (_⋆_ : Op₂ A) (ε : A) (isCommutativeMonoid 
     | identityʳ ε
     = refl
 
-  {-
-  foldr-pull-out : ∀ {r : ℕ} (n m : A) (arr : Ar (ι r) A) → foldr _⋆_ (n ⋆ m) arr ≡ n ⋆ (foldr _⋆_ m arr)
-  foldr-pull-out {zero} n m arr = refl
-  foldr-pull-out {suc r} n m arr rewrite
-      foldr-pull-out (head₁ arr) (n ⋆ m) (tail₁ arr) 
-    | foldr-pull-out (head₁ arr) (m) (tail₁ arr) 
-    | foldr-pull-out n m (tail₁ arr)
-    | sym (assoc (arr (ι fzero)) n (foldr _⋆_ m (tail₁ arr)))
-    | comm (arr (ι fzero)) n
-    | assoc n (arr (ι fzero)) (foldr _⋆_ m (tail₁ arr))
-    = refl
-
-  foldr≡sum : ∀ {m : ℕ} (arr : Ar (ι m) A) → foldr {m} _⋆_ ε arr ≡ sum {m} arr
-  foldr≡sum {zero} arr = refl
-  foldr≡sum {suc m} arr rewrite 
-      foldr-pull-out {m} (arr (ι fzero)) ε (tail₁ arr) 
-    | foldr≡sum {m} (tail₁ arr)
-    = refl
-  -}
-
   split-sum : ∀ {m n : ℕ} → (arr : Ar (ι (n +ₙ m)) A) → sum arr ≡ sum (splitArₗ {n} arr) ⋆ sum (splitArᵣ {n} arr)
   split-sum {m} {zero} arr rewrite
       identityˡ (sum (splitArᵣ {0} arr)) = sum-cong {m} (λ{(ι i) → refl })
