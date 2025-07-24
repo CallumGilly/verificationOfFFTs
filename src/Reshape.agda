@@ -154,6 +154,9 @@ ext arr refl (ι x) = refl
 flatten-reindex : Reshape s (ι (length (recursive-transpose s)))
 flatten-reindex {s} = reindex (|s|≡|sᵗ| {s}) ∙ _♭
 
+reindex-reindex : (prf : m ≡ n) (i : Position (ι m)) → i ⟨ reindex (sym prf) ∙ reindex prf ⟩ ≡ i
+reindex-reindex refl i = refl
+
 --_♭₂ : Reshape (s) (ι (length (recursive-transpose s)))
 --_♭₂ {ι x} = eq
 --_♭₂ {s ⊗ s₁} = comm-eq (*-comm (length (recursive-transpose s₁)) (length (recursive-transpose s))) ∙ flat ∙ _♭₂ ⊕ _♭₂

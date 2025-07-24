@@ -17,7 +17,7 @@ open import Function using (_$_; _∘_)
 open import Data.Fin.Base using (Fin; toℕ; opposite) renaming (zero to fzero; suc to fsuc)
 open import Data.Nat.Base using (ℕ; suc) renaming (_+_ to _+ₙ_; _*_ to _*ₙ_)
 
-open import src.Matrix using (Ar; Shape; Position; ι; _⊗_; zipWith; nestedMap; length; foldr)
+open import src.Matrix using (Ar; Shape; Position; ι; _⊗_; zipWith; nestedMap; length)
 open import src.Matrix.Sum _+_ 0ℂ +-isCommutativeMonoid using (sum)
 open import src.Reshape using (Reshape; transpose; transposeᵣ; rev; recursive-transposeᵣ; recursive-transpose; reshape; flat; _∙_; swap; _⟨_⟩; _♯; _⊕_; eq)
 
@@ -25,27 +25,32 @@ open import src.Reshape using (Reshape; transpose; transposeᵣ; rev; recursive-
 --- DFT and FFT helper functions ---
 ------------------------------------
 
-offset : ∀ {s : Shape} → Position s → Position (ι (length s))
-offset i = i ⟨ _♯ ⟩
+--offset : ∀ {s : Shape} → Position s → Position (ι (length s))
+--offset i = i ⟨ _♯ ⟩
+--
+--offset-n : ∀ {s : Shape} → Position s → ℕ
+--offset-n i with offset i
+--... | ι x = toℕ x
+--
+--position-sum : ∀ {s r : Shape} → Position (s ⊗ r) → ℕ
+--position-sum {s} {r} (i ⊗ j) = offset-n i *ₙ offset-n j
 
-offset-n : ∀ {s : Shape} → Position s → ℕ
-offset-n i with offset i
-... | ι x = toℕ x
+private
+  variable
+    N : ℕ
+    s p : Shape
 
-position-sum : ∀ {s r : Shape} → Position (s ⊗ r) → ℕ
-position-sum {s} {r} (i ⊗ j) = offset-n i *ₙ offset-n j
+iota : Ar (ι N) ℕ
+iota (ι i) = toℕ i
 
--- There is 100% some relation between twiddles and step,
--- however I have had a brief play and havent found it yet
+offset-prod : Position (s ⊗ p) → ℕ
+offset-prod (i ⊗ j) = iota (i ⟨ _♯ ⟩) *ₙ iota (j ⟨ _♯ ⟩)
 
-twiddles : ∀ {s r : Shape} → Ar (s ⊗ r) ℂ
-twiddles {s} {r} p = -ω (length (s ⊗ r)) (position-sum p)
-
-step : {N : ℕ} → {Fin N} → ℂ → ℕ → ℂ
-step {N} {k} xₙ n = xₙ * (-ω N (n *ₙ (toℕ k)))
+twiddles : Ar (s ⊗ p) ℂ
+twiddles {s} {p} i = -ω (length (s ⊗ p)) (offset-prod i)
 
 DFT : ∀ {N : ℕ} → Ar (ι N) ℂ → Ar (ι N) ℂ
-DFT {N} xs (ι k) = sum (zipWith (step {N} {k}) xs offset-n)
+DFT {N} xs k = sum (λ i → xs i * -ω N (offset-prod (i ⊗ k)))
 
 FFT : ∀ {s : Shape} → Ar s ℂ → Ar (recursive-transpose s) ℂ
 FFT {ι x     } arr = DFT arr -- Use the DFT when no splitting is defined 

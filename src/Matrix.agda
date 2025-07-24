@@ -86,6 +86,7 @@ splitArᵣ {n} {m} xs (ι i) = xs (ι (join n m (inj₂ i)))
 splitAr : Ar (ι (n + m)) X → Ar (ι n) X × Ar (ι m) X
 splitAr xs = ⟨ splitArₗ xs , splitArᵣ xs ⟩
 
+{-
 foldr : ∀ {n : ℕ} {X Y : Set} → (X → Y → Y) → Y → Ar (ι n) X → Y
 foldr {zero } f acc ar = acc
 foldr {suc n} f acc ar = foldr f (f (head₁ ar) acc) (tail₁ ar)
@@ -121,6 +122,7 @@ foldr-≡ {zero} {X} {Y} {f} {g} {acc} {arr} prf = refl
 foldr-≡ {suc n} {g = g} {acc = acc} {arr = arr} prf rewrite 
     prf {arr (ι fzero)} {acc}
   | foldr-≡ {g = g} {g (arr (ι fzero)) acc} {tail₁ arr} prf = refl
+-}
 
 zip : Ar (ι n) X → Ar (ι n) Y → Ar (ι n) (X × Y)
 zip xs ys pos = ⟨ xs pos , ys pos ⟩

@@ -231,13 +231,6 @@ module src.Proof3 (real : Real) (cplx : Cplx real) where
 
 
 
-  mergeSumₗ : ∀ {m n : ℕ} → (arr : Ar (ι (suc m *ₙ suc n)) ℂ) → (tail₁ (λ j → arr ((ι (fzero {m}) ⊗ j) ⟨ split ⟩))) ≅ (splitArₗ {n} (tail₁ arr))
-  mergeSumₗ {m} {n} arr (ι i) = cong (arr ∘ ι) refl
-
-  --mergeSumᵣ : ∀ {m n : ℕ} → (arr : Ar (ι (suc (n +ₙ m *ₙ suc n))) ℂ) → 
-  --      (tail₁ {?} (λ i → arr ((i ⊗ ι (fzero {?} )) ⟨ split {?} {?} ⟩) + sum (tail₁ {?} (λ j → arr ((i ⊗ j) ⟨ split {?} {?} ⟩)))))
-  --    ≅ 
-  --      (splitArᵣ {n} {m *ₙ suc n} (tail₁ arr))
 
   
   sum-tail₁ : ∀ {n : ℕ} (arr : Ar (ι (suc n)) ℂ) → sum {n} (tail₁ (λ i → arr i)) ≡ sum {n} (λ i → (splitArᵣ (tail₁ arr)) i)
@@ -249,23 +242,6 @@ module src.Proof3 (real : Real) (cplx : Cplx real) where
     = refl
 
     
-  mergeSum : ∀ {m n : ℕ} → (arr : Ar (ι (m *ₙ n)) ℂ) → sum {m} (λ i → sum {n} (λ j → arr ((i ⊗ j) ⟨ split ⟩ ))) ≡ sum arr
-  mergeSum {zero} {n} arr = refl
-  mergeSum {suc m} {zero} arr rewrite 
-      sum-nil arr (*ₙ-zeroʳ m) 
-    | +-identityˡ (sum {m} (tail₁ (λ i → 0ℂ)))
-    | sum-cong (tail₁-const {ℂ} {m} {0ℂ})
-    | sum-zeros {m}
-    = refl
-  mergeSum {suc m} {suc n} arr 
-    rewrite split-sum {m *ₙ suc n} {n} (tail₁ arr) rewrite 
-        sym (+-assoc (arr (ι fzero)) (sum (splitArₗ {n} (tail₁ arr))) (sum (splitArᵣ {n} (tail₁ arr))))
-      | sum-cong (mergeSumₗ {m} {n} arr)
-      = cong₂ _+_ refl 
-        (trans 
-          (sum-cong {m} (λ{ (ι i) → cong₂ _+_ refl (sum-cong {n} (λ{(ι j) → refl})) }))
-          (mergeSum {m} {suc n} (splitArᵣ {n} (tail₁ arr)))
-        )
 
   distrib-tail₁ : ∀ {n : ℕ} (xs ys : Ar (ι (suc n)) ℂ) → sum (tail₁ (λ i → xs i + ys i)) ≡ sum (λ i → (tail₁ xs) i + (tail₁ ys) i)
   distrib-tail₁ {n} xs ys = sum-cong {n} λ{(ι i) → refl }
@@ -360,7 +336,7 @@ module src.Proof3 (real : Real) (cplx : Cplx real) where
   reindex-is-comm-eq : ∀ {m n : ℕ} {arr : Ar (ι (m *ₙ n)) ℂ} → reshape (comm-eq (sym (*ₙ-comm m n))) arr ≅ reshape (reindex {m}) arr
   reindex-is-comm-eq {m} {n} (ι x) = refl
 
-  sumReindex : ∀ {m n : ℕ} → (arr : Ar (ι (m *ₙ n)) ℂ) → sum arr ≡ sum (reshape (reindex {m}) arr)
+  sumReindex : ∀ {m n : ℕ} → (arr : Ar (ι (m *ₙ n)) ℂ) → sum arr ≡ sum (reshape (reindex {?}) arr)
   sumReindex {m} {n} arr = trans (cong-sum-comm-eq arr (*ₙ-comm m n)) (sum-cong (reindex-is-comm-eq {m} {n} {arr}))
 
   newMergeFoldr : ∀ {r₁ r₂ : ℕ} (arr : Ar (ι (r₂ *ₙ r₁)) ℂ) →
@@ -377,10 +353,10 @@ module src.Proof3 (real : Real) (cplx : Cplx real) where
       foldr≡sum arr 
     | foldr≡sum (λ k₀ → foldr {r₁} _+_ 0ℂ (λ k₁ → arr ((k₁ ⊗ k₀) ⟨ split ⟩ ⟨ reindex {r₂} {r₁} ⟩ )))
     | sum-cong  (λ k₀ → foldr≡sum {r₁} (λ k₁ → arr ((k₁ ⊗ k₀) ⟨ split ⟩ ⟨ reindex {r₂} {r₁} ⟩ )))
-    | sumSwap {r₂} {r₁} (λ i j → arr ((j ⊗ i) ⟨ split ∙ reindex {r₂} ⟩ ))
-    | mergeSum {r₁} (reshape (reindex {r₂}) arr)
-    | sumReindex {r₂} arr
-    = refl
+    --| sumSwap {r₂} {r₁} (λ i j → arr ((j ⊗ i) ⟨ split ∙ reindex {r₂} ⟩ ))
+    --| mergeSum {r₁} (reshape (reindex {r₂}) arr)
+    --| sumReindex {r₂} arr
+    = ?
 
 
 
