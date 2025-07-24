@@ -21,24 +21,14 @@ open import src.Matrix using (Ar; Shape; Position; ι; _⊗_; zipWith; nestedMap
 open import src.Matrix.Sum _+_ 0ℂ +-isCommutativeMonoid using (sum)
 open import src.Reshape using (Reshape; transpose; transposeᵣ; rev; recursive-transposeᵣ; recursive-transpose; reshape; flat; _∙_; swap; _⟨_⟩; _♯; _⊕_; eq)
 
-------------------------------------
---- DFT and FFT helper functions ---
-------------------------------------
-
---offset : ∀ {s : Shape} → Position s → Position (ι (length s))
---offset i = i ⟨ _♯ ⟩
---
---offset-n : ∀ {s : Shape} → Position s → ℕ
---offset-n i with offset i
---... | ι x = toℕ x
---
---position-sum : ∀ {s r : Shape} → Position (s ⊗ r) → ℕ
---position-sum {s} {r} (i ⊗ j) = offset-n i *ₙ offset-n j
-
 private
   variable
     N : ℕ
     s p : Shape
+
+------------------------------------
+--- DFT and FFT helper functions ---
+------------------------------------
 
 iota : Ar (ι N) ℕ
 iota (ι i) = toℕ i
@@ -48,6 +38,10 @@ offset-prod (i ⊗ j) = iota (i ⟨ _♯ ⟩) *ₙ iota (j ⟨ _♯ ⟩)
 
 twiddles : Ar (s ⊗ p) ℂ
 twiddles {s} {p} i = -ω (length (s ⊗ p)) (offset-prod i)
+
+-------------------
+--- DFT and FFT ---
+-------------------
 
 DFT : ∀ {N : ℕ} → Ar (ι N) ℂ → Ar (ι N) ℂ
 DFT {N} xs k = sum (λ i → xs i * -ω N (offset-prod (i ⊗ k)))
