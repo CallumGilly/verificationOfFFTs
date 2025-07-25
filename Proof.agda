@@ -35,7 +35,7 @@ open import src.Matrix.Equality using (_≅_; eq+eq≅arr; reduce-≅; tail₁-c
 open import src.Matrix.Properties using (splitArᵣ-zero; tail₁-const; zipWith-congˡ)
 
 import src.Matrix.Sum as S
-open S _+_ 0ℂ +-isCommutativeMonoid using (sum-length; merge-sum; sum-reindex; sumSwap)
+open S _+_ 0ℂ +-isCommutativeMonoid using (merge-sum; sum-reindex; sum-swap)
 sum = S.sum _+_ 0ℂ +-isCommutativeMonoid
 {-# DISPLAY S.sum _+_ 0ℂ +-isCommutativeMonoid = sum #-}
 sum-cong = S.sum-cong _+_ 0ℂ +-isCommutativeMonoid
@@ -236,9 +236,9 @@ fft≅dft {r₁ ⊗ r₂} arr (j₁ ⊗ j₀) =
               )
           ) 
       ⟩
-    _ ≡⟨ sum-cong {length (recursive-transpose r₂)} (λ k₀ → sum-length (|s|≡|sᵗ| {r₁})) ⟩
-    _ ≡⟨ sum-length (|s|≡|sᵗ| {r₂}) ⟩
-    _ ≡⟨ sumSwap {length r₂} {length r₁} _ ⟩
+    _ ≡⟨ sum-cong {length (recursive-transpose r₂)} (λ k₀ → sym (sum-reindex (|s|≡|sᵗ| {r₁}))) ⟩
+    _ ≡⟨ sym (sum-reindex (|s|≡|sᵗ| {r₂})) ⟩
+    _ ≡⟨ sum-swap {length r₂} {length r₁} _ ⟩
     _ ≡⟨ merge-sum {length r₁} {length r₂} _ ⟩
           sum { length r₁ *ₙ length r₂ }
             (λ k →
@@ -248,7 +248,7 @@ fft≅dft {r₁ ⊗ r₂} arr (j₁ ⊗ j₀) =
                    (length (recursive-transpose r₂) *ₙ length (recursive-transpose r₁))
                    (iota k *ₙ iota (((j₁ ⟨ rev _♭ ⟩) ⊗ (j₀ ⟨ rev _♭ ⟩)) ⟨ split ⟩))
             )
-      ≡⟨ sym (sum-length { length (recursive-transpose (r₁ ⊗ r₂)) } { length (r₁ ⊗ r₂) } (|s|≡|sᵗ| {r₁ ⊗ r₂})) ⟩
+      ≡⟨ sum-reindex (|s|≡|sᵗ| {r₁ ⊗ r₂}) ⟩
     _ ≡⟨ sum-cong 
         {length (recursive-transpose (r₁ ⊗ r₂))} 
         (λ{(ι k) → 
