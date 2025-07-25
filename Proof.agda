@@ -40,7 +40,7 @@ sum = S.sum _+_ 0ℂ +-isCommutativeMonoid
 {-# DISPLAY S.sum _+_ 0ℂ +-isCommutativeMonoid = sum #-}
 sum-cong = S.sum-cong _+_ 0ℂ +-isCommutativeMonoid
 
-open import src.Reshape using (reshape; Reshape; flat; _♭; _♯; recursive-transpose; recursive-transposeᵣ; _∙_; rev; _⊕_; swap; eq; split; _⟨_⟩; eq+eq-position-wrapper; reindex; rev-eq; flatten-reindex; |s|≡|sᵗ|; reindex-reindex)
+open import Matrix.Reshape using (reshape; Reshape; flat; ♭; ♯; recursive-transpose; recursive-transposeᵣ; _∙_; rev; _⊕_; swap; eq; split; _⟨_⟩; reindex; rev-eq; flatten-reindex; |s|≡|sᵗ|; reindex-reindex)
 
 open import Function.Base using (_$_; id; _∘_; flip; _∘₂_)
 
@@ -109,25 +109,25 @@ FFT-cong {r₁ ⊗ r₂} {xs} {ys} prf (j₁ ⊗ j₀) = (FFT-cong {r₂} λ { k
    → 
         -ω 
           (length (recursive-transpose r₁)) 
-          (iota k₁ *ₙ iota (j₀ ⟨ rev _♭ ⟩)) 
+          (iota k₁ *ₙ iota (j₀ ⟨ rev ♭ ⟩)) 
       * -ω 
           (length r₂ *ₙ length (recursive-transpose r₁))
-          (iota (((k₀ ⟨ reindex (|s|≡|sᵗ| {r₂}) ⟩) ⟨ _♭ ⟩) ⟨ rev (_♭ {r₂}) ⟩) *ₙ iota (j₀ ⟨ rev _♭ ⟩)) 
+          (iota (((k₀ ⟨ reindex (|s|≡|sᵗ| {r₂}) ⟩) ⟨ ♭ ⟩) ⟨ rev (♭ {r₂}) ⟩) *ₙ iota (j₀ ⟨ rev ♭ ⟩)) 
       * -ω 
           (length (recursive-transpose r₂)) 
-          (iota k₀ *ₙ iota (j₁ ⟨ rev _♭ ⟩))
+          (iota k₀ *ₙ iota (j₁ ⟨ rev ♭ ⟩))
       ≡
         -ω 
           (length (recursive-transpose r₂) *ₙ length (recursive-transpose r₁))
-          (iota (((k₁ ⟨ reindex (|s|≡|sᵗ| {r₁}) ⟩) ⊗ (k₀ ⟨ reindex (|s|≡|sᵗ| {r₂}) ⟩)) ⟨ split ⟩) *ₙ iota (((j₁ ⟨ rev _♭ ⟩) ⊗ (j₀ ⟨ rev _♭ ⟩)) ⟨ split ⟩))
+          (iota (((k₁ ⟨ reindex (|s|≡|sᵗ| {r₁}) ⟩) ⊗ (k₀ ⟨ reindex (|s|≡|sᵗ| {r₂}) ⟩)) ⟨ split ⟩) *ₙ iota (((j₁ ⟨ rev ♭ ⟩) ⊗ (j₀ ⟨ rev ♭ ⟩)) ⟨ split ⟩))
 -ω-rearanging {r₂} {r₁} j₁ j₀ k₀ k₁ =
   begin
   _ ≡⟨ cong₂ _*_ (cong₂ _*_ refl (cong₂ -ω (cong₂ _*ₙ_ (|s|≡|sᵗ| {r₂}) refl) refl)) refl ⟩
-  _ ≡⟨ cong₂ _*_ (cong₂ _*_ refl (cong₂ -ω refl (cong₂ _*ₙ_ (cong iota (rev-eq {r₂} _♭ (k₀ ⟨ reindex (|s|≡|sᵗ| {r₂}) ⟩))) refl))) refl ⟩
+  _ ≡⟨ cong₂ _*_ (cong₂ _*_ refl (cong₂ -ω refl (cong₂ _*ₙ_ (cong iota (rev-eq {r₂} ♭ (k₀ ⟨ reindex (|s|≡|sᵗ| {r₂}) ⟩))) refl))) refl ⟩
   _ ≡⟨ cong₂ _*_ (cong₂ _*_ refl (cong₂ -ω refl (cong₂ _*ₙ_ (iota-reindex (|s|≡|sᵗ| {r₂})) refl))) refl ⟩
-  _ ≡⟨ -ω-rearanging′ (length (recursive-transpose r₁)) (length (recursive-transpose r₂)) (iota k₀) (iota k₁) (iota (j₀ ⟨ rev _♭ ⟩)) (iota (j₁ ⟨ rev _♭ ⟩)) ⟩
+  _ ≡⟨ -ω-rearanging′ (length (recursive-transpose r₁)) (length (recursive-transpose r₂)) (iota k₀) (iota k₁) (iota (j₀ ⟨ rev ♭ ⟩)) (iota (j₁ ⟨ rev ♭ ⟩)) ⟩
   _ ≡⟨ sym (cong₂ -ω refl 
-          (cong (_*ₙ (length (recursive-transpose r₁) *ₙ iota (j₁ ⟨ rev _♭ ⟩) +ₙ iota (j₀ ⟨ rev _♭ ⟩))) 
+          (cong (_*ₙ (length (recursive-transpose r₁) *ₙ iota (j₁ ⟨ rev ♭ ⟩) +ₙ iota (j₀ ⟨ rev ♭ ⟩))) 
             (cong ((length (recursive-transpose r₂) *ₙ iota k₁ +ₙ_))
               (iota-reindex (|s|≡|sᵗ| {r₂}))
             )
@@ -135,7 +135,7 @@ FFT-cong {r₁ ⊗ r₂} {xs} {ys} prf (j₁ ⊗ j₀) = (FFT-cong {r₂} λ { k
          ) 
    ⟩
   _ ≡⟨ sym (cong₂ -ω refl 
-          (cong (_*ₙ (length (recursive-transpose r₁) *ₙ iota (j₁ ⟨ rev _♭ ⟩) +ₙ iota (j₀ ⟨ rev _♭ ⟩))) 
+          (cong (_*ₙ (length (recursive-transpose r₁) *ₙ iota (j₁ ⟨ rev ♭ ⟩) +ₙ iota (j₀ ⟨ rev ♭ ⟩))) 
             (cong (_+ₙ iota (k₀ ⟨ reindex (|s|≡|sᵗ| {r₂}) ⟩)) 
               (cong (length (recursive-transpose r₂) *ₙ_) (iota-reindex {length (recursive-transpose r₁)} {length r₁} {k₁} (|s|≡|sᵗ| {r₁})))
             )
@@ -154,8 +154,8 @@ FFT-cong {r₁ ⊗ r₂} {xs} {ys} prf (j₁ ⊗ j₀) = (FFT-cong {r₂} λ { k
                   (iota-split 
                     {ι (length (recursive-transpose r₁))} 
                     {ι (length (recursive-transpose r₂))} 
-                    (j₀ ⟨ rev _♭ ⟩) 
-                    (j₁ ⟨ rev _♭ ⟩)
+                    (j₀ ⟨ rev ♭ ⟩) 
+                    (j₁ ⟨ rev ♭ ⟩)
                   )
               )
             ) 
@@ -200,12 +200,12 @@ assoc₄ a b c d rewrite
 --- FFT ≡ DFT ---
 -----------------
 
-fft≅dft : ∀ (arr : Ar s ℂ) → FFT arr ≅ ((reshape _♯) ∘ DFT ∘ (reshape flatten-reindex)) arr
+fft≅dft : ∀ (arr : Ar s ℂ) → FFT arr ≅ ((reshape ♯) ∘ DFT ∘ (reshape flatten-reindex)) arr
 fft≅dft {ι N    } arr  i = refl
 fft≅dft {r₁ ⊗ r₂} arr (j₁ ⊗ j₀) =
   begin
     _ ≡⟨ fft≅dft _ j₁ ⟩
-    _ ≡⟨ DFT-cong (λ x → cong₂ _*_ (fft≅dft _ j₀) refl) (j₁ ⟨ rev _♭ ⟩ ) ⟩
+    _ ≡⟨ DFT-cong (λ x → cong₂ _*_ (fft≅dft _ j₀) refl) (j₁ ⟨ rev ♭ ⟩ ) ⟩
     _ ≡⟨ sum-cong {length (recursive-transpose r₂)} (λ k₀ → cong₂ _*_ (*-distribʳ-sum {length (recursive-transpose r₁)} _) refl ) ⟩
     _ ≡⟨ sum-cong {length (recursive-transpose r₂)} (λ k₀ →            *-distribʳ-sum {length (recursive-transpose r₁)} _)        ⟩ 
     _ ≡⟨ sum-cong {  length (recursive-transpose r₂) } 
@@ -213,10 +213,10 @@ fft≅dft {r₁ ⊗ r₂} arr (j₁ ⊗ j₀) =
             sum-cong {length (recursive-transpose r₁) }
               (λ k₁ → 
                 assoc₄
-                    (arr (((k₁ ⟨ reindex (|s|≡|sᵗ| {r₁}) ⟩) ⟨ _♭ ⟩) ⊗ ((k₀ ⟨ reindex (|s|≡|sᵗ| {r₂}) ⟩) ⟨ _♭ ⟩)))
-                    (-ω (length (recursive-transpose r₁)) (iota k₁ *ₙ iota (j₀ ⟨ rev _♭ ⟩)))
-                    (-ω (length r₂ *ₙ length (recursive-transpose r₁)) (iota (((k₀ ⟨ reindex (|s|≡|sᵗ| {r₂}) ⟩) ⟨ _♭ ⟩) ⟨ rev (_♭ {r₂}) ⟩) *ₙ iota (j₀ ⟨ rev _♭ ⟩)))
-                    (-ω (length (recursive-transpose r₂)) (iota k₀ *ₙ iota (j₁ ⟨ rev _♭ ⟩)))
+                    (arr (((k₁ ⟨ reindex (|s|≡|sᵗ| {r₁}) ⟩) ⟨ ♭ ⟩) ⊗ ((k₀ ⟨ reindex (|s|≡|sᵗ| {r₂}) ⟩) ⟨ ♭ ⟩)))
+                    (-ω (length (recursive-transpose r₁)) (iota k₁ *ₙ iota (j₀ ⟨ rev ♭ ⟩)))
+                    (-ω (length r₂ *ₙ length (recursive-transpose r₁)) (iota (((k₀ ⟨ reindex (|s|≡|sᵗ| {r₂}) ⟩) ⟨ ♭ ⟩) ⟨ rev (♭ {r₂}) ⟩) *ₙ iota (j₀ ⟨ rev ♭ ⟩)))
+                    (-ω (length (recursive-transpose r₂)) (iota k₀ *ₙ iota (j₁ ⟨ rev ♭ ⟩)))
               )
           )
       ⟩
@@ -232,7 +232,7 @@ fft≅dft {r₁ ⊗ r₂} arr (j₁ ⊗ j₀) =
           (λ k₀ → 
             sum-cong { length (recursive-transpose r₁) }
               (λ k₁ → 
-                cong₂ _*_ (sym ((rev-eq-applied split (reshape (_♭ ⊕ _♭) arr)) ((k₁ ⟨ reindex (|s|≡|sᵗ| {r₁}) ⟩) ⊗ (k₀ ⟨ reindex (|s|≡|sᵗ| {r₂}) ⟩))) ) refl
+                cong₂ _*_ (sym ((rev-eq-applied split (reshape (♭ ⊕ ♭) arr)) ((k₁ ⟨ reindex (|s|≡|sᵗ| {r₁}) ⟩) ⊗ (k₀ ⟨ reindex (|s|≡|sᵗ| {r₂}) ⟩))) ) refl
               )
           ) 
       ⟩
@@ -242,11 +242,11 @@ fft≅dft {r₁ ⊗ r₂} arr (j₁ ⊗ j₀) =
     _ ≡⟨ merge-sum {length r₁} {length r₂} _ ⟩
           sum { length r₁ *ₙ length r₂ }
             (λ k →
-                 arr (((k) ⟨ flat ⟩) ⟨ _♭ ⊕ _♭ ⟩)
+                 arr (((k) ⟨ flat ⟩) ⟨ ♭ ⊕ ♭ ⟩)
                *
                  -ω
                    (length (recursive-transpose r₂) *ₙ length (recursive-transpose r₁))
-                   (iota k *ₙ iota (((j₁ ⟨ rev _♭ ⟩) ⊗ (j₀ ⟨ rev _♭ ⟩)) ⟨ split ⟩))
+                   (iota k *ₙ iota (((j₁ ⟨ rev ♭ ⟩) ⊗ (j₀ ⟨ rev ♭ ⟩)) ⟨ split ⟩))
             )
       ≡⟨ sum-reindex (|s|≡|sᵗ| {r₁ ⊗ r₂}) ⟩
     _ ≡⟨ sum-cong 

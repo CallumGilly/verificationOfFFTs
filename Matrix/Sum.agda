@@ -20,7 +20,7 @@ module Matrix.Sum {A : Set} (_⋆_ : Op₂ A) (ε : A) (isCommutativeMonoid : Is
   open import Matrix.Equality using (_≅_; reduce-≅)
   open import Matrix.Properties using (tail₁-const)
 
-  open import src.Reshape using (reshape; reindex; |s|≡|sᵗ|; _⟨_⟩; split; _∙_; eq)
+  open import Matrix.Reshape using (reshape; reindex; |s|≡|sᵗ|; _⟨_⟩; split; _∙_; eq)
 
   open import Function.Base using (_$_; _∘_)
 
