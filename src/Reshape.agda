@@ -13,8 +13,6 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; trans)
 open Eq.≡-Reasoning
 
-open import src.Extensionality using (extensionality)
-
 open import Function.Base using (_$_; id; _∘_)
 
 variable
@@ -85,8 +83,8 @@ rev-eq swap (i ⊗ i₁) = refl
 --    cast-trans (*-comm n m) (*-comm m n) i 
 --  | cast-is-id refl i = refl
 
-eq+eq : ∀ {X : Set} {n m : ℕ} (arr : Ar (ι n ⊗ ι m) X) → reshape (eq ⊕ eq) arr ≡ arr
-eq+eq {X} {n} {m} arr = extensionality λ{(ι x ⊗ ι y) → refl }
+--eq+eq : ∀ {X : Set} {n m : ℕ} (arr : Ar (ι n ⊗ ι m) X) → reshape (eq ⊕ eq) arr ≡ arr
+--eq+eq {X} {n} {m} arr = extensionality λ{(ι x ⊗ ι y) → refl }
 
 eq+eq-position-wrapper : ∀ {X : Set} {n m : ℕ} (arr : Ar (ι n ⊗ ι m) X) (pos : Position (ι n ⊗ ι m)) → arr (pos ⟨ eq ⊕ eq ⟩) ≡ arr pos
 eq+eq-position-wrapper arr (ι x ⊗ ι y) = refl
