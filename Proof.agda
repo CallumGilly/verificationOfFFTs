@@ -30,11 +30,11 @@ open import Data.Fin.Properties using (cast-is-id; remQuot-combine; splitAt-↑�
 open import Data.Product.Base using (∃; ∃₂; _×_; proj₁; proj₂; map₁; map₂; uncurry) renaming ( _,_ to ⟨_,_⟩)
 open import Data.Sum.Base using (inj₁; inj₂ )
 
-open import src.Matrix using (Ar; Shape; _⊗_; ι; Position; nestedMap; zipWith; nest; map; unnest; head₁; tail₁; zip; iterate; ι-cons; nil; length; splitAr; splitArₗ; splitArᵣ)
-open import src.Matrix.Equality using (_≅_; reduce-≅; tail₁-cong)
-open import src.Matrix.Properties using (splitArᵣ-zero; tail₁-const; zipWith-congˡ)
+open import Matrix using (Ar; Shape; _⊗_; ι; Position; nestedMap; zipWith; nest; map; unnest; head₁; tail₁; zip; iterate; ι-cons; nil; length; splitAr; splitArₗ; splitArᵣ)
+open import Matrix.Equality using (_≅_; reduce-≅; tail₁-cong)
+open import Matrix.Properties using (splitArᵣ-zero; tail₁-const; zipWith-congˡ)
 
-import src.Matrix.Sum as S
+import Matrix.Sum as S
 open S _+_ 0ℂ +-isCommutativeMonoid using (merge-sum; sum-reindex; sum-swap)
 sum = S.sum _+_ 0ℂ +-isCommutativeMonoid
 {-# DISPLAY S.sum _+_ 0ℂ +-isCommutativeMonoid = sum #-}

@@ -17,8 +17,8 @@ open import Function using (_$_; _∘_)
 open import Data.Fin.Base using (Fin; toℕ; opposite) renaming (zero to fzero; suc to fsuc)
 open import Data.Nat.Base using (ℕ; suc) renaming (_+_ to _+ₙ_; _*_ to _*ₙ_)
 
-open import src.Matrix using (Ar; Shape; Position; ι; _⊗_; zipWith; nestedMap; length)
-open import src.Matrix.Sum _+_ 0ℂ +-isCommutativeMonoid using (sum)
+open import Matrix using (Ar; Shape; Position; ι; _⊗_; zipWith; nestedMap; length)
+open import Matrix.Sum _+_ 0ℂ +-isCommutativeMonoid using (sum)
 open import src.Reshape using (Reshape; transpose; transposeᵣ; rev; recursive-transposeᵣ; recursive-transpose; reshape; flat; _∙_; swap; _⟨_⟩; _♯; _⊕_; eq)
 
 private
