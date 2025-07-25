@@ -47,8 +47,8 @@ DFT : ∀ {N : ℕ} → Ar (ι N) ℂ → Ar (ι N) ℂ
 DFT {N} xs k = sum (λ i → xs i * -ω N (offset-prod (i ⊗ k)))
 
 FFT : ∀ {s : Shape} → Ar s ℂ → Ar (recursive-transpose s) ℂ
-FFT {ι x     } arr = DFT arr -- Use the DFT when no splitting is defined 
-FFT {sₗ  ⊗ sᵣ} arr = let innerDFTapplied       = nestedMap FFT (reshape swap arr) in
+FFT {ι N     } arr = DFT arr -- Use the DFT when no splitting is defined 
+FFT {r₁  ⊗ r₂} arr = let innerDFTapplied       = nestedMap FFT (reshape swap arr) in
                      let twiddleFactorsApplied = zipWith _*_   innerDFTapplied twiddles in
                      let outerDFTapplied       = nestedMap FFT (reshape swap twiddleFactorsApplied) in
                      reshape swap outerDFTapplied
