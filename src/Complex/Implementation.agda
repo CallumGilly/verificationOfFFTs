@@ -5,8 +5,9 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym)
 open Eq.≡-Reasoning
 
+open import Algebra.Structures using (IsCommutativeRing)
 open import Function using (_∘_)
-open import Data.Nat using (ℕ)
+open import Data.Nat using (ℕ) renaming (_*_ to _*ₙ_; _+_ to _+ₙ_)
 
 module src.Complex.Implementation (real : Real) where
   open Real real using (ℝ; _ᵣ; cos; sin; π) renaming (-_ to -ᵣ_; _+_ to _+ᵣ_; _-_ to _-ᵣ_; _*_ to _*ᵣ_; _/_ to _/ᵣ_)
@@ -53,8 +54,16 @@ module src.Complex.Implementation (real : Real) where
       -ω : ∀ (N : ℕ) (k : ℕ) → ℂ₁
       -ω N k = e^i (((-ᵣ (2 ᵣ)) *ᵣ π *ᵣ (k ᵣ)) /ᵣ (N ᵣ))
 
-    complexBaseImplementation : Cplx real
-    complexBaseImplementation = record {
+
+    postulate
+      isCommutativeRing : IsCommutativeRing {A = ℂ₁} _≡_ _+_ _*_ -_ 0ℂ 1ℂ
+      ω-N-0 : ∀ {N : ℕ} → -ω N 0 ≡ 1ℂ
+      ω-N-mN : ∀ {N m : ℕ} → -ω N (N *ₙ m) ≡ 1ℂ
+      ω-r₁x-r₁y : ∀ (r₁ x y : ℕ) → -ω (r₁ *ₙ x) (r₁ *ₙ y) ≡ -ω x y
+      ω-N-k₀+k₁ : ∀ {N k₀ k₁ : ℕ} → -ω N (k₀ +ₙ k₁) ≡ (-ω N k₀) * (-ω N k₁)
+
+    complexImplementation : Cplx real
+    complexImplementation = record {
           ℂ = ℂ₁
 
         ; _+_ = _+_
@@ -63,20 +72,19 @@ module src.Complex.Implementation (real : Real) where
         ; _*_ = _*_
 
         ; fromℝ = fromℝ
-        ; ℂfromℕ = ℂfromℕ
 
         ; e^i_ = e^i_
         ; ℂ-conjugate = ℂ-conjugate
 
         ; -ω = -ω
 
-        ; +-*-isCommutativeRing = ?
-        ; ω-N-0                 = ?
-        ; ω-N-mN                = ?
-        ; ω-r₁x-r₁y             = ?
-        ; ω-N-k₀+k₁             = ?
+        ; +-*-isCommutativeRing = isCommutativeRing
+        ; ω-N-0                 = ω-N-0 
+        ; ω-N-mN                = ω-N-mN 
+        ; ω-r₁x-r₁y             = ω-r₁x-r₁y 
+        ; ω-N-k₀+k₁             = ω-N-k₀+k₁
       }
   open Base public
-  open Cplx complexBaseImplementation
+  open Cplx complexImplementation
 
 

@@ -175,11 +175,11 @@ FFT-cong {r₁ ⊗ r₂} {xs} {ys} prf (j₁ ⊗ j₀) = (FFT-cong {r₂} λ { k
                     (r₁ *ₙ j₁ +ₙ j₀) 
                   )
     -ω-rearanging′ r₁ r₂ k₀ k₁ j₀ j₁ rewrite
-        sym (ω-r₁x-r₁y {r₂} {r₁} {k₁ *ₙ j₀}) 
-      | sym (ω-r₁x-r₁y {r₁} {r₂} {k₀ *ₙ j₁}) 
+        sym (ω-r₁x-r₁y r₂ r₁ (k₁ *ₙ j₀)) 
+      | sym (ω-r₁x-r₁y r₁ r₂ (k₀ *ₙ j₁)) 
       | sym (*-identityʳ (-ω (r₂ *ₙ r₁) (r₂ *ₙ (k₁ *ₙ j₀)) * -ω (r₂ *ₙ r₁) (k₀ *ₙ j₀) * -ω (r₁ *ₙ r₂) (r₁ *ₙ (k₀ *ₙ j₁))))
       | sym (ω-N-mN {r₁} {j₁ *ₙ k₁}) 
-      | sym (ω-r₁x-r₁y {r₂} {r₁} {r₁ *ₙ (j₁ *ₙ k₁)}) 
+      | sym (ω-r₁x-r₁y r₂ r₁ (r₁ *ₙ (j₁ *ₙ k₁))) 
       | *ₙ-comm r₂ r₁
       | sym (ω-N-k₀+k₁ {r₁ *ₙ r₂} {r₂ *ₙ (k₁ *ₙ j₀)} {k₀ *ₙ j₀})
       | sym (ω-N-k₀+k₁ {r₁ *ₙ r₂} {r₂ *ₙ (k₁ *ₙ j₀) +ₙ k₀ *ₙ j₀} {r₁ *ₙ (k₀ *ₙ j₁)})

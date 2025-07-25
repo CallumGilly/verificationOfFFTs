@@ -58,15 +58,7 @@ module src.Complex (real : Real) where
 
       ω-N-mN : ∀ {N m : ℕ} → -ω N (N *ₙ m) ≡ 1ℂ
   
-      ω-r₁x-r₁y : ∀ {r₁ x y : ℕ} → -ω (r₁ *ₙ x) (r₁ *ₙ y) ≡ -ω x y
+      ω-r₁x-r₁y : ∀ (r₁ x y : ℕ) → -ω (r₁ *ₙ x) (r₁ *ₙ y) ≡ -ω x y
 
       ω-N-k₀+k₁ : ∀ {N k₀ k₁ : ℕ} → -ω N (k₀ +ₙ k₁) ≡ (-ω N k₀) * (-ω N k₁)
-
-    {- How to use properties from IsCommutativeRing:
-    open IsCommutativeRing +-*-isCommutativeRing using (zero)
-
-    my-zeroˡ : LeftZero 0ℂ  _*_
-    my-zeroˡ x rewrite (proj₁ zero) x = refl
-    -}
-
 
