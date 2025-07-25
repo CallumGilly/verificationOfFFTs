@@ -1,6 +1,6 @@
-module src.Matrix.Show where
+module Matrix.Show where
 
-open import src.Matrix using (Ar; Shape; Position; ι; _⊗_; foldr; nest; map; head₁; tail₁)
+open import Matrix using (Ar; Shape; Position; ι; _⊗_; foldr; nest; map; head₁; tail₁)
 open import Agda.Builtin.String using (String; primStringAppend; primShowString)
 open import Data.Nat using (ℕ) 
 open import Data.Nat.Show renaming (show to showNat)
@@ -10,7 +10,7 @@ open import Agda.Builtin.Nat using (suc; zero)
 open import Function.Base using (_$_)
 
 infixl 4 _++_
--- Makes shit less ugly
+
 _++_ : String → String → String
 _++_ = primStringAppend
 

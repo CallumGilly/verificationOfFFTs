@@ -7,7 +7,7 @@ open import Data.Fin.Properties using (remQuot-combine; combine-remQuot; cast-is
 
 open import Data.Product using (Σ; ∃; _,_; _×_; proj₁; proj₂)
 open import Relation.Binary.PropositionalEquality
-open import src.Matrix using (Shape; Position; Ar; ι; _⊗_; length)
+open import Matrix using (Shape; Position; Ar; ι; _⊗_; length)
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; trans)

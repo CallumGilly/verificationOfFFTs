@@ -1,7 +1,7 @@
-module src.Matrix.Properties where
+module Matrix.Properties where
 
-open import src.Matrix
-open import src.Matrix.Equality
+open import Matrix
+open import Matrix.Equality
 
 open import Data.Nat using (ℕ)
 open import Function.Base using (_∘_)

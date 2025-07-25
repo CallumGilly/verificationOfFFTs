@@ -1,7 +1,5 @@
-open import src.Real using (Real)
-open import src.Complex using (Cplx)
-
 import Algebra.Structures as AlgebraStructures
+open AlgebraStructures  using (IsCommutativeMonoid)
 import Algebra.Definitions as AlgebraDefinitions
 open import Algebra.Core 
 
@@ -9,9 +7,8 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym; cong₂; subst; cong-app; trans)
 open Eq.≡-Reasoning
 
-open AlgebraStructures  using (IsCommutativeMonoid)
 
-module src.Matrix.Sum {A : Set} (_⋆_ : Op₂ A) (ε : A) (isCommutativeMonoid : IsCommutativeMonoid {A = A} _≡_ _⋆_ ε) where
+module Matrix.Sum {A : Set} (_⋆_ : Op₂ A) (ε : A) (isCommutativeMonoid : IsCommutativeMonoid {A = A} _≡_ _⋆_ ε) where
 
   open import Data.Product.Base using (proj₁; proj₂)
 
@@ -19,9 +16,9 @@ module src.Matrix.Sum {A : Set} (_⋆_ : Op₂ A) (ε : A) (isCommutativeMonoid 
   open import Data.Nat.Properties using (*-zeroʳ)
   open import Data.Fin.Base using () renaming (zero to fzero; suc to fsuc)
 
-  open import src.Matrix using (Ar; Position; ι; _⊗_; head₁; tail₁; splitArₗ; splitArᵣ)
-  open import src.Matrix.Equality using (_≅_; reduce-≅)
-  open import src.Matrix.Properties using (tail₁-const)
+  open import Matrix using (Ar; Position; ι; _⊗_; head₁; tail₁; splitArₗ; splitArᵣ)
+  open import Matrix.Equality using (_≅_; reduce-≅)
+  open import Matrix.Properties using (tail₁-const)
 
   open import src.Reshape using (reshape; reindex; |s|≡|sᵗ|; _⟨_⟩; split; _∙_; eq)
 
@@ -45,9 +42,6 @@ module src.Matrix.Sum {A : Set} (_⋆_ : Op₂ A) (ε : A) (isCommutativeMonoid 
 
     variable
       n m : ℕ
-
-  
-  
 
   ----------------------
   --- Sum Definition ---
