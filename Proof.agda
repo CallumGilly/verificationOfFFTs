@@ -31,7 +31,7 @@ open import Data.Product.Base using (∃; ∃₂; _×_; proj₁; proj₂; map₁
 open import Data.Sum.Base using (inj₁; inj₂ )
 
 open import src.Matrix using (Ar; Shape; _⊗_; ι; Position; nestedMap; zipWith; nest; map; unnest; head₁; tail₁; zip; iterate; ι-cons; nil; length; splitAr; splitArₗ; splitArᵣ)
-open import src.Matrix.Equality using (_≅_; eq+eq≅arr; reduce-≅; tail₁-cong)
+open import src.Matrix.Equality using (_≅_; reduce-≅; tail₁-cong)
 open import src.Matrix.Properties using (splitArᵣ-zero; tail₁-const; zipWith-congˡ)
 
 import src.Matrix.Sum as S

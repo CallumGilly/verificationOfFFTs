@@ -86,11 +86,11 @@ splitArᵣ {n} {m} xs (ι i) = xs (ι (join n m (inj₂ i)))
 splitAr : Ar (ι (n + m)) X → Ar (ι n) X × Ar (ι m) X
 splitAr xs = ⟨ splitArₗ xs , splitArᵣ xs ⟩
 
-{-
 foldr : ∀ {n : ℕ} {X Y : Set} → (X → Y → Y) → Y → Ar (ι n) X → Y
 foldr {zero } f acc ar = acc
 foldr {suc n} f acc ar = foldr f (f (head₁ ar) acc) (tail₁ ar)
 
+{-
 --tail-equality : ∀ 
 --  {n : ℕ}
 --  {arr₁ arr₂ : Ar (ι (suc n)) X} 
