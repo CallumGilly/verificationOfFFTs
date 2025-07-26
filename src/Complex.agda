@@ -1,6 +1,7 @@
 open import src.Real using (Real)
 
-open import Data.Nat.Base using (ℕ) renaming (_*_ to _*ₙ_; _+_ to _+ₙ_)
+open import Data.Nat.Base using (ℕ; NonZero) renaming (_*_ to _*ₙ_; _+_ to _+ₙ_)
+open import Data.Nat.Properties using (m*n≢0)
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym)
@@ -32,7 +33,8 @@ module src.Complex (real : Real) where
       ℂ-conjugate : ℂ → ℂ
 
       --+ω : ∀ (N : ℕ) (k : ℕ) → ℂ
-      -ω : (N : ℕ) → (k : ℕ) → ℂ
+      -- Instance arguments seem pretty good https://agda.readthedocs.io/en/v2.5.4/language/instance-arguments.html
+      -ω : (N : ℕ) → {{prf : NonZero N}} → (k : ℕ) → ℂ
 
 
     0ℂ  : ℂ
@@ -54,11 +56,11 @@ module src.Complex (real : Real) where
       -- Properties of -ω
       -------------------------------------------------------------------------------
 
-      ω-N-0 : ∀ {N : ℕ} → -ω N 0 ≡ 1ℂ
+      ω-N-0 : ∀ {N : ℕ} → {{prf : NonZero N}} → -ω N 0 ≡ 1ℂ
 
-      ω-N-mN : ∀ {N m : ℕ} → -ω N (N *ₙ m) ≡ 1ℂ
+      ω-N-mN : ∀ {N m : ℕ} → {{prf : NonZero N}} → -ω N (N *ₙ m) ≡ 1ℂ
   
-      ω-r₁x-r₁y : ∀ (r₁ x y : ℕ) → -ω (r₁ *ₙ x) (r₁ *ₙ y) ≡ -ω x y
+      ω-r₁x-r₁y : ∀ (r₁ x y : ℕ) → {{nonZero-r₁*x : NonZero (r₁ *ₙ x)}} → {{nonZero-x : NonZero x}} → -ω (r₁ *ₙ x) (r₁ *ₙ y) ≡ -ω x y
 
-      ω-N-k₀+k₁ : ∀ {N k₀ k₁ : ℕ} → -ω N (k₀ +ₙ k₁) ≡ (-ω N k₀) * (-ω N k₁)
+      ω-N-k₀+k₁ : ∀ {N k₀ k₁ : ℕ} → {{_ : NonZero N}} → -ω N (k₀ +ₙ k₁) ≡ (-ω N k₀) * (-ω N k₁)
 

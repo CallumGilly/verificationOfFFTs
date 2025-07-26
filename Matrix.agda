@@ -1,6 +1,7 @@
 module Matrix where
 
-open import Data.Nat using (ℕ; suc; zero; _+_; _*_)
+open import Data.Nat using (ℕ; suc; zero; NonZero; _+_; _*_)
+open import Data.Nat.Properties using (m*n≢0; m*n≢0⇒m≢0; m*n≢0⇒n≢0)
 open import Data.Fin as F using (Fin; join) renaming (zero to fzero; suc to fsuc)
 open import Data.Product.Base using (_×_) renaming ( _,_ to ⟨_,_⟩)
 open import Data.Sum.Base using (inj₁; inj₂)
@@ -79,4 +80,25 @@ zipWith f arr₁ arr₂ pos = f (arr₁ pos) (arr₂ pos)
 iterate : (n : ℕ) → (X → X) → X → Ar (ι n) X
 iterate zero    f acc = nil
 iterate (suc n) f acc = ι-cons acc (iterate n f (f acc))
+
+
+--- NonZero properties of matricies
+record NonZeroₛ (s : Shape) : Set where
+  field
+    nonZeroₛ : NonZero (length s)
+instance
+  nonZeroₛ : ∀ {s : Shape} → ⦃ prf : NonZero (length s) ⦄ → NonZeroₛ s
+  nonZeroₛ ⦃ prf = prf ⦄  = record { nonZeroₛ = prf }
+
+ι-suc-nonZeroₛ : ∀ { n : ℕ } → .⦃ NonZero n ⦄ → NonZeroₛ (ι n)
+ι-suc-nonZeroₛ {suc n} = _
+
+s⊗p-nonZeroₛ : ⦃ nonZero-s : NonZeroₛ s ⦄ → ⦃ nonZero-p : NonZeroₛ p ⦄ → NonZeroₛ (s ⊗ p)
+s⊗p-nonZeroₛ {s} {p} ⦃ record { nonZeroₛ = nonZero-length-s } ⦄ ⦃ record { nonZeroₛ = nonZero-length-p } ⦄ = record { nonZeroₛ = m*n≢0 (length s) (length p) ⦃ nonZero-length-s ⦄ ⦃ nonZero-length-p ⦄ }
+
+s⊗p-nonZeroₛ⇒s-nonZeroₛ : ⦃ s⊗p-nonZeroₛ : NonZeroₛ (s ⊗ p) ⦄ → NonZeroₛ s
+s⊗p-nonZeroₛ⇒s-nonZeroₛ {s} {p} ⦃ s⊗p-nonZeroₛ = record { nonZeroₛ = nonZeroₛ-s⊗p } ⦄ = record { nonZeroₛ = m*n≢0⇒m≢0 (length s) ⦃ nonZeroₛ-s⊗p ⦄ }
+
+s⊗p-nonZeroₛ⇒p-nonZeroₛ : ⦃ s⊗p-nonZeroₛ : NonZeroₛ (s ⊗ p) ⦄ → NonZeroₛ p
+s⊗p-nonZeroₛ⇒p-nonZeroₛ {s} {p} ⦃ s⊗p-nonZeroₛ = record { nonZeroₛ = nonZeroₛ-s⊗p } ⦄ = record { nonZeroₛ = m*n≢0⇒n≢0 (length s) ⦃ nonZeroₛ-s⊗p ⦄ }
 

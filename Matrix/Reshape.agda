@@ -1,12 +1,12 @@
 module Matrix.Reshape where
 
-open import Data.Nat using (ℕ; _*_)
+open import Data.Nat using (ℕ; _*_; NonZero)
 open import Data.Nat.Properties using (*-comm)
 open import Data.Fin as F using (Fin; combine; remQuot; quotRem; toℕ; cast)
 open import Data.Fin.Properties using (remQuot-combine; combine-remQuot; cast-is-id; cast-trans)
 
 open import Data.Product using (_,_; proj₁; proj₂)
-open import Matrix using (Shape; Position; Ar; ι; _⊗_; length)
+open import Matrix using (Shape; Position; Ar; ι; _⊗_; length; NonZeroₛ)
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; trans; subst; sym)
@@ -187,3 +187,11 @@ reindex-reindex refl i = refl
 
 flatten-reindex : Reshape s (ι (length (recursive-transpose s)))
 flatten-reindex {s} = reindex (|s|≡|sᵗ| {s}) ∙ ♭
+
+
+--- NonZero recursive-transpose properties ---
+
+s-nonZeroₛ⇒sᵗ-nonZeroₛ : ⦃ nonZeroₛ-s : NonZeroₛ s ⦄ → NonZeroₛ (recursive-transpose s)
+s-nonZeroₛ⇒sᵗ-nonZeroₛ {s} ⦃ nonZeroₛ-s = record { nonZeroₛ = nonZero-|s| } ⦄ with |s|≡|sᵗ| {s}
+... | prf = record { nonZeroₛ = subst (λ len → NonZero len) prf nonZero-|s| }
+
