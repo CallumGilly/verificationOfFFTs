@@ -5,6 +5,7 @@ open import Data.Nat.Properties using (m*n≢0; m*n≢0⇒m≢0; m*n≢0⇒n≢0
 open import Data.Fin as F using (Fin; join) renaming (zero to fzero; suc to fsuc)
 open import Data.Product.Base using (_×_) renaming ( _,_ to ⟨_,_⟩)
 open import Data.Sum.Base using (inj₁; inj₂)
+open import Relation.Nullary
 
 private
   variable
@@ -83,22 +84,22 @@ iterate (suc n) f acc = ι-cons acc (iterate n f (f acc))
 
 
 --- NonZero properties of matricies
-record NonZeroₛ (s : Shape) : Set where
-  field
-    nonZeroₛ : NonZero (length s)
-instance
-  nonZeroₛ : ∀ {s : Shape} → ⦃ prf : NonZero (length s) ⦄ → NonZeroₛ s
-  nonZeroₛ ⦃ prf = prf ⦄  = record { nonZeroₛ = prf }
+data NonZeroₛ : Shape → Set where
+  ι   : NonZero  n →              NonZeroₛ (ι n)
+  _⊗_ : NonZeroₛ s → NonZeroₛ p → NonZeroₛ (s ⊗ p)
 
-ι-suc-nonZeroₛ : ∀ { n : ℕ } → .⦃ NonZero n ⦄ → NonZeroₛ (ι n)
-ι-suc-nonZeroₛ {suc n} = _
+nonZeroDec : ∀ s → Dec (NonZeroₛ s)
+nonZeroDec (ι zero) = no λ { (ι ()) }
+nonZeroDec (ι (suc x)) = yes (ι _)
+nonZeroDec (s ⊗ p) with nonZeroDec s | nonZeroDec p 
+... | yes  ds | yes  dp = yes ( ds ⊗ dp )
+... | yes _   | no  ¬dp = no (λ { (_  ⊗ dp) → ¬dp dp })
+... | no  ¬ds | _       = no (λ { (ds ⊗ _ ) → ¬ds ds })
 
-s⊗p-nonZeroₛ : ⦃ nonZero-s : NonZeroₛ s ⦄ → ⦃ nonZero-p : NonZeroₛ p ⦄ → NonZeroₛ (s ⊗ p)
-s⊗p-nonZeroₛ {s} {p} ⦃ record { nonZeroₛ = nonZero-length-s } ⦄ ⦃ record { nonZeroₛ = nonZero-length-p } ⦄ = record { nonZeroₛ = m*n≢0 (length s) (length p) ⦃ nonZero-length-s ⦄ ⦃ nonZero-length-p ⦄ }
+nonZeroₛ-length : NonZeroₛ s → NonZero (length s)
+nonZeroₛ-length (ι nonZero-|s|) = nonZero-|s|
+nonZeroₛ-length {s ⊗ p} (nonZeroₛ-s ⊗ nonZeroₛ-p) with nonZeroₛ-length nonZeroₛ-s | nonZeroₛ-length nonZeroₛ-p 
+... | nonZeroₛ-|s| | nonZeroₛ-|p| = m*n≢0 (length s) (length p) ⦃ nonZeroₛ-|s| ⦄ ⦃ nonZeroₛ-|p| ⦄
 
-s⊗p-nonZeroₛ⇒s-nonZeroₛ : ⦃ s⊗p-nonZeroₛ : NonZeroₛ (s ⊗ p) ⦄ → NonZeroₛ s
-s⊗p-nonZeroₛ⇒s-nonZeroₛ {s} {p} ⦃ s⊗p-nonZeroₛ = record { nonZeroₛ = nonZeroₛ-s⊗p } ⦄ = record { nonZeroₛ = m*n≢0⇒m≢0 (length s) ⦃ nonZeroₛ-s⊗p ⦄ }
 
-s⊗p-nonZeroₛ⇒p-nonZeroₛ : ⦃ s⊗p-nonZeroₛ : NonZeroₛ (s ⊗ p) ⦄ → NonZeroₛ p
-s⊗p-nonZeroₛ⇒p-nonZeroₛ {s} {p} ⦃ s⊗p-nonZeroₛ = record { nonZeroₛ = nonZeroₛ-s⊗p } ⦄ = record { nonZeroₛ = m*n≢0⇒n≢0 (length s) ⦃ nonZeroₛ-s⊗p ⦄ }
 

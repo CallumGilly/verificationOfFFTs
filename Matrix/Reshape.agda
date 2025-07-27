@@ -188,10 +188,11 @@ reindex-reindex refl i = refl
 flatten-reindex : Reshape s (ι (length (recursive-transpose s)))
 flatten-reindex {s} = reindex (|s|≡|sᵗ| {s}) ∙ ♭
 
+nonZeroₛ-transpose : NonZeroₛ s → NonZeroₛ (recursive-transpose s)
+nonZeroₛ-transpose {s} (ι x) = ι x
+nonZeroₛ-transpose {s} (nonZeroₛ-s ⊗ nonZeroₛ-p) with nonZeroₛ-transpose nonZeroₛ-s | nonZeroₛ-transpose nonZeroₛ-p 
+... | nonZeroₛ-sᵗ | nonZeroₛ-pᵗ = nonZeroₛ-pᵗ ⊗ nonZeroₛ-sᵗ
 
---- NonZero recursive-transpose properties ---
 
-s-nonZeroₛ⇒sᵗ-nonZeroₛ : ⦃ nonZeroₛ-s : NonZeroₛ s ⦄ → NonZeroₛ (recursive-transpose s)
-s-nonZeroₛ⇒sᵗ-nonZeroₛ {s} ⦃ nonZeroₛ-s = record { nonZeroₛ = nonZero-|s| } ⦄ with |s|≡|sᵗ| {s}
-... | prf = record { nonZeroₛ = subst (λ len → NonZero len) prf nonZero-|s| }
+
 
