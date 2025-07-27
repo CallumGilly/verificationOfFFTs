@@ -34,7 +34,7 @@ module src.Complex (real : Real) where
 
       --+ω : ∀ (N : ℕ) (k : ℕ) → ℂ
       -- Instance arguments seem pretty good https://agda.readthedocs.io/en/v2.5.4/language/instance-arguments.html
-      -ω : (N : ℕ) → .(prf : NonZero N) → (k : ℕ) → ℂ
+      -ω : (N : ℕ) → .⦃ nonZero-n : NonZero N ⦄ → (k : ℕ) → ℂ
 
 
     0ℂ  : ℂ
@@ -56,15 +56,15 @@ module src.Complex (real : Real) where
       -- Properties of -ω
       -------------------------------------------------------------------------------
 
-      ω-N-0 : ∀ {N : ℕ} → (prf : NonZero N) → -ω N prf 0 ≡ 1ℂ
+      ω-N-0 : ∀ {N : ℕ} → ⦃ nonZero-n : NonZero N ⦄ → -ω N 0 ≡ 1ℂ
 
-      ω-N-mN : ∀ {N m : ℕ} → (prf : NonZero N) → -ω N prf (N *ₙ m) ≡ 1ℂ
+      ω-N-mN : ∀ {N m : ℕ} → ⦃ nonZero-N : NonZero N ⦄ → -ω N (N *ₙ m) ≡ 1ℂ
   
       ω-r₁x-r₁y : 
         ∀ (r₁ x y : ℕ) 
-        → (nonZero-r₁ : NonZero r₁) 
-        → (nonZero-x : NonZero x) 
-        → -ω (r₁ *ₙ x) (m*n≢0 r₁ x {{nonZero-r₁}} {{nonZero-x}} ) (r₁ *ₙ y) ≡ -ω x nonZero-x y
+        → ⦃ nonZero-r₁ : NonZero r₁ ⦄
+        → ⦃ nonZero-x : NonZero x ⦄ 
+        → -ω (r₁ *ₙ x) ⦃ m*n≢0 r₁ x ⦄ (r₁ *ₙ y) ≡ -ω x y
 
-      ω-N-k₀+k₁ : ∀ {N k₀ k₁ : ℕ} → (prf : NonZero N) → -ω N prf (k₀ +ₙ k₁) ≡ (-ω N prf k₀) * (-ω N prf k₁)
+      ω-N-k₀+k₁ : ∀ {N k₀ k₁ : ℕ} → ⦃ nonZero-N : NonZero N ⦄ → -ω N (k₀ +ₙ k₁) ≡ (-ω N k₀) * (-ω N k₁)
 

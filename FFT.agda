@@ -35,20 +35,33 @@ module FFT (real : Real) (cplx : Cplx real) where
   offset-prod : Position (s ⊗ p) → ℕ
   offset-prod (i ⊗ j) = iota (i ⟨ ♯ ⟩) *ₙ iota (j ⟨ ♯ ⟩)
 
-  twiddles : ( nonZeroₛ-s⊗p : NonZeroₛ (s ⊗ p) ) → Ar (s ⊗ p) ℂ
-  twiddles {s} {p} nonZeroₛ-s⊗p i = 
-    -ω (length (s ⊗ p)) (nonZeroₛ-length (nonZeroₛ-s⊗p)) (offset-prod i)
+  twiddles : ⦃ nonZeroₛ-s⊗p : NonZeroₛ (s ⊗ p) ⦄ → Ar (s ⊗ p) ℂ
+  twiddles {s} {p} ⦃ nonZeroₛ-s⊗p ⦄ i = 
+    -ω (length (s ⊗ p)) ⦃ (nonZeroₛ-length (nonZeroₛ-s⊗p)) ⦄ (offset-prod i)
 
   -------------------
   --- DFT and FFT ---
   -------------------
 
-  DFT : ∀ {N : ℕ} → (nonZero-N : NonZero N ) → Ar (ι N) ℂ → Ar (ι N) ℂ
-  DFT {N} nonZero-N xs k = sum (λ i → xs i * -ω N nonZero-N (offset-prod (i ⊗ k)))
+  DFT : ∀ {N : ℕ} → ⦃ nonZero-N : NonZero N ⦄ → Ar (ι N) ℂ → Ar (ι N) ℂ
+  DFT {N} xs k = sum (λ i → xs i * -ω N (offset-prod (i ⊗ k)))
 
-  FFT : ∀ {s : Shape} → ( nonZero-s : NonZeroₛ s ) → Ar s ℂ → Ar (recursive-transpose s) ℂ
-  FFT {ι N} (ι nonZero-N) arr = DFT nonZero-N arr -- Use the DFT when no splitting is defined 
-  FFT {r₁ ⊗ r₂} (nonZero-r₁ ⊗ nonZero-r₂) arr = let innerDFTapplied       = nestedMap (FFT nonZero-r₁) (reshape swap arr)   
-                                                    twiddleFactorsApplied = zipWith _*_   innerDFTapplied (twiddles (nonZero-r₂ ⊗ nonZeroₛ-transpose nonZero-r₁)) 
-                                                    outerDFTapplied       = nestedMap (FFT nonZero-r₂) (reshape swap twiddleFactorsApplied) 
-                                                in  reshape swap outerDFTapplied
+  FFT : ∀ {s : Shape} → ⦃ nonZero-s : NonZeroₛ s ⦄ → Ar s ℂ → Ar (recursive-transpose s) ℂ
+  FFT {ι N} ⦃ ι nonZero-N ⦄ arr = DFT ⦃ nonZero-N ⦄ arr -- Use the DFT when no splitting is defined 
+  FFT {r₁ ⊗ r₂} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ arr = 
+      let instance
+        _ : NonZeroₛ r₁
+        _ = nonZero-r₁
+        _ : NonZeroₛ r₂
+        _ = nonZero-r₂
+        _ : NonZeroₛ (r₂ ⊗ (recursive-transpose r₁))
+        _ = nonZero-r₂ ⊗ (nonZeroₛ-transpose nonZero-r₁)
+      in
+      let 
+          innerDFTapplied       = nestedMap FFT (reshape swap arr)   
+          twiddleFactorsApplied = zipWith _*_   innerDFTapplied twiddles
+          outerDFTapplied       = nestedMap FFT (reshape swap twiddleFactorsApplied) 
+      in  reshape swap outerDFTapplied
+
+
+
