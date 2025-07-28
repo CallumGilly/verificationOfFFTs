@@ -7,7 +7,7 @@ open import Implementations.Real using (realImplementation; showℝ)
 open import Complex using (Cplx)
 open import Implementations.Complex realImplementation using (complexImplementation; _+_i)
 
-open Real.Real realImplementation using (ℝ; _ᵣ)
+open Real.Real realImplementation using (ℝ; _ᵣ; -_)
 open Cplx complexImplementation using (ℂ; fromℝ)
 
 open import Matrix
@@ -57,6 +57,25 @@ demo-mat₁ =
   ι-cons (fromℝ $ 7 ᵣ) $
   ι-cons (fromℝ $ 8 ᵣ) nil
 
+demo-mat₂ : Ar (ι 16) ℂ
+demo-mat₂ =
+  ι-cons (fromℝ $   87  ᵣ) $
+  ι-cons (fromℝ $   13  ᵣ) $
+  ι-cons (fromℝ $   72  ᵣ) $
+  ι-cons (fromℝ $ - 44  ᵣ) $
+  ι-cons (fromℝ $   99  ᵣ) $
+  ι-cons (fromℝ $   8   ᵣ)  $
+  ι-cons (fromℝ $ - 63  ᵣ) $
+  ι-cons (fromℝ $   25  ᵣ) $
+  ι-cons (fromℝ $   90  ᵣ) $
+  ι-cons (fromℝ $ - 31  ᵣ) $
+  ι-cons (fromℝ $   56  ᵣ) $
+  ι-cons (fromℝ $   19  ᵣ) $
+  ι-cons (fromℝ $ - 100 ᵣ) $
+  ι-cons (fromℝ $   37  ᵣ) $
+  ι-cons (fromℝ $   4   ᵣ) $
+  ι-cons (fromℝ $   61  ᵣ) nil
+
 show-arr             : Ar s ℂ → IO {a} ⊤
 show-flat-arr        : Ar s ℂ → IO {a} ⊤
 show-flat-FFT-result : Ar s ℂ → IO {a} ⊤
@@ -75,7 +94,7 @@ show-full-stack arr = do
   show-flat-DFT-result arr
 
 main : Main
-main = run $ show-full-stack demo-mat₁
+main = run $ show-full-stack (reshape (eq ⊕ split {4} {2} ∙ split {2} {8}) demo-mat₂)
 
 --fft≅dft : 
 --    ∀ (arr : Ar s ℂ) 
