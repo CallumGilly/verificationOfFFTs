@@ -6,7 +6,7 @@ open import Data.Fin as F using (Fin; combine; remQuot; quotRem; toℕ; cast)
 open import Data.Fin.Properties using (remQuot-combine; combine-remQuot; cast-is-id; cast-trans)
 
 open import Data.Product using (_,_; proj₁; proj₂)
-open import Matrix using (Shape; Position; Ar; ι; _⊗_; length; NonZeroₛ)
+open import Matrix using (Shape; Position; Ar; ι; _⊗_; length)
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; trans; subst; sym)
@@ -187,12 +187,4 @@ reindex-reindex refl i = refl
 
 flatten-reindex : Reshape s (ι (length (recursive-transpose s)))
 flatten-reindex {s} = reindex (|s|≡|sᵗ| {s}) ∙ ♭
-
-nonZeroₛ-transpose : NonZeroₛ s → NonZeroₛ (recursive-transpose s)
-nonZeroₛ-transpose {s} (ι x) = ι x
-nonZeroₛ-transpose {s} (nonZeroₛ-s ⊗ nonZeroₛ-p) with nonZeroₛ-transpose nonZeroₛ-s | nonZeroₛ-transpose nonZeroₛ-p 
-... | nonZeroₛ-sᵗ | nonZeroₛ-pᵗ = nonZeroₛ-pᵗ ⊗ nonZeroₛ-sᵗ
-
-
-
 

@@ -14,12 +14,13 @@ module FFT (real : Real) (cplx : Cplx real) where
 
   open import Data.Fin.Base using (Fin; toℕ) renaming (zero to fzero; suc to fsuc)
   open import Data.Nat.Base using (ℕ; suc; NonZero) renaming (_+_ to _+ₙ_; _*_ to _*ₙ_)
-  open import Data.Nat.Properties using (m*n≢0; nonZero?)
+  open import Data.Nat.Properties using (nonZero?)
   open import Relation.Nullary
 
-  open import Matrix using (Ar; Shape; Position; ι; _⊗_; zipWith; nestedMap; length; NonZeroₛ; nonZeroₛ-length; nonZeroDec)
+  open import Matrix using (Ar; Shape; Position; ι; _⊗_; zipWith; nestedMap; length)
   open import Matrix.Sum _+_ 0ℂ +-isCommutativeMonoid using (sum)
-  open import Matrix.Reshape using (recursive-transpose; reshape; swap; _⟨_⟩; ♯; nonZeroₛ-transpose; recursive-transposeᵣ)
+  open import Matrix.Reshape using (recursive-transpose; reshape; swap; _⟨_⟩; ♯; recursive-transposeᵣ)
+  open import Matrix.NonZero using (NonZeroₛ; ι; _⊗_; nonZeroₛ-s⇒nonZero-s; nonZeroDec; nonZeroₛ-s⇒nonZeroₛ-sᵗ)
 
   private
     variable
@@ -38,7 +39,7 @@ module FFT (real : Real) (cplx : Cplx real) where
 
   twiddles : ⦃ nonZeroₛ-s⊗p : NonZeroₛ (s ⊗ p) ⦄ → Ar (s ⊗ p) ℂ
   twiddles {s} {p} ⦃ nonZeroₛ-s⊗p ⦄ i = 
-    -ω (length (s ⊗ p)) ⦃ (nonZeroₛ-length (nonZeroₛ-s⊗p)) ⦄ (offset-prod i)
+    -ω (length (s ⊗ p)) ⦃ (nonZeroₛ-s⇒nonZero-s (nonZeroₛ-s⊗p)) ⦄ (offset-prod i)
 
   -------------------
   --- DFT and FFT ---
@@ -56,7 +57,7 @@ module FFT (real : Real) (cplx : Cplx real) where
         _ : NonZeroₛ r₂
         _ = nonZero-r₂
         _ : NonZeroₛ (r₂ ⊗ (recursive-transpose r₁))
-        _ = nonZero-r₂ ⊗ (nonZeroₛ-transpose nonZero-r₁)
+        _ = nonZero-r₂ ⊗ (nonZeroₛ-s⇒nonZeroₛ-sᵗ nonZero-r₁)
       in
       let 
           innerDFTapplied       = nestedMap FFT′ (reshape swap arr)   

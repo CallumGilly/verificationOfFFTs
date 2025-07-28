@@ -5,7 +5,6 @@ open import Data.Nat.Properties using (m*n≢0; m*n≢0⇒m≢0; m*n≢0⇒n≢0
 open import Data.Fin as F using (Fin; join) renaming (zero to fzero; suc to fsuc)
 open import Data.Product.Base using (_×_) renaming ( _,_ to ⟨_,_⟩)
 open import Data.Sum.Base using (inj₁; inj₂)
-open import Relation.Nullary
 
 private
   variable
@@ -81,25 +80,4 @@ zipWith f arr₁ arr₂ pos = f (arr₁ pos) (arr₂ pos)
 iterate : (n : ℕ) → (X → X) → X → Ar (ι n) X
 iterate zero    f acc = nil
 iterate (suc n) f acc = ι-cons acc (iterate n f (f acc))
-
-
---- NonZero properties of matricies
-data NonZeroₛ : Shape → Set where
-  ι   : NonZero  n →              NonZeroₛ (ι n)
-  _⊗_ : NonZeroₛ s → NonZeroₛ p → NonZeroₛ (s ⊗ p)
-
-nonZeroDec : ∀ s → Dec (NonZeroₛ s)
-nonZeroDec (ι zero) = no λ { (ι ()) }
-nonZeroDec (ι (suc x)) = yes (ι _)
-nonZeroDec (s ⊗ p) with nonZeroDec s | nonZeroDec p 
-... | yes  ds | yes  dp = yes ( ds ⊗ dp )
-... | yes _   | no  ¬dp = no (λ { (_  ⊗ dp) → ¬dp dp })
-... | no  ¬ds | _       = no (λ { (ds ⊗ _ ) → ¬ds ds })
-
-nonZeroₛ-length : NonZeroₛ s → NonZero (length s)
-nonZeroₛ-length (ι nonZero-|s|) = nonZero-|s|
-nonZeroₛ-length {s ⊗ p} (nonZeroₛ-s ⊗ nonZeroₛ-p) with nonZeroₛ-length nonZeroₛ-s | nonZeroₛ-length nonZeroₛ-p 
-... | nonZeroₛ-|s| | nonZeroₛ-|p| = m*n≢0 (length s) (length p) ⦃ nonZeroₛ-|s| ⦄ ⦃ nonZeroₛ-|p| ⦄
-
-
 
