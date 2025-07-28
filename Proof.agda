@@ -1,5 +1,5 @@
-open import src.Real using (Real)
-open import src.Complex using (Cplx)
+open import Real using (Real)
+open import Complex using (Cplx)
 
 import Algebra.Structures as AlgebraStructures
 import Algebra.Definitions as AlgebraDefinitions
@@ -11,8 +11,8 @@ open Eq.≡-Reasoning
 
 module Proof (real : Real) (cplx : Cplx real) where
 
-open Real real using (_ᵣ; ℝ)
-  renaming (_+_ to _+ᵣ_; _-_ to _-ᵣ_; -_ to -ᵣ_; _/_ to _/ᵣ_; _*_ to _*ᵣ_; *-comm to *ᵣ-comm; *-identityʳ to *ᵣ-identityʳ)
+open Real.Real real using (_ᵣ; ℝ)
+  renaming (_+_ to _+ᵣ_; _-_ to _-ᵣ_; -_ to -ᵣ_; _/_ to _/ᵣ_; _*_ to _*ᵣ_)
 open Cplx cplx using (ℂ; _+_; fromℝ; _*_; -ω; 0ℂ; +-*-isCommutativeRing; ω-r₁x-r₁y; ω-N-mN; ω-N-k₀+k₁)
 
 open AlgebraStructures  {A = ℂ} _≡_

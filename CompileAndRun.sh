@@ -1,1 +1,1 @@
-agda --compile src/TestFloatImplementation.agda 1> /dev/null && ./TestFloatImplementation
+agda --compile Implementations/FFT.agda 1> /dev/null && ./FFT

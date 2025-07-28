@@ -9,10 +9,10 @@ open import Agda.Builtin.Nat using (suc; zero)
 
 open import Function.Base using (_$_)
 
-infixl 4 _++_
-
-_++_ : String → String → String
-_++_ = primStringAppend
+private
+  infixl 4 _++_
+  _++_ : String → String → String
+  _++_ = primStringAppend
 
 id : String → String
 id x = x
@@ -27,6 +27,13 @@ showShape {s ⊗ s₁} = "[" ++ ((showShape {s}) ++ ("] ⊗ [" ++ ((showShape {s
 show : ∀ {s : Shape} {X : Set} → (X → String) →  Ar s X → String
 -- This does the classic thing of ending with a comma, but like......
 show {ι zero   } showElem arr = "[" ++ "]"
-show {ι (suc x)} showElem arr = "[" ++ (foldr (λ elem → (", " ++ "(" ++ (showElem elem) ++ ")") ++_) "" (flipArr arr)) ++ "]"
+show {ι (suc x)} showElem arr = 
+    "[" 
+  ++ (foldr 
+        (λ elem → _++ (", " ++ "(" ++ (showElem elem) ++ ")"))
+        ("(" ++ (showElem $ head₁ arr) ++ ")")
+        (tail₁ arr)
+     ) 
+  ++ "]"
 show {s ⊗ s₁} showElem arr = show id (map (show showElem) (nest arr))
 

@@ -1,5 +1,5 @@
-open import src.Real using (Real)
-open import src.Complex using (Cplx)
+open import Real using (Real)
+open import Complex using (Cplx)
 
 import Algebra.Structures as AlgebraStructures
 

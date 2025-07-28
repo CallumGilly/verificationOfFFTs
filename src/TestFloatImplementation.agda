@@ -297,10 +297,10 @@ showGiantShape₂ = putStrLn $ showMatrix showComplex
   $ reshape (_♭₂) giant-fft-in-order
 
 bunchOStuff : IO {a} ⊤
-bunchOStuff = do 
+bunchOStuff = do ?
  -- showTwiddles
- showProofLeft
- showProofRight
+ -- showProofLeft
+ -- showProofRight
  --showGiantFFTed
  --showGiantShape
  --showGiantShape₂
