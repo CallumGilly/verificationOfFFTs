@@ -4,6 +4,7 @@ open import src.Complex using (Cplx)
 import Algebra.Structures as AlgebraStructures
 import Algebra.Definitions as AlgebraDefinitions
 
+open import Relation.Nullary
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; trans; sym; cong₂; subst; cong-app; cong′; icong)
 open Eq.≡-Reasoning
@@ -20,7 +21,7 @@ open AlgebraDefinitions {A = ℂ} _≡_
 open IsCommutativeRing +-*-isCommutativeRing using (+-isCommutativeMonoid; distribˡ; *-comm; zeroʳ; zeroˡ; *-identityʳ; *-assoc; +-identityʳ; +-assoc; +-comm; +-identityˡ)
 
 open import Data.Nat.Base using (ℕ; zero; suc; NonZero; _≡ᵇ_) renaming (_*_ to _*ₙ_; _+_ to _+ₙ_)
-open import Data.Nat.Properties using (suc-injective; m*n≢0; m*n≢0⇒m≢0; m*n≢0⇒n≢0) renaming (*-comm to *ₙ-comm; *-identityʳ to *ₙ-identityʳ; *-assoc to *ₙ-assoc; 
+open import Data.Nat.Properties using (suc-injective; m*n≢0; m*n≢0⇒m≢0; m*n≢0⇒n≢0; nonZero?) renaming (*-comm to *ₙ-comm; *-identityʳ to *ₙ-identityʳ; *-assoc to *ₙ-assoc; 
   +-identityʳ to +ₙ-identityʳ; *-zeroˡ to *ₙ-zeroˡ; *-zeroʳ to *ₙ-zeroʳ)
 open import Data.Nat.Solver using (module +-*-Solver)
 open +-*-Solver using (solve; _:*_; _:+_; con; _:=_)
@@ -33,7 +34,7 @@ open import Data.Product.Base using (∃; ∃₂; _×_; proj₁; proj₂; map₁
 open import Data.Sum.Base using (inj₁; inj₂ )
 open import Data.Unit using (⊤; tt)
 
-open import Matrix using (Ar; Shape; _⊗_; ι; Position; nestedMap; zipWith; nest; map; unnest; head₁; tail₁; zip; iterate; ι-cons; nil; length; splitAr; splitArₗ; splitArᵣ; NonZeroₛ; nonZeroₛ-length)
+open import Matrix using (Ar; Shape; _⊗_; ι; Position; nestedMap; zipWith; nest; map; unnest; head₁; tail₁; zip; iterate; ι-cons; nil; length; splitAr; splitArₗ; splitArᵣ; NonZeroₛ; nonZeroₛ-length; nonZeroDec)
 open import Matrix.Equality using (_≅_; reduce-≅; tail₁-cong)
 open import Matrix.Properties using (splitArᵣ-zero; tail₁-const; zipWith-congˡ)
 
@@ -43,14 +44,14 @@ sum = S.sum _+_ 0ℂ +-isCommutativeMonoid
 {-# DISPLAY S.sum _+_ 0ℂ +-isCommutativeMonoid = sum #-}
 sum-cong = S.sum-cong _+_ 0ℂ +-isCommutativeMonoid
 
-open import Matrix.Reshape using (reshape; Reshape; flat; ♭; ♯; recursive-transpose; recursive-transposeᵣ; _∙_; rev; _⊕_; swap; eq; split; _⟨_⟩; reindex; rev-eq; flatten-reindex; |s|≡|sᵗ|; reindex-reindex; nonZeroₛ-transpose)
+open import Matrix.Reshape using (reshape; Reshape; flat; ♭; ♯; recursive-transpose; recursive-transposeᵣ; _∙_; rev; _⊕_; swap; eq; split; _⟨_⟩; reindex; rev-eq; flatten-reindex; |s|≡|sᵗ|; reindex-reindex; nonZeroₛ-transpose; recursive-transpose-inv)
 open import Function.Base using (_$_; id; _∘_; flip; _∘₂_)
 
-open import FFT real cplx using (DFT; FFT; offset-prod; iota; twiddles)
+open import FFT real cplx using (DFT; FFT; DFT′; FFT′; offset-prod; iota; twiddles)
 
 private
   variable
-    s r₁ r₂ : Shape
+    s p r₁ r₂ : Shape
     N M : ℕ
 
 -----------------------------------------
@@ -70,6 +71,10 @@ _ᵗ = recursive-transpose
 
 nz-# : NonZeroₛ s → NonZero (length s)
 nz-# = nonZeroₛ-length
+
+nz-ι# : NonZeroₛ s → NonZeroₛ (ι (length s))
+nz-ι# (ι x) = ι x
+nz-ι# {s ⊗ p} (nz-s ⊗ nz-p) = ι (m*n≢0 (# s) (# p) ⦃ nz-# nz-s ⦄ ⦃ nz-# nz-p ⦄ )
 
 nzᵗ : NonZeroₛ s → NonZeroₛ (s ᵗ)
 nzᵗ = nonZeroₛ-transpose
@@ -108,20 +113,20 @@ iota-split (ι k₀) (ι k₁) rewrite toℕ-combine k₁ k₀ = refl
 --- Properties of DFT and FFT ---
 ---------------------------------
 
-DFT-cong : ∀ {xs ys : Ar (ι N) ℂ} → ⦃ nonZero-N : NonZero N ⦄ → xs ≅ ys → DFT xs ≅ DFT ys
-DFT-cong {N} prf (ι j) = sum-cong {N} (λ i → cong₂ _*_ (prf i) refl)
+DFT′-cong : ∀ {xs ys : Ar (ι N) ℂ} → ⦃ nonZero-N : NonZeroₛ (ι N) ⦄ → xs ≅ ys → DFT′ xs ≅ DFT′ ys
+DFT′-cong {suc N} ⦃ nonZero-N = ι nonZero-N ⦄ prf (ι j) = sum-cong {suc N} (λ i → cong₂ _*_ (prf i) refl)
 
-FFT-cong : ∀ {s : Shape} {xs ys : Ar s ℂ} → ⦃ nonZeroₛ-s : NonZeroₛ s ⦄ → xs ≅ ys → FFT xs ≅ FFT ys
-FFT-cong {ι N} ⦃ ι nonZeroₛ-s ⦄ = DFT-cong ⦃ nonZeroₛ-s ⦄
-FFT-cong {r₁ ⊗ r₂} {xs} {ys} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ prf (j₁ ⊗ j₀) =
+FFT′-cong : ∀ {s : Shape} {xs ys : Ar s ℂ} → ⦃ nonZeroₛ-s : NonZeroₛ s ⦄ → xs ≅ ys → FFT′ xs ≅ FFT′ ys
+FFT′-cong {ι N} ⦃ nonZeroₛ-s ⦄ = DFT′-cong ⦃ nonZeroₛ-s ⦄
+FFT′-cong {r₁ ⊗ r₂} {xs} {ys} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ prf (j₁ ⊗ j₀) =
   let instance
     _ : NonZeroₛ r₁
     _ = nonZero-r₁
     _ : NonZeroₛ r₂
     _ = nonZero-r₂
-  in  (FFT-cong {r₂} λ{ k₀ → 
+  in  (FFT′-cong {r₂} λ{ k₀ → 
         (cong₂ _*_ 
-          ((FFT-cong {r₁} λ{k₁ → 
+          ((FFT′-cong {r₁} λ{k₁ → 
             prf (k₁ ⊗ k₀) 
           }) j₀ ) 
           refl
@@ -287,16 +292,16 @@ assoc₄ a b c d rewrite
 --- FFT ≡ DFT ---
 -----------------
 
-fft≅dft : 
+fft′≅dft′ : 
     ⦃ nz-s  : NonZeroₛ s ⦄
   → ∀ (arr : Ar s ℂ) 
-  → FFT arr 
+  → FFT′ arr 
     ≅ 
     ( (reshape ♯) 
-    ∘ (DFT ⦃ nz-# (nzᵗ nz-s) ⦄ )
+    ∘ (DFT′ ⦃ nz-ι# (nzᵗ nz-s) ⦄ )
     ∘ (reshape flatten-reindex)) arr
-fft≅dft {ι N} ⦃ ι nz-N ⦄ arr i = refl
-fft≅dft {r₁ ⊗ r₂} ⦃ nz-r₁ ⊗ nz-r₂ ⦄ arr (j₁ ⊗ j₀) =
+fft′≅dft′ {ι N} ⦃ ι nz-N ⦄ arr i = refl
+fft′≅dft′ {r₁ ⊗ r₂} ⦃ nz-r₁ ⊗ nz-r₂ ⦄ arr (j₁ ⊗ j₀) =
   let instance
     _ : NonZeroₛ r₁
     _ = nz-r₁
@@ -314,9 +319,13 @@ fft≅dft {r₁ ⊗ r₂} ⦃ nz-r₁ ⊗ nz-r₂ ⦄ arr (j₁ ⊗ j₀) =
     _ = m*n≢0 (# r₂) (# r₁ ᵗ)
     _ : NonZero (# r₂ ᵗ *ₙ # r₁ ᵗ)
     _ = m*n≢0 (# r₂ ᵗ) (# r₁ ᵗ)
+    tmp : NonZeroₛ (ι (# r₂ ᵗ))
+    tmp = ι (nz-# (nzᵗ nz-r₂))
+    _ : NonZeroₛ (ι (# (r₁ ⊗ r₂) ᵗ))
+    _ = ι (m*n≢0 (length (recursive-transpose r₂)) (length (recursive-transpose r₁)))
   in begin
-    _ ≡⟨ fft≅dft _ j₁ ⟩
-    _ ≡⟨ DFT-cong (λ x → cong₂ _*_ (fft≅dft _ j₀) refl) (j₁ ⟨ rev ♭ ⟩ ) ⟩
+    _ ≡⟨ fft′≅dft′ _ j₁ ⟩
+    _ ≡⟨ DFT′-cong (λ x → cong₂ _*_ (fft′≅dft′ _ j₀) refl) (j₁ ⟨ rev ♭ ⟩ ) ⟩
     _ ≡⟨ sum-cong {# r₂ ᵗ} (λ k₀ → cong₂ _*_ (*-distribʳ-sum {# r₁ ᵗ} _) refl ) ⟩
     _ ≡⟨ sum-cong {# r₂ ᵗ} (λ k₀ →            *-distribʳ-sum {# r₁ ᵗ} _)        ⟩ 
     _ ≡⟨ sum-cong {  # r₂ ᵗ } 
@@ -371,6 +380,13 @@ fft≅dft {r₁ ⊗ r₂} ⦃ nz-r₁ ⊗ nz-r₂ ⦄ arr (j₁ ⊗ j₀) =
       ≡⟨ sum-reindex (|s|≡|sᵗ| {r₁ ⊗ r₂}) ⟩
     _ ≡⟨ sum-cong 
         {# (r₁ ⊗ r₂) ᵗ} 
+        {_}
+        {λ k → 
+            reshape flatten-reindex arr k
+          * -ω 
+              (length (recursive-transpose r₂) *ₙ length (recursive-transpose r₁)) 
+              (iota k *ₙ iota ((j₁ ⊗ j₀) ⟨ ♯ ⟩)) 
+        }
         (λ{(ι k) → 
             cong₂ _*_ 
               refl 
@@ -382,4 +398,136 @@ fft≅dft {r₁ ⊗ r₂} ⦃ nz-r₁ ⊗ nz-r₂ ⦄ arr (j₁ ⊗ j₀) =
               )
           }) 
       ⟩
-    _ ∎
+    _ ≡⟨⟩
+      (reshape ♯ ∘ (DFT′ {length (recursive-transpose (r₁ ⊗ r₂))}) ∘ reshape flatten-reindex) arr (j₁ ⊗ j₀)
+    ∎
+
+nonZero-#s⇒nonZero-s : NonZero (# s) → NonZeroₛ s
+nonZero-#s⇒nonZero-s {ι N} x = NonZeroₛ.ι x
+nonZero-#s⇒nonZero-s {s ⊗ p} nz-#s*#p = NonZeroₛ._⊗_ 
+    (nonZero-#s⇒nonZero-s (m*n≢0⇒m≢0 (length s) ⦃ nz-#s*#p ⦄)) 
+    (nonZero-#s⇒nonZero-s (m*n≢0⇒n≢0 (length s) ⦃ nz-#s*#p ⦄))
+
+nonZero-s⇒nonZero-#s : NonZeroₛ s → NonZero (# s)
+nonZero-s⇒nonZero-#s (ι nz-N) = nz-N
+nonZero-s⇒nonZero-#s {s ⊗ p} (nz-s ⊗ nz-p)  = m*n≢0 (# s) (# p) ⦃ nonZero-s⇒nonZero-#s nz-s ⦄ ⦃ nonZero-s⇒nonZero-#s nz-p ⦄
+
+nonZeroₛ-ι#sᵗ⇒nonZeroₛ-s : NonZeroₛ (ι (# s ᵗ)) → NonZeroₛ s
+nonZeroₛ-ι#sᵗ⇒nonZeroₛ-s {s} (ι nz-#sᵗ) with nonZeroₛ-transpose (nonZero-#s⇒nonZero-s {s ᵗ} nz-#sᵗ)
+nonZeroₛ-ι#sᵗ⇒nonZeroₛ-s {s} (ι nz-#sᵗ) | nz-sᵗᵗ rewrite recursive-transpose-inv {s} = nz-sᵗᵗ
+
+
+--¬nonZeroₛ⇒¬nonZero : ¬ NonZeroₛ s → ¬ NonZero (# s)
+--¬nonZeroₛ⇒¬nonZero ¬nz-s nz-#s = ¬nz-s (nonZero-#s⇒nonZero-s nz-#s)
+
+-- ¬nonZero⇒¬nonZeroₛ : ¬ NonZero (# s) → ¬ NonZeroₛ s
+-- ¬nonZero⇒¬nonZeroₛ ¬nz-#s nz-s = ?
+
+nonZeroₛ-s⇒nonZeroₛ-ι#sᵗ : NonZeroₛ s → NonZeroₛ (ι (# s ᵗ))
+nonZeroₛ-s⇒nonZeroₛ-ι#sᵗ (ι x) = ι x
+nonZeroₛ-s⇒nonZeroₛ-ι#sᵗ {s ⊗ p} (nz-s ⊗ nz-p) with nonZeroₛ-s⇒nonZeroₛ-ι#sᵗ nz-s | nonZeroₛ-s⇒nonZeroₛ-ι#sᵗ nz-p
+... | (ι nz-#sᵗ) | (ι nz-#pᵗ) = ι (m*n≢0 (# p ᵗ) (# s ᵗ) ⦃ nz-#pᵗ ⦄ ⦃ nz-#sᵗ ⦄ )
+
+¬nonZeroₛ-s⇒¬nonZeroₛ-ι#sᵗ : ¬ NonZeroₛ s → ¬ NonZeroₛ (ι (# s ᵗ))
+¬nonZeroₛ-s⇒¬nonZeroₛ-ι#sᵗ {s} ¬nz-s nz-ι#sᵗ with nonZeroₛ-ι#sᵗ⇒nonZeroₛ-s {s} nz-ι#sᵗ
+¬nonZeroₛ-s⇒¬nonZeroₛ-ι#sᵗ {s} ¬nz-s nz-sᵗ | nz-s = ¬nz-s nz-s
+
+nz-#s-nz-#p⇒nz-#s⊗p : NonZero (# s) → NonZero (# p) → NonZero (# s ⊗ p)
+nz-#s-nz-#p⇒nz-#s⊗p {s} {p} nz-#s nz-#p = m*n≢0 (length s) (length p) ⦃ nz-#s ⦄ ⦃ nz-#p ⦄
+
+
+nonZeroₛ-s⇒Dec-nonZeroₛ-s : (nz-s : NonZeroₛ s) → nonZeroDec (ι (# s ᵗ)) ≡ yes (nonZeroₛ-s⇒nonZeroₛ-ι#sᵗ nz-s) 
+nonZeroₛ-s⇒Dec-nonZeroₛ-s {ι zero} (ι ())
+nonZeroₛ-s⇒Dec-nonZeroₛ-s {ι (suc N)} (ι nz-N) = refl
+nonZeroₛ-s⇒Dec-nonZeroₛ-s {s ⊗ p} (nz-s ⊗ nz-p) with nonZeroₛ-s⇒nonZeroₛ-ι#sᵗ nz-s | nonZeroₛ-s⇒nonZeroₛ-ι#sᵗ nz-p | nz-#s-nz-#p⇒nz-#s⊗p {s} {p} (nonZero-s⇒nonZero-#s nz-s) (nonZero-s⇒nonZero-#s nz-p)
+nonZeroₛ-s⇒Dec-nonZeroₛ-s {s ⊗ p} (nz-s ⊗ nz-p) | ι nz-#sᵗ | ι nz-#pᵗ | t = ?
+
+¬nonZeroₛ-s⇒Dec-nonZeroₛ-s : (¬nz-s : ¬ NonZeroₛ s) → nonZeroDec (ι (# s ᵗ)) ≡ no (¬nonZeroₛ-s⇒¬nonZeroₛ-ι#sᵗ ¬nz-s) 
+¬nonZeroₛ-s⇒Dec-nonZeroₛ-s {ι zero} ¬nz-s = refl
+¬nonZeroₛ-s⇒Dec-nonZeroₛ-s {ι (suc x)} ¬nz-s = ?
+¬nonZeroₛ-s⇒Dec-nonZeroₛ-s {s ⊗ s₁} ¬nz-s = ?
+
+fft≅dft : 
+    ∀ (arr : Ar s ℂ) 
+  → FFT arr 
+    ≅ 
+    ( (reshape ♯) 
+    ∘ DFT
+    ∘ (reshape flatten-reindex)) arr
+fft≅dft {s} arr i with nonZeroDec s
+fft≅dft {s} arr i    | no  ¬nonZeroₛ-s with ¬nonZeroₛ-s⇒Dec-nonZeroₛ-s ¬nonZeroₛ-s 
+fft≅dft {s} arr i    | no  ¬nonZeroₛ-s | dec-rule rewrite dec-rule = ?
+fft≅dft {s} arr i    | yes  nonZeroₛ-s with nonZeroₛ-s⇒Dec-nonZeroₛ-s nonZeroₛ-s 
+fft≅dft {s} arr i    | yes  nonZeroₛ-s | dec-rule rewrite dec-rule = fft′≅dft′ ⦃ nonZeroₛ-s ⦄ arr i
+
+-- fft≅dft {ι zero   } arr i = refl
+-- fft≅dft {ι (suc x)} arr i = refl
+-- fft≅dft {s ⊗ p    } arr i with nonZeroDec s | nonZeroDec p 
+-- fft≅dft {s ⊗ p} arr i | no ¬a | nz-p = ?
+-- fft≅dft {s ⊗ p} arr i | true because proof₁ | nz-p = ?
+
+--fft≅dft {s} arr i with nonZeroDec s
+--fft≅dft {s} arr i    | no  ¬nonZeroₛ-s = ?
+--fft≅dft {s} arr i    | yes  nonZeroₛ-s with nonZeroₛ-s⇒Dec-nonZeroₛ-s nonZeroₛ-s | nonZeroDec s
+--fft≅dft {s} arr i | yes nonZeroₛ-s | no ¬a | no ¬a₁ = ?
+--fft≅dft {s} arr i | yes nonZeroₛ-s | no ¬a | yes a = ¬q
+--fft≅dft {s} arr i | yes nonZeroₛ-s | yes a | t = ?
+
+--fft≅dft {s} arr i with nonZeroDec s
+--fft≅dft {s} arr i    | no  ¬nonZeroₛ-s with ¬nonZeroₛ-s⇒¬nonZeroₛ-ι#sᵗ ¬nonZeroₛ-s
+--fft≅dft {s} arr i    | no  ¬nonZeroₛ-s | ¬nonZeroₛ-ι#sᵗ = ?
+--fft≅dft {s} arr i    | yes  nonZeroₛ-s with nonZeroₛ-s⇒nonZeroₛ-ι#sᵗ nonZeroₛ-s | nonZeroDec (ι (# s ᵗ))
+--fft≅dft {s} arr i | yes nonZeroₛ-s | nonZeroₛ-ι#sᵗ | no ¬a = ?
+--fft≅dft {s} arr i | yes nonZeroₛ-s | nonZeroₛ-ι#sᵗ | yes a = fft′≅dft′ ⦃ nonZeroₛ-s ⦄ arr i
+
+--fft≅dft {s} arr i with nonZeroDec (s) | nonZeroDec (ι (# s ᵗ))
+--fft≅dft {s} arr i    | no  ¬nonZeroₛ-s | t = ? 
+--fft≅dft {s} arr i    | yes  nonZeroₛ-s | no  ¬nonZero-ι#sᵗ with ¬nonZeroₛ-ι#sᵗ⇒¬nonZeroₛ-s {s} ¬nonZero-ι#sᵗ
+--fft≅dft {s} arr i    | yes  nonZeroₛ-s | no  ¬nonZero-ι#sᵗ | ¬nonZeroₛ-s = ?
+--fft≅dft {s} arr i    | yes  nonZeroₛ-s | yes  nonZero-ι#sᵗ = fft′≅dft′ ⦃ ? ⦄ arr i
+--fft≅dft {s} arr i with nonZeroDec (s)
+--fft≅dft {s} arr i    | no  ¬nonZero-s with ¬nonZeroₛ-s⇒¬nonZeroₛ-sᵗ ¬nonZero-s --with ¬nonZeroₛ-s⇒¬nonZeroₛ-sᵗ ¬nonZero-s \
+--fft≅dft {s} arr i    | no  ¬nonZero-s | ¬nonZeroₛ-ι#sᵗ = ?
+--fft≅dft {s} arr i    | yes  nonZero-s = ?
+--fft≅dft {ι zero} arr i with nonZeroDec (ι zero) 
+--... | no ¬nonZero-s = refl
+--... | yes (ι ())
+--fft≅dft {ι (suc N)} arr i = refl
+--fft≅dft {s ⊗ p} arr i with nonZeroDec (s ⊗ p)
+--... | no ¬nz-s⊗p = ?
+--... | yes nz-s⊗p = ? --fft′≅dft′ ⦃ ? ⦄ arr i
+
+
+
+--fft≅dft {s ⊗ p} arr i with nonZeroDec (s ⊗ p)
+--... | no ¬a with ¬nonZeroₛ⇒¬nonZero (¬nonZeroₛ-s⇒¬nonZeroₛ-sᵗ ¬a) -- (¬nonZeroₛ⇒¬nonZero ¬a)
+--...         | tmp = ?
+--fft≅dft {s ⊗ p} arr i | yes a with nz-# (nzᵗ a) 
+--fft≅dft {s ⊗ p} arr i | yes a | t = ?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

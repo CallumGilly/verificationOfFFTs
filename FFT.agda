@@ -14,11 +14,12 @@ module FFT (real : Real) (cplx : Cplx real) where
 
   open import Data.Fin.Base using (Fin; toℕ) renaming (zero to fzero; suc to fsuc)
   open import Data.Nat.Base using (ℕ; suc; NonZero) renaming (_+_ to _+ₙ_; _*_ to _*ₙ_)
-  open import Data.Nat.Properties using (m*n≢0)
+  open import Data.Nat.Properties using (m*n≢0; nonZero?)
+  open import Relation.Nullary
 
-  open import Matrix using (Ar; Shape; Position; ι; _⊗_; zipWith; nestedMap; length; NonZeroₛ; nonZeroₛ-length)
+  open import Matrix using (Ar; Shape; Position; ι; _⊗_; zipWith; nestedMap; length; NonZeroₛ; nonZeroₛ-length; nonZeroDec)
   open import Matrix.Sum _+_ 0ℂ +-isCommutativeMonoid using (sum)
-  open import Matrix.Reshape using (recursive-transpose; reshape; swap; _⟨_⟩; ♯; nonZeroₛ-transpose)
+  open import Matrix.Reshape using (recursive-transpose; reshape; swap; _⟨_⟩; ♯; nonZeroₛ-transpose; recursive-transposeᵣ)
 
   private
     variable
@@ -43,12 +44,12 @@ module FFT (real : Real) (cplx : Cplx real) where
   --- DFT and FFT ---
   -------------------
 
-  DFT : ∀ {N : ℕ} → ⦃ nonZero-N : NonZero N ⦄ → Ar (ι N) ℂ → Ar (ι N) ℂ
-  DFT {N} xs k = sum (λ i → xs i * -ω N (offset-prod (i ⊗ k)))
+  DFT′ : ∀ {N : ℕ} → ⦃ nonZero-s : NonZeroₛ (ι N) ⦄ → Ar (ι N) ℂ → Ar (ι N) ℂ
+  DFT′ {N} ⦃ nonZero-ιN ⦄ xs k = sum (λ i → xs i * -ω N ⦃ nonZeroₛ-length nonZero-ιN ⦄ (offset-prod (i ⊗ k)))
 
-  FFT : ∀ {s : Shape} → ⦃ nonZero-s : NonZeroₛ s ⦄ → Ar s ℂ → Ar (recursive-transpose s) ℂ
-  FFT {ι N} ⦃ ι nonZero-N ⦄ arr = DFT ⦃ nonZero-N ⦄ arr -- Use the DFT when no splitting is defined 
-  FFT {r₁ ⊗ r₂} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ arr = 
+  FFT′ : ∀ {s : Shape} → ⦃ nonZero-s : NonZeroₛ s ⦄ → Ar s ℂ → Ar (recursive-transpose s) ℂ
+  FFT′ {ι N} ⦃ nonZero-s ⦄ arr = DFT′ ⦃ nonZero-s ⦄ arr -- Use the DFT when no splitting is defined 
+  FFT′ {r₁ ⊗ r₂} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ arr = 
       let instance
         _ : NonZeroₛ r₁
         _ = nonZero-r₁
@@ -58,10 +59,19 @@ module FFT (real : Real) (cplx : Cplx real) where
         _ = nonZero-r₂ ⊗ (nonZeroₛ-transpose nonZero-r₁)
       in
       let 
-          innerDFTapplied       = nestedMap FFT (reshape swap arr)   
+          innerDFTapplied       = nestedMap FFT′ (reshape swap arr)   
           twiddleFactorsApplied = zipWith _*_   innerDFTapplied twiddles
-          outerDFTapplied       = nestedMap FFT (reshape swap twiddleFactorsApplied) 
+          outerDFTapplied       = nestedMap FFT′ (reshape swap twiddleFactorsApplied) 
       in  reshape swap outerDFTapplied
 
 
+  DFT : ∀ {N : ℕ} → Ar (ι N) ℂ → Ar (ι N) ℂ
+  DFT {N} arr with nonZeroDec (ι N)
+  ... | no  ¬nonZero-s = arr
+  ... | yes  nonZero-s = DFT′ ⦃ nonZero-s ⦄ arr
+
+  FFT : ∀ {s : Shape} → Ar s ℂ → Ar (recursive-transpose s) ℂ
+  FFT {s} arr with nonZeroDec s
+  ... | no  ¬nonZero-s = reshape (recursive-transposeᵣ) arr
+  ... | yes  nonZero-s = FFT′ ⦃ nonZero-s ⦄ arr
 
