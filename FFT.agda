@@ -44,11 +44,11 @@ module FFT (real : Real) (cplx : Cplx real) where
   --- DFT and FFT ---
   -------------------
 
-  DFT′ : ∀ {N : ℕ} → ⦃ nonZero-s : NonZeroₛ (ι N) ⦄ → Ar (ι N) ℂ → Ar (ι N) ℂ
-  DFT′ {N} ⦃ nonZero-ιN ⦄ xs k = sum (λ i → xs i * -ω N ⦃ nonZeroₛ-length nonZero-ιN ⦄ (offset-prod (i ⊗ k)))
+  DFT′ : ∀ {N : ℕ} → ⦃ nonZero-s : NonZero N ⦄ → Ar (ι N) ℂ → Ar (ι N) ℂ
+  DFT′ {N} ⦃ nonZero-N ⦄ xs k = sum (λ i → xs i * -ω N ⦃ nonZero-N ⦄ (offset-prod (i ⊗ k)))
 
   FFT′ : ∀ {s : Shape} → ⦃ nonZero-s : NonZeroₛ s ⦄ → Ar s ℂ → Ar (recursive-transpose s) ℂ
-  FFT′ {ι N} ⦃ nonZero-s ⦄ arr = DFT′ ⦃ nonZero-s ⦄ arr -- Use the DFT when no splitting is defined 
+  FFT′ {ι N} ⦃ ι nonZero-N ⦄ arr = DFT′ ⦃ nonZero-N ⦄ arr -- Use the DFT when no splitting is defined 
   FFT′ {r₁ ⊗ r₂} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ arr = 
       let instance
         _ : NonZeroₛ r₁
@@ -66,7 +66,7 @@ module FFT (real : Real) (cplx : Cplx real) where
 
 
   DFT : ∀ {N : ℕ} → Ar (ι N) ℂ → Ar (ι N) ℂ
-  DFT {N} arr with nonZeroDec (ι N)
+  DFT {N} arr with nonZero? N
   ... | no  ¬nonZero-s = arr
   ... | yes  nonZero-s = DFT′ ⦃ nonZero-s ⦄ arr
 
