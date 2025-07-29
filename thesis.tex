@@ -1,0 +1,184 @@
+\documentclass[12pt, twoside]{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{fancyhdr} % Required to put information in a right and left justified header
+\usepackage{enumitem} % Required to make itemize left margin not massive 
+\usepackage{hyperref} % Allows linking to the bib in citations
+\usepackage{amsmath} % Used to make maths good
+\usepackage{amssymb} % USed for maths symbols
+\usepackage{minted}
+\usepackage{pdflscape}
+% Required to set the margin sizes to avoid \vspace{-9em}
+\usepackage{geometry}
+\geometry{
+    a4paper,
+    left=35mm,
+    right=24mm,
+    top=24mm,
+    bottom=24mm,
+}
+\setlength{\headheight}{18.0pt}
+\renewcommand{\familydefault}{\rmdefault}
+\setlength{\parindent}{0pt}  % Disable paragraph indentation
+\pagenumbering{roman}
+
+% Used to stop me submitting the wrong version
+%\usepackage{draftwatermark}
+%\SetWatermarkText{Draft}
+%\SetWatermarkScale{4}
+%\SetWatermarkAngle{30}
+
+% https://tex.stackexchange.com/questions/318142/typeseeting-a-multiset-with-double-curly-braces
+\newcommand*{\xlbrace}{[\mskip-5mu[}
+\newcommand*{\xrbrace}{]\mskip-5mu]}
+
+\usepackage{bm}
+% \usepackage{agda}
+\usepackage{newunicodechar}
+
+
+
+\newunicodechar{₁}{\ensuremath{_1}}
+\newunicodechar{₂}{\ensuremath{_2}}
+\newunicodechar{₃}{\ensuremath{_3}}
+\newunicodechar{₄}{\ensuremath{_4}}
+\newunicodechar{₅}{\ensuremath{_5}}
+\newunicodechar{ι}{\ensuremath{\iota}}
+\newunicodechar{ₗ}{\ensuremath{_l}}
+\newunicodechar{ₐ}{\ensuremath{_a}}
+\newunicodechar{ₖ}{\ensuremath{_k}}
+\newunicodechar{ᵢ}{\ensuremath{_i}}
+\newunicodechar{ⱼ}{\ensuremath{_j}}
+\newunicodechar{ᵥ}{\ensuremath{_v}}
+\newunicodechar{ₕ}{\ensuremath{_h}}
+
+\newunicodechar{ᵣ}{\ensuremath{_r}}
+\newunicodechar{ʳ}{\ensuremath{^r}}
+\newunicodechar{ˡ}{\ensuremath{^l}}
+\newunicodechar{ℕ}{\ensuremath{\mathbb{N}}}
+\newunicodechar{∀}{\ensuremath{\forall}}
+\newunicodechar{≡}{\ensuremath{\equiv}}
+\newunicodechar{≈}{\ensuremath{\approx}}
+\newunicodechar{∎}{\ensuremath{\blacksquare}}
+\newunicodechar{⊛}{\ensuremath{\circledast}}
+\newunicodechar{⊗}{\ensuremath{\otimes}}
+\newunicodechar{⊕}{\ensuremath{\oplus}}
+\newunicodechar{φ}{\ensuremath{\phi}}
+\newunicodechar{ψ}{\ensuremath{\psi}}
+\newunicodechar{ε}{\ensuremath{\epsilon}}
+\newunicodechar{λ}{\ensuremath{\lambda}}
+\newunicodechar{σ}{\ensuremath{\sigma}}
+\newunicodechar{′}{{'}}
+\newunicodechar{∷}{\ensuremath{\dblcolon}}
+\newunicodechar{↔}{\ensuremath{\leftrightarrow}}
+\newunicodechar{↦}{\ensuremath{\mapsto}}
+\newunicodechar{∘}{\ensuremath{\circ}}
+\newunicodechar{⁻}{\ensuremath{^{-}}}
+\newunicodechar{∙}{\ensuremath{\boldsymbol{\cdot}}}
+\newunicodechar{▹}{\ensuremath{\triangleright}}
+\newunicodechar{Σ}{\ensuremath{\Sigma}}
+\newunicodechar{∈}{\ensuremath{\in}}
+\newunicodechar{⟦}{\ensuremath{\llbracket}}
+\newunicodechar{⟧}{\ensuremath{\rrbracket}}
+\newunicodechar{⇒}{\ensuremath{\Rightarrow}}
+\newunicodechar{⟪}{\ensuremath{\xlbrace}}
+\newunicodechar{⟫}{\ensuremath{\xrbrace}}
+\newunicodechar{⊠}{\ensuremath{\boxtimes}}
+\newunicodechar{⊞}{\ensuremath{\boxplus}}
+\newunicodechar{∋}{\ensuremath{\ni}}
+\newunicodechar{∶}{\ensuremath{\bm{:}}}
+\newunicodechar{↦}{\ensuremath{\mapsto}}
+\newunicodechar{ℂ}{\ensuremath{\mathbb{C}}} 
+
+\newunicodechar{ʹ}{\ensuremath{\prime}}
+
+
+%TC:ignore
+\pagestyle{fancy}
+\lhead{
+    \large
+    % Electronics and Computer Science \\
+    % Faculty of Engineering and Physical Sciences \\
+    % University of Southampton 
+    Final Report
+    }
+\rhead{
+    \large 15th August 2025
+}
+
+\begin{document}
+\thispagestyle{fancy}
+\begin{center}
+    \vspace*{20mm}
+    \Large
+    Electronics and Computer Science \\
+    Faculty of Engineering and Physical Sciences \\
+    University of Southampton 
+
+    
+    \vspace*{20mm}
+    \Large Callum Gilchrist (\verb|cg3g22@soton.ac.uk|)
+    
+    \large 15th August 2025
+    
+    \vspace*{20mm}
+    \Huge Formal Verification of Fast Fourier Transforms
+    \vspace*{60mm}
+    
+    % \large Project Brief
+    \large \textbf{Supervisor:} Artjoms Šinkarovs (\verb|a.sinkarovs@soton.ac.uk|)
+    \large \textbf{Second Examiner:} Vahid Yazdanpanah (\verb|v.yazdanpanah@soton.ac.uk|)
+
+    \vspace*{10mm}
+    \normalsize A Project Report submitted for the award of \\
+    \large \textbf{BSc Computer Science}
+    
+    \vspace*{10mm}
+    
+\end{center}
+\clearpage
+\addcontentsline{toc}{section}{Abstract}
+\section*{Abstract}
+Discrete Fourier Transforms (DFTs) are key operations within Digital Signal Processing and other fields, Fast Fourier Transforms (FFTs) allow for the time complexity of computing the DFT to be significantly reduced. 
+Implementations of the FFT often comprise large, low-level libraries written with efficiency in mind, making verification of their correctness challenging.
+Agda is a dependently typed functional language which implements Martin-Löf type theory allowing proofs to be embedded within code.
+As a result of including these proofs, programs written in Agda can contain formal guarantees of their correctness, for the FFT this requires proving that the DFT is equal to the FFT for all cases.
+
+
+In this project, I have thus far created an Agda definition of the DFT and FFT.
+I now plan to implement proof that the two definitions are equal for all possible inputs.
+Given such a proof I will then use the FFT definition to generate a low-level library of my own which can perform Fourier Transforms with strict guarantees on its correctness.
+
+\clearpage
+%TC:endignore
+\include{Thesis/StatementOfOriginality}
+\clearpage
+% \addcontentsline{toc}{section}{Nomenclature}
+% \section*{Nomenclature}
+% \begin{table}[h]
+%     \centering
+%     \begin{tabular}{|c|c|}
+%         \hline
+%          DFT & Discrete Fourier Transform  \\
+%         \hline
+%          FFT & Fast Fourier Transform  \\
+%         \hline
+%     \end{tabular}
+%     \caption{Nomenclature}
+%     \label{tab:my_label}
+% \end{table}
+% \clearpage
+\addcontentsline{toc}{section}{Contents}
+\tableofcontents
+\clearpage
+% Add space between paragraphs, but only after the TOC
+\setlength{\parskip}{0.5em}
+\pagenumbering{arabic}
+\clearpage
+\include{Thesis/Introduction}
+\include{Thesis/Background}
+\clearpage
+\bibliographystyle{IEEEtran}
+\bibliography{Thesis/References}
+
+\end{document}
+
