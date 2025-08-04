@@ -1,7 +1,6 @@
 module Matrix where
 
 open import Data.Nat using (ℕ; suc; zero; NonZero; _+_; _*_)
-open import Data.Nat.Properties using (m*n≢0; m*n≢0⇒m≢0; m*n≢0⇒n≢0)
 open import Data.Fin as F using (Fin; join) renaming (zero to fzero; suc to fsuc)
 open import Data.Product.Base using (_×_) renaming ( _,_ to ⟨_,_⟩)
 open import Data.Sum.Base using (inj₁; inj₂)
@@ -49,8 +48,8 @@ nest a i j = a (i ⊗ j)
 unnest : Ar s (Ar p X) → Ar (s ⊗ p) X
 unnest a (i ⊗ j) = a i j
 
-nestedMap : ∀ {s p t : Shape} → (Ar p X → Ar t Y) → Ar (s ⊗ p) X → Ar (s ⊗ t) Y
-nestedMap f ar = unnest (map f (nest ar))
+mapRows : ∀ {s p t : Shape} → (Ar p X → Ar t Y) → Ar (s ⊗ p) X → Ar (s ⊗ t) Y
+mapRows f ar = unnest (map f (nest ar))
 
 head₁ : Ar (ι (suc n)) X → X
 head₁ ar = ar (ι fzero)

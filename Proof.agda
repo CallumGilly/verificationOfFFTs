@@ -35,7 +35,7 @@ open import Data.Product.Base using (∃; ∃₂; _×_; proj₁; proj₂; map₁
 open import Data.Sum.Base using (inj₁; inj₂; _⊎_)
 open import Data.Unit using (⊤; tt)
 
-open import Matrix using (Ar; Shape; _⊗_; ι; Position; nestedMap; zipWith; nest; map; unnest; head₁; tail₁; zip; iterate; ι-cons; nil; length; splitAr; splitArₗ; splitArᵣ)
+open import Matrix using (Ar; Shape; _⊗_; ι; Position; mapRows; zipWith; nest; map; unnest; head₁; tail₁; zip; iterate; ι-cons; nil; length; splitAr; splitArₗ; splitArᵣ)
 open import Matrix.Equality using (_≅_; reduce-≅; tail₁-cong)
 open import Matrix.Properties using (splitArᵣ-zero; tail₁-const; zipWith-congˡ)
 open import Matrix.NonZero using (NonZeroₛ; ι; _⊗_; nonZeroₛ-s⇒nonZero-s; nonZeroDec; nonZeroₛ-s⇒nonZeroₛ-sᵗ; nonZeroₛ-s⇒nonZero-sᵗ; ¬nonZeroₛ-s⇒¬nonZero-sᵗ; ¬nonZero-N⇒PosN-irrelevant; ¬nonZero-sᵗ⇒¬nonZero-s)
@@ -84,6 +84,16 @@ nzᵗ = nonZeroₛ-s⇒nonZeroₛ-sᵗ
 rev-eq-applied : (rshp : Reshape r₂ r₁) (arr : Ar r₁ ℂ) → reshape (rshp ∙ rev rshp) arr ≅ arr 
 rev-eq-applied rshp arr i = cong arr (rev-eq rshp i)
 
+-------------------------------------------
+--- 4 way associativity helper function ---
+-------------------------------------------
+
+assoc₄ : (a b c d : ℂ) → a * b * c * d ≡ a * (b * c * d)
+assoc₄ a b c d rewrite
+    *-assoc a b c
+  | *-assoc a (b * c) d
+  = refl
+
 --------------------------
 --- Properties of iota ---
 --------------------------
@@ -97,9 +107,9 @@ iota-split : ∀
    → iota ((k₁ ⊗ k₀) ⟨ split ⟩) ≡ (# r₂ *ₙ iota k₁) +ₙ iota k₀
 iota-split (ι k₀) (ι k₁) rewrite toℕ-combine k₁ k₀ = refl
 
------------------------------------
---- Congurance properties of -ω ---
------------------------------------
+-----------------------------
+--- Congurance properties ---
+-----------------------------
 
 -ω-cong₂ : 
   ∀ {n m : ℕ} 
@@ -110,10 +120,6 @@ iota-split (ι k₀) (ι k₁) rewrite toℕ-combine k₁ k₀ = refl
   → k ≡ j 
   → -ω n ⦃ nonZero-n ⦄ k ≡ -ω m ⦃ nonZero-m ⦄ j
 -ω-cong₂ refl refl = refl
-
----------------------------------
---- Properties of DFT and FFT ---
----------------------------------
 
 DFT′-cong : ∀ {xs ys : Ar (ι N) ℂ} → ⦃ nonZero-N : NonZero N ⦄ → xs ≅ ys → DFT′ xs ≅ DFT′ ys
 DFT′-cong {suc N} ⦃ nonZero-N ⦄ prf (ι j) = sum-cong {suc N} (λ i → cong₂ _*_ (prf i) refl)
@@ -139,7 +145,7 @@ FFT′-cong {r₁ ⊗ r₂} {xs} {ys} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ prf 
 --- Properties of Sum ---
 -------------------------
 
--- Of note here is that I cannot put this in the sum module as it requires knowlage of _+_ as well as its relation with _+_
+-- Of note here is that I cannot put this in the sum module as it requires knowledge of _+_ as well as its relation with _*_
 
 *-distribˡ-sum : {xs : Ar (ι N) ℂ} (x : ℂ) → x * (sum xs) ≡ sum (map (x *_) xs)
 *-distribˡ-sum {zero} {xs} x = zeroʳ x
@@ -157,8 +163,111 @@ FFT′-cong {r₁ ⊗ r₂} {xs} {ys} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ prf 
 ------------------------------------
 --- Rearanging of roots of unity ---
 ------------------------------------
+cooley-tukey-derivation : 
+  ∀ (r₁ r₂ k₀ k₁ j₀ j₁ : ℕ) 
+  → ⦃ nonZero-r₁   : NonZero r₁ ⦄
+  → ⦃ nonZero-r₂   : NonZero r₂ ⦄
+  → 
+            -ω 
+              (r₂ *ₙ r₁) 
+              ⦃ m*n≢0 r₂ r₁ ⦄
+              (
+                (r₂ *ₙ k₁ +ₙ k₀) 
+                *ₙ 
+                (r₁ *ₙ j₁ +ₙ j₀) 
+              )
+            ≡
+              -ω (r₁) (k₁ *ₙ j₀) 
+            * -ω (r₂ *ₙ r₁) ⦃ m*n≢0 r₂ r₁ ⦄ (k₀ *ₙ j₀) 
+            * -ω (r₂) (k₀ *ₙ j₁)
+cooley-tukey-derivation r₁ r₂ k₀ k₁ j₀ j₁ ⦃ nonZero-r₁ ⦄ ⦃ nonZero-r₂ ⦄
+  = rearrange-ω-power 
+  ⊡ split-ω
+  ⊡ remove-constant-term
+  ⊡ simplify-bases
+  where
+    instance
+      _ : NonZero (r₁ *ₙ r₂)
+      _ = m*n≢0 r₁ r₂
+      _ : NonZero (r₂ *ₙ r₁)
+      _ = m*n≢0 r₂ r₁ 
+    simplify-bases :
+          -ω (r₂ *ₙ r₁) ⦃ m*n≢0 r₂ r₁ ⦄ (r₂ *ₙ (k₁ *ₙ j₀)) 
+        * -ω (r₂ *ₙ r₁) ⦃ m*n≢0 r₂ r₁ ⦄ (k₀ *ₙ j₀) 
+        * -ω (r₂ *ₙ r₁) ⦃ m*n≢0 r₂ r₁ ⦄ (r₁ *ₙ (k₀ *ₙ j₁))
+      ≡
+          -ω (r₁) (k₁ *ₙ j₀) 
+        * -ω (r₂ *ₙ r₁) ⦃ m*n≢0 r₂ r₁ ⦄ (k₀ *ₙ j₀) 
+        * -ω (r₂) (k₀ *ₙ j₁)
+    simplify-bases = 
+        cong₂ 
+          _*_ 
+          ( cong₂
+                _*_
+                (ω-r₁x-r₁y r₂ r₁ (k₁ *ₙ j₀))
+                refl
+          )
+          (   -ω-cong₂ (*ₙ-comm r₂ r₁) refl
+            ⊡ (ω-r₁x-r₁y r₁ r₂ (k₀ *ₙ j₁))
+          )
+    remove-constant-term :
+          -ω (r₂ *ₙ r₁) ⦃ m*n≢0 r₂ r₁ ⦄ (r₂ *ₙ (k₁ *ₙ j₀)) 
+        * -ω (r₂ *ₙ r₁) ⦃ m*n≢0 r₂ r₁ ⦄ (k₀ *ₙ j₀) 
+        * -ω (r₂ *ₙ r₁) ⦃ m*n≢0 r₂ r₁ ⦄ (r₁ *ₙ (k₀ *ₙ j₁))
+        * -ω (r₂ *ₙ r₁) ⦃ m*n≢0 r₂ r₁ ⦄ ((r₂ *ₙ r₁) *ₙ (j₁ *ₙ k₁))
+      ≡
+          -ω (r₂ *ₙ r₁) ⦃ m*n≢0 r₂ r₁ ⦄ (r₂ *ₙ (k₁ *ₙ j₀)) 
+        * -ω (r₂ *ₙ r₁) ⦃ m*n≢0 r₂ r₁ ⦄ (k₀ *ₙ j₀) 
+        * -ω (r₂ *ₙ r₁) ⦃ m*n≢0 r₂ r₁ ⦄ (r₁ *ₙ (k₀ *ₙ j₁))
+    remove-constant-term =
+        cong₂ _*_ refl (ω-N-mN {r₂ *ₙ r₁} {j₁ *ₙ k₁})
+      ⊡ *-identityʳ _
+    rearrange-ω-power :
+        -ω 
+          (r₂ *ₙ r₁) 
+          (  (r₂ *ₙ k₁ +ₙ k₀) 
+          *ₙ (r₁ *ₙ j₁ +ₙ j₀) 
+          )
+      
+      ≡ 
+        -ω 
+          (r₂ *ₙ r₁)
+          ( r₂ *ₙ (k₁ *ₙ j₀) 
+          +ₙ k₀ *ₙ j₀ 
+          +ₙ r₁ *ₙ (k₀ *ₙ j₁) 
+          +ₙ r₂ *ₙ (r₁ *ₙ (j₁ *ₙ k₁))
+          )
+    rearrange-ω-power = 
+      -ω-cong₂ 
+        refl 
+        (solve 
+          6 
+          (λ r₁ℕ r₂ℕ k₀ℕ k₁ℕ j₀ℕ j₁ℕ → (r₂ℕ :* k₁ℕ :+ k₀ℕ) :* (r₁ℕ :* j₁ℕ :+ j₀ℕ) := r₂ℕ :* (k₁ℕ :* j₀ℕ) :+ k₀ℕ :* j₀ℕ :+ r₁ℕ :* (k₀ℕ :* j₁ℕ) :+ r₂ℕ :* (r₁ℕ :* (j₁ℕ :* k₁ℕ))) 
+          refl 
+          r₁ r₂ k₀ k₁ j₀ j₁
+        )
+    split-ω :
+        -ω 
+          (r₂ *ₙ r₁)
+          ( r₂ *ₙ (k₁ *ₙ j₀) 
+          +ₙ k₀ *ₙ j₀ 
+          +ₙ r₁ *ₙ (k₀ *ₙ j₁) 
+          +ₙ r₂ *ₙ (r₁ *ₙ (j₁ *ₙ k₁))
+          )
+        ≡
+          -ω (r₂ *ₙ r₁) ⦃ m*n≢0 r₂ r₁ ⦄ (r₂ *ₙ (k₁ *ₙ j₀)) 
+        * -ω (r₂ *ₙ r₁) ⦃ m*n≢0 r₂ r₁ ⦄ (k₀ *ₙ j₀) 
+        * -ω (r₂ *ₙ r₁) ⦃ m*n≢0 r₂ r₁ ⦄ (r₁ *ₙ (k₀ *ₙ j₁))
+        * -ω (r₂ *ₙ r₁) ⦃ m*n≢0 r₂ r₁ ⦄ ((r₂ *ₙ r₁) *ₙ (j₁ *ₙ k₁))
+    split-ω = 
+          (ω-N-k₀+k₁ {r₂ *ₙ r₁} {r₂ *ₙ (k₁ *ₙ j₀) +ₙ k₀ *ₙ j₀ +ₙ r₁ *ₙ (k₀ *ₙ j₁)} {r₂ *ₙ (r₁ *ₙ (j₁ *ₙ k₁))} )
+        ⊡ (flip $ cong₂ _*_) (-ω-cong₂ refl $ sym $ *ₙ-assoc r₂ r₁ (j₁ *ₙ k₁)) 
+        ( (ω-N-k₀+k₁ {r₂ *ₙ r₁} {r₂ *ₙ (k₁ *ₙ j₀) +ₙ k₀ *ₙ j₀                    } {r₁ *ₙ (k₀ *ₙ j₁)        } )
+        ⊡ (flip $ cong₂ _*_) refl 
+          (ω-N-k₀+k₁ {r₂ *ₙ r₁} {r₂ *ₙ (k₁ *ₙ j₀)                                } {k₀ *ₙ j₀                } )
+        )
 
--ω-rearanging : ∀
+cooley-tukey-derivation-application : ∀
    (j₁   : Position (r₂ ᵗ))
    (j₀   : Position (r₁ ᵗ))
    (k₀   : Position (ι (# r₂ ᵗ)))
@@ -183,7 +292,7 @@ FFT′-cong {r₁ ⊗ r₂} {xs} {ys} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ prf 
           (# r₂ ᵗ *ₙ # r₁ ᵗ)
           ⦃ m*n≢0 (# r₂ ᵗ) (# r₁ ᵗ) ⦃ nz-# (nzᵗ nz-r₂) ⦄ ⦃ nz-# (nzᵗ nz-r₁) ⦄ ⦄
           (iota (((k₁ ⟨ reindex (|s|≡|sᵗ| {r₁}) ⟩) ⊗ (k₀ ⟨ reindex (|s|≡|sᵗ| {r₂}) ⟩)) ⟨ split ⟩) *ₙ iota (((j₁ ⟨ rev ♭ ⟩) ⊗ (j₀ ⟨ rev ♭ ⟩)) ⟨ split ⟩))
--ω-rearanging {r₂} {r₁} j₁ j₀ k₀ k₁ nz-r₁ nz-r₂ =
+cooley-tukey-derivation-application {r₂} {r₁} j₁ j₀ k₀ k₁ nz-r₁ nz-r₂ =
   let instance
     _ : NonZero (# r₁)
     _ = nz-# nz-r₁
@@ -198,16 +307,32 @@ FFT′-cong {r₁ ⊗ r₂} {xs} {ys} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ prf 
     _ : NonZero (# r₂ ᵗ *ₙ # r₁ ᵗ)
     _ = m*n≢0 (# r₂ ᵗ) (# r₁ ᵗ)
   in begin
-  _ ≡⟨ cong₂ _*_ (cong₂ _*_ refl (-ω-cong₂ (cong₂ _*ₙ_ (|s|≡|sᵗ| {r₂}) refl) refl)) refl ⟩
-  _ ≡⟨ cong₂ _*_ (cong₂ _*_ refl (-ω-cong₂ refl (cong₂ _*ₙ_ (cong iota (rev-eq {r₂} ♭ (k₀ ⟨ reindex (|s|≡|sᵗ| {r₂}) ⟩))) refl))) refl ⟩
-  _ ≡⟨ cong₂ _*_ (cong₂ _*_ refl (-ω-cong₂ refl (cong₂ _*ₙ_ (iota-reindex (|s|≡|sᵗ| {r₂})) refl))) refl ⟩
-  _ ≡⟨ -ω-rearanging′ 
+  _ ≡⟨  cong₂ _*_ 
+          ( cong₂ _*_ 
+              refl 
+              ( -ω-cong₂ 
+                  ( cong₂ _*ₙ_ (|s|≡|sᵗ| {r₂}) refl) 
+                  ( cong₂ _*ₙ_ 
+                      ( (cong 
+                            iota 
+                            (rev-eq {r₂} ♭ (k₀ ⟨ reindex (|s|≡|sᵗ| {r₂}) ⟩))
+                        ) 
+                      ⊡ (iota-reindex (|s|≡|sᵗ| {r₂}))
+                      )
+                      refl
+                  )
+              )
+          ) 
+          refl 
+    ⟩
+  _ ≡⟨ sym (cooley-tukey-derivation
         (# r₁ ᵗ) 
         (# r₂ ᵗ) 
         (iota k₀) 
         (iota k₁) 
         (iota (j₀ ⟨ rev ♭ ⟩)) 
         (iota (j₁ ⟨ rev ♭ ⟩)) 
+       )
      ⟩
   _ ≡⟨ sym (-ω-cong₂ refl 
           (cong (_*ₙ (# r₁ ᵗ *ₙ iota (j₁ ⟨ rev ♭ ⟩) +ₙ iota (j₀ ⟨ rev ♭ ⟩))) 
@@ -244,52 +369,7 @@ FFT′-cong {r₁ ⊗ r₂} {xs} {ys} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ prf 
             ) 
       ⟩ 
   _ ∎
-  where
-    -ω-rearanging′ : 
-      ∀ (r₁ r₂ k₀ k₁ j₀ j₁ : ℕ) 
-      → ⦃ nonZero-r₁   : NonZero r₁ ⦄
-      → ⦃ nonZero-r₂   : NonZero r₂ ⦄
-      → 
-                  -ω (r₁) (k₁ *ₙ j₀) 
-                * -ω (r₂ *ₙ r₁) ⦃ m*n≢0 r₂ r₁ ⦄ (k₀ *ₙ j₀) 
-                * -ω (r₂) (k₀ *ₙ j₁)
-                ≡
-                -ω 
-                  (r₂ *ₙ r₁) 
-                  ⦃ m*n≢0 r₂ r₁ ⦄
-                  (
-                    (r₂ *ₙ k₁ +ₙ k₀) 
-                    *ₙ 
-                    (r₁ *ₙ j₁ +ₙ j₀) 
-                  )
-    -ω-rearanging′ r₁ r₂ k₀ k₁ j₀ j₁ ⦃ nonZero-r₁ ⦄ ⦃ nonZero-r₂ ⦄ rewrite
-        sym (ω-r₁x-r₁y r₂ r₁ (k₁ *ₙ j₀)) 
-      | sym (ω-r₁x-r₁y r₁ r₂ (k₀ *ₙ j₁)) 
-      | sym (*-identityʳ (  -ω (r₂ *ₙ r₁) ⦃ m*n≢0 r₂ r₁ ⦄ (r₂ *ₙ (k₁ *ₙ j₀)) 
-                          * -ω (r₂ *ₙ r₁) ⦃ m*n≢0 r₂ r₁ ⦄ (k₀ *ₙ j₀) 
-                          * -ω (r₁ *ₙ r₂) ⦃ m*n≢0 r₁ r₂ ⦄ (r₁ *ₙ (k₀ *ₙ j₁))
-                         ))
-      | sym (ω-N-mN {r₁} {j₁ *ₙ k₁}) 
-      | sym (ω-r₁x-r₁y r₂ r₁ (r₁ *ₙ (j₁ *ₙ k₁)) ⦃ nonZero-r₂ ⦄ ⦃ nonZero-r₁ ⦄ ) 
-      | -ω-cong₂ {r₂ *ₙ r₁} {r₁ *ₙ r₂} ⦃ m*n≢0 r₂ r₁ ⦄ ⦃ m*n≢0 r₁ r₂ ⦄ {r₂ *ₙ (k₁ *ₙ j₀)                    } (*ₙ-comm r₂ r₁) refl
-      | -ω-cong₂ {r₂ *ₙ r₁} {r₁ *ₙ r₂} ⦃ m*n≢0 r₂ r₁ ⦄ ⦃ m*n≢0 r₁ r₂ ⦄ {k₀ *ₙ j₀                            } (*ₙ-comm r₂ r₁) refl
-      | -ω-cong₂ {r₂ *ₙ r₁} {r₁ *ₙ r₂} ⦃ m*n≢0 r₂ r₁ ⦄ ⦃ m*n≢0 r₁ r₂ ⦄ {r₂ *ₙ (r₁ *ₙ (j₁ *ₙ k₁))            } (*ₙ-comm r₂ r₁) refl
-      | -ω-cong₂ {r₂ *ₙ r₁} {r₁ *ₙ r₂} ⦃ m*n≢0 r₂ r₁ ⦄ ⦃ m*n≢0 r₁ r₂ ⦄ {(r₂ *ₙ k₁ +ₙ k₀) *ₙ (r₁ *ₙ j₁ +ₙ j₀)} (*ₙ-comm r₂ r₁) refl
-      | sym (ω-N-k₀+k₁ {r₁ *ₙ r₂} {r₂ *ₙ (k₁ *ₙ j₀)                                } {k₀ *ₙ j₀                } ⦃ m*n≢0 r₁ r₂ ⦄ )
-      | sym (ω-N-k₀+k₁ {r₁ *ₙ r₂} {r₂ *ₙ (k₁ *ₙ j₀) +ₙ k₀ *ₙ j₀                    } {r₁ *ₙ (k₀ *ₙ j₁)        } ⦃ m*n≢0 r₁ r₂ ⦄ )
-      | sym (ω-N-k₀+k₁ {r₁ *ₙ r₂} {r₂ *ₙ (k₁ *ₙ j₀) +ₙ k₀ *ₙ j₀ +ₙ r₁ *ₙ (k₀ *ₙ j₁)} {r₂ *ₙ (r₁ *ₙ (j₁ *ₙ k₁))} ⦃ m*n≢0 r₁ r₂ ⦄ )
-      = -ω-cong₂ ⦃ m*n≢0 r₁ r₂ ⦄ ⦃ m*n≢0 r₁ r₂ ⦄ refl (solve 6 (λ r₁ℕ r₂ℕ k₀ℕ k₁ℕ j₀ℕ j₁ℕ → r₂ℕ :* (k₁ℕ :* j₀ℕ) :+ k₀ℕ :* j₀ℕ :+ r₁ℕ :* (k₀ℕ :* j₁ℕ) :+ r₂ℕ :* (r₁ℕ :* (j₁ℕ :* k₁ℕ)) := (r₂ℕ :* k₁ℕ :+ k₀ℕ) :* (r₁ℕ :* j₁ℕ :+ j₀ℕ)) refl r₁ r₂ k₀ k₁ j₀ j₁)
   
--------------------------------------------
---- 4 way associativity helper function ---
--------------------------------------------
-
-assoc₄ : (a b c d : ℂ) → a * b * c * d ≡ a * (b * c * d)
-assoc₄ a b c d rewrite
-    *-assoc a b c
-  | *-assoc a (b * c) d
-  = refl
-
 -----------------
 --- FFT ≡ DFT ---
 -----------------
@@ -321,57 +401,36 @@ fft′≅dft′ {r₁ ⊗ r₂} ⦃ nz-r₁ ⊗ nz-r₂ ⦄ arr (j₁ ⊗ j₀) 
     _ = m*n≢0 (# r₂) (# r₁ ᵗ)
     _ : NonZero (# r₂ ᵗ *ₙ # r₁ ᵗ)
     _ = m*n≢0 (# r₂ ᵗ) (# r₁ ᵗ)
-    tmp : NonZeroₛ (ι (# r₂ ᵗ))
-    tmp = ι (nz-# (nzᵗ nz-r₂))
-    _ : NonZeroₛ (ι (# (r₁ ⊗ r₂) ᵗ))
-    _ = ι (m*n≢0 (length (recursive-transpose r₂)) (length (recursive-transpose r₁)))
   in begin
     _ ≡⟨ fft′≅dft′ _ j₁ ⟩
     _ ≡⟨ DFT′-cong (λ x → cong₂ _*_ (fft′≅dft′ _ j₀) refl) (j₁ ⟨ rev ♭ ⟩ ) ⟩
-    _ ≡⟨ sum-cong {# r₂ ᵗ} (λ k₀ → cong₂ _*_ (*-distribʳ-sum {# r₁ ᵗ} _) refl ) ⟩
-    _ ≡⟨ sum-cong {# r₂ ᵗ} (λ k₀ →            *-distribʳ-sum {# r₁ ᵗ} _)        ⟩ 
-    _ ≡⟨ sum-cong {  # r₂ ᵗ } 
-          (λ k₀ → 
-            sum-cong {# r₁ ᵗ }
-              (λ k₁ → 
-                assoc₄
-                    (arr (((k₁ ⟨ reindex (|s|≡|sᵗ| {r₁}) ⟩) ⟨ ♭ ⟩) ⊗ ((k₀ ⟨ reindex (|s|≡|sᵗ| {r₂}) ⟩) ⟨ ♭ ⟩)))
-                    (-ω 
-                        (# r₁ ᵗ) 
-                        (iota k₁ *ₙ iota (j₀ ⟨ rev ♭ ⟩))
-                    )
-                    (-ω 
-                        (# r₂ *ₙ # r₁ ᵗ) 
-                        (iota (((k₀ ⟨ reindex (|s|≡|sᵗ| {r₂}) ⟩) ⟨ ♭ ⟩) ⟨ rev (♭ {r₂}) ⟩) *ₙ iota (j₀ ⟨ rev ♭ ⟩))
-                    )
-                    (-ω 
-                        (# r₂ ᵗ) 
-                        (iota k₀ *ₙ iota (j₁ ⟨ rev ♭ ⟩))
-                    )
-              )
+    _ ≡⟨  sum-cong {  # r₂ ᵗ } 
+            (λ k₀ → 
+                cong₂ _*_ (*-distribʳ-sum {# r₁ ᵗ} _) refl
+              ⊡ *-distribʳ-sum {# r₁ ᵗ} _
+              ⊡ sum-cong {# r₁ ᵗ }
+                  (λ k₁ → 
+                      assoc₄ _ _ _ _ 
+                    ⊡ cong₂ _*_ 
+                        (sym ((rev-eq-applied split (reshape (♭ ⊕ ♭) arr)) (_ ⊗ _))) 
+                        refl
+                  )
+            )
+        ⟩
+    _ ≡⟨  sum-cong {  # r₂ ᵗ } (λ k₀ → 
+            sum-cong {# r₁ ᵗ } (λ k₁ → 
+              cong₂ _*_ refl
+                (cooley-tukey-derivation-application j₁ j₀ k₀ k₁ nz-r₁ nz-r₂)
+            )
           )
-      ⟩
-    _ ≡⟨ sum-cong {  # r₂ ᵗ } 
-          (λ k₀ → 
-            sum-cong {# r₁ ᵗ }
-              (λ k₁ →
-                cong₂ _*_ refl (-ω-rearanging j₁ j₀ k₀ k₁ nz-r₁ nz-r₂)
-              )
-          )
-      ⟩
-    _ ≡⟨ sum-cong { # r₂ ᵗ } 
-          (λ k₀ → 
-            sum-cong { # r₁ ᵗ }
-              (λ k₁ → 
-                cong₂ _*_ (sym ((rev-eq-applied split (reshape (♭ ⊕ ♭) arr)) ((k₁ ⟨ reindex (|s|≡|sᵗ| {r₁}) ⟩) ⊗ (k₀ ⟨ reindex (|s|≡|sᵗ| {r₂}) ⟩))) ) refl
-              )
-          ) 
-      ⟩
-    _ ≡⟨ sum-cong {# r₂ ᵗ} (λ k₀ → sym (sum-reindex (|s|≡|sᵗ| {r₁}))) ⟩
-    _ ≡⟨ sym (sum-reindex (|s|≡|sᵗ| {r₂})) ⟩
-    _ ≡⟨ sum-swap {# r₂} {# r₁} _ ⟩
-    _ ≡⟨ merge-sum {# r₁} {# r₂} _ ⟩
-          sum { # r₁ *ₙ # r₂ }
+        ⟩
+    _ ≡⟨  sum-cong {# r₂ ᵗ} (λ k₀ → sym (sum-reindex (|s|≡|sᵗ| {r₁})))
+        ⊡ sym (sum-reindex (|s|≡|sᵗ| {r₂})) 
+       ⟩
+    _ ≡⟨  sum-swap {# r₂} {# r₁} _ 
+        ⊡ merge-sum {# r₁} {# r₂} _
+       ⟩
+          sum { # (r₁ ⊗ r₂) }
             (λ k →
                  arr (((k) ⟨ flat ⟩) ⟨ ♭ ⊕ ♭ ⟩)
                *
@@ -380,27 +439,18 @@ fft′≅dft′ {r₁ ⊗ r₂} ⦃ nz-r₁ ⊗ nz-r₂ ⦄ arr (j₁ ⊗ j₀) 
                    (iota k *ₙ iota (((j₁ ⟨ rev ♭ ⟩) ⊗ (j₀ ⟨ rev ♭ ⟩)) ⟨ split ⟩))
             )
       ≡⟨ sum-reindex (|s|≡|sᵗ| {r₁ ⊗ r₂}) ⟩
-    _ ≡⟨ sum-cong 
+        sum {# (r₁ ⊗ r₂) ᵗ} _
+      ≡⟨ sum-cong 
         {# (r₁ ⊗ r₂) ᵗ} 
-        {_}
-        {λ k → 
-            reshape flatten-reindex arr k
-          * -ω 
-              (length (recursive-transpose r₂) *ₙ length (recursive-transpose r₁)) 
-              (iota k *ₙ iota ((j₁ ⊗ j₀) ⟨ ♯ ⟩)) 
-        }
-        (λ{(ι k) → 
+        (λ k → 
             cong₂ _*_ 
               refl 
               (-ω-cong₂ 
-                {# r₂ ᵗ *ₙ # r₁ ᵗ} 
-                {# r₂ ᵗ *ₙ # r₁ ᵗ } 
                 refl 
                 (cong₂ _*ₙ_ (iota-reindex (|s|≡|sᵗ| {r₁ ⊗ r₂})) refl)
               )
-          }) 
+        ) 
       ⟩
-    _ ≡⟨⟩
       (reshape ♯ ∘ (DFT′ {length (recursive-transpose (r₁ ⊗ r₂))}) ∘ reshape flatten-reindex) arr (j₁ ⊗ j₀)
     ∎
 

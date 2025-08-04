@@ -7,6 +7,7 @@
 \usepackage{amssymb} % USed for maths symbols
 \usepackage{minted}
 \usepackage{pdflscape}
+\usepackage{todonotes}
 % Required to set the margin sizes to avoid \vspace{-9em}
 \usepackage{geometry}
 \geometry{
@@ -16,6 +17,8 @@
     top=24mm,
     bottom=24mm,
 }
+\usepackage{quiver}
+\usepackage{tikz}
 \setlength{\headheight}{18.0pt}
 \renewcommand{\familydefault}{\rmdefault}
 \setlength{\parindent}{0pt}  % Disable paragraph indentation
@@ -32,9 +35,8 @@
 \newcommand*{\xrbrace}{]\mskip-5mu]}
 
 \usepackage{bm}
-% \usepackage{agda}
+\usepackage{agda}
 \usepackage{newunicodechar}
-
 
 
 \newunicodechar{₁}{\ensuremath{_1}}
@@ -90,6 +92,38 @@
 \newunicodechar{ℂ}{\ensuremath{\mathbb{C}}} 
 
 \newunicodechar{ʹ}{\ensuremath{\prime}}
+\newunicodechar{≢}{\ensuremath{\not\equiv}}
+\newunicodechar{⦃}{\textlbrackdbl}
+\newunicodechar{⦄}{\textrbrackdbl}
+\newunicodechar{ω}{\ensuremath{\omega}}
+\newunicodechar{ₙ}{\ensuremath{_n}}
+\newunicodechar{₀}{\ensuremath{_0}}
+\newunicodechar{⋆}{\ensuremath{\cdot}}
+\newunicodechar{♯}{\ensuremath{\sharp}}
+\newunicodechar{♭}{\ensuremath{\flat}}
+\newunicodechar{ₛ}{\ensuremath{_s}}
+\newunicodechar{≅}{\ensuremath{\cong}}
+\newunicodechar{ᵗ}{\ensuremath{^t}}
+\newunicodechar{⊡}{\ensuremath{\boxdot}}
+% Some shortcut commands for agda symbols
+\newcommand{\AD}[1]{\AgdaDatatype{#1}}
+\newcommand{\AC}[1]{\AgdaInductiveConstructor{#1}}
+\newcommand{\AF}[1]{\AgdaFunction{#1}}
+\newcommand{\AB}[1]{\AgdaBound{#1}}
+\newcommand{\AK}[1]{\AgdaKeyword{#1}}
+\newcommand{\AR}[1]{\AgdaField{#1}}
+\newcommand{\AM}[1]{\AgdaModule{#1}}
+\newcommand{\AN}[1]{\AgdaNumber{#1}}
+\newcommand{\AS}[1]{\AgdaString{#1}}
+
+\renewcommand{\AgdaCommentFontStyle}[1]{\textrm{#1}}
+\renewcommand{\AgdaFontStyle}[1]{\textrm{#1}}
+\renewcommand{\AgdaKeywordFontStyle}[1]{\textrm{#1}}
+
+\usepackage[T1]{fontenc}
+\usepackage{microtype}
+\DisableLigatures[-]{encoding=T1}
+
 
 
 %TC:ignore
@@ -176,6 +210,9 @@ Given such a proof I will then use the FFT definition to generate a low-level li
 \clearpage
 \include{Thesis/Introduction}
 \include{Thesis/Background}
+\include{Thesis/Model}
+\include{Thesis/ProofWriteup}
+\section{Review of Implementation}
 \clearpage
 \bibliographystyle{IEEEtran}
 \bibliography{Thesis/References}

@@ -76,6 +76,27 @@ demo-mat₂ =
   ι-cons (fromℝ $   4   ᵣ) $
   ι-cons (fromℝ $   61  ᵣ) nil
 
+demo-mat₃ : Ar (ι 3 ⊗ ι 4) ℂ
+demo-mat₃ =
+  unnest $
+      ι-cons (
+    ι-cons (fromℝ $ 1  ᵣ) $
+    ι-cons (fromℝ $ 2  ᵣ) $
+    ι-cons (fromℝ $ 3  ᵣ) $
+    ι-cons (fromℝ $ 4  ᵣ) nil
+  ) $ ι-cons (
+    ι-cons (fromℝ $ 5  ᵣ) $
+    ι-cons (fromℝ $ 6  ᵣ) $
+    ι-cons (fromℝ $ 7  ᵣ) $
+    ι-cons (fromℝ $ 8  ᵣ) nil
+  ) $ ι-cons (
+    ι-cons (fromℝ $ 9  ᵣ) $
+    ι-cons (fromℝ $ 10 ᵣ) $
+    ι-cons (fromℝ $ 11 ᵣ) $
+    ι-cons (fromℝ $ 12 ᵣ) nil
+  ) nil
+
+
 show-arr             : Ar s ℂ → IO {a} ⊤
 show-flat-arr        : Ar s ℂ → IO {a} ⊤
 show-flat-FFT-result : Ar s ℂ → IO {a} ⊤
@@ -94,7 +115,7 @@ show-full-stack arr = do
   show-flat-DFT-result arr
 
 main : Main
-main = run $ show-full-stack (reshape (eq ⊕ split {4} {2} ∙ split {2} {8}) demo-mat₂)
+main = run $ show-full-stack $ reshape swap demo-mat₃ -- (reshape (eq ⊕ split {4} {2} ∙ split {2} {8}) demo-mat₂)
 
 --fft≅dft : 
 --    ∀ (arr : Ar s ℂ) 

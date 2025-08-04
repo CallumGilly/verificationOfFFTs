@@ -1,0 +1,2743 @@
+\begin{code}[hide]%
+\>[0]\<%
+\\
+\>[0]\AgdaKeyword{module}\AgdaSpace{}%
+\AgdaModule{Model}\AgdaSpace{}%
+\AgdaKeyword{where}%
+\>[2I]\AgdaComment{--\ This\ allows\ me\ to\ use\ arbitrary\ module\ names\ from\ here\ }\<%
+\\
+\>[.][@{}l@{}]\<[2I]%
+\>[19]\AgdaComment{--\ onwards}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+\>[0]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Real}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaRecord{Real}\AgdaSymbol{)}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+\>[0]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Data.Nat.Base}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaDatatype{ℕ}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaRecord{NonZero}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaInductiveConstructor{suc}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaKeyword{renaming}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaOperator{\AgdaPrimitive{\AgdaUnderscore{}*\AgdaUnderscore{}}}\AgdaSpace{}%
+\AgdaSymbol{to}\AgdaSpace{}%
+\AgdaOperator{\AgdaPrimitive{\AgdaUnderscore{}*ₙ\AgdaUnderscore{}}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaOperator{\AgdaPrimitive{\AgdaUnderscore{}+\AgdaUnderscore{}}}\AgdaSpace{}%
+\AgdaSymbol{to}\AgdaSpace{}%
+\AgdaOperator{\AgdaPrimitive{\AgdaUnderscore{}+ₙ\AgdaUnderscore{}}}\AgdaSymbol{)}\<%
+\\
+\>[0]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Data.Nat.Properties}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{m*n≢0}\AgdaSymbol{)}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+\>[0]\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Relation.Binary.PropositionalEquality}\AgdaSpace{}%
+\AgdaSymbol{as}\AgdaSpace{}%
+\AgdaModule{Eq}\<%
+\\
+\>[0]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaModule{Eq}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaOperator{\AgdaDatatype{\AgdaUnderscore{}≡\AgdaUnderscore{}}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaInductiveConstructor{refl}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{cong}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{sym}\AgdaSymbol{)}\<%
+\\
+\>[0]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaModule{Eq.≡-Reasoning}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+\>[0]\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Algebra.Structures}\AgdaSpace{}%
+\AgdaSymbol{as}\AgdaSpace{}%
+\AgdaModule{AlgebraStructures}\<%
+\\
+\>[0]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaModule{AlgebraStructures}%
+\>[24]\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaRecord{IsCommutativeMonoid}\AgdaSymbol{)}\<%
+\\
+\>[0]\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Algebra.Definitions}\AgdaSpace{}%
+\AgdaSymbol{as}\AgdaSpace{}%
+\AgdaModule{AlgebraDefinitions}\<%
+\\
+\>[0]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Algebra.Core}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+\>[0]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Function.Base}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaOperator{\AgdaFunction{\AgdaUnderscore{}\$\AgdaUnderscore{}}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaOperator{\AgdaFunction{\AgdaUnderscore{}∘\AgdaUnderscore{}}}\AgdaSymbol{)}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+\>[0]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Data.Product.Base}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaOperator{\AgdaFunction{\AgdaUnderscore{}×\AgdaUnderscore{}}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaField{proj₁}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaField{proj₂}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaKeyword{renaming}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaOperator{\AgdaInductiveConstructor{\AgdaUnderscore{},\AgdaUnderscore{}}}\AgdaSpace{}%
+\AgdaSymbol{to}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⟨\AgdaUnderscore{},\AgdaUnderscore{}⟩}}\AgdaSymbol{)}\<%
+\end{code}
+% From Equation \ref{eq:DFT_Definition} we have a definition of the DFT which we 
+% know to be correct, but this is not yet in a useable form. 
+% In order to prove against this definition we must define our DFT in Agda given 
+% some definition of Complex numbers, and some definition of Vectors. 
+% 
+% As we did above, we must then perform a likewise conversion for our FFT 
+% definition, Equation \ref{eq:FFT_Definition}.
+% Although it would be possible to implement this definition with respect to
+% an input Vector, using instead an input Matrix of arbitrary shape will make both
+% the definition, and the proofs applicable to any radix or mix of radices.
+% 
+% Given that Vectors can be considered one dimenti
+
+
+\section{Implementation}
+
+Before the DFT and FFT can be reasoned on, it is important to define a 
+framework which can accurately encode all required data, as well as 
+operations on that data. 
+For the DFT and FFT, this requires the definition of a number format, and a
+structure in which these numbers can be represented.
+
+
+\subsection{Complex Numbers}
+\label{sec:complex_numbers}
+
+The Agda Standard library does not provide definitions for Complex numbers, it
+is therefore necessary for us to design and decide upon an encoding.
+
+One method defining this encoding would be to directly use the \verb|Builtin| 
+definition of floating point numbers, and create strict definitions for each 
+of the basic operations. 
+This method would, however, be non ideal.
+Unlike the definitions for other number systems in Agda, 
+\verb|Agda.Builtin.Float| exists only as an interface around IEEE754  \todo[color=green]{Cite the IEEE754 definition}
+floating point numbers and does not have a corresponding Agda definition. \todo[color=green]{cite https://agda.readthedocs.io/en/latest/language/built-ins.html}
+As this is not built up directly in Agda properties on these floating point
+numbers cannot be formed without assumptions.
+This would make any proof built upon them weaker.
+% Maybe talk about IEEE not being commutative and all that...
+%Directly defining Complex numbers on builtin floating point numbers would also 
+%restrict any all proofs to work only on this definition.
+
+Instead, a record defining the operations and properties required of any Complex 
+number can be created.
+This is equivalent to the definition of an interface in Java, and keeps 
+definitions and proofs on the Fourier Transforms separate to the definition of 
+\textit{number} chosen. 
+
+% To encode Complex numbers, I have instead created a record which defines what
+% operations are required of these Complex numbers, and what properties must hold
+% on these operations.
+% This means that my Fourier Transform definitions and proofs can be lifted to any
+% any definition of numbers, given that it holds all required properties.
+
+As well as defining addition, multiplication, and other operations, any 
+implementation of complex numbers requires some specific properties be present.
+Below is a minimal example of this defintion of Complex.
+
+\begin{AgdaAlign}
+\begin{code}[hide]%
+\>[0]\AgdaKeyword{module}\AgdaSpace{}%
+\AgdaModule{ComplexMini}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{real}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaRecord{Real}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaKeyword{where}\<%
+\\
+\>[0][@{}l@{\AgdaIndent{0}}]%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaModule{Real.Real}\AgdaSpace{}%
+\AgdaBound{real}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaField{ℝ}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{0ℝ}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{1ℝ}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{-1ℝ}\AgdaSymbol{)}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Algebra.Structures}\AgdaSpace{}%
+\AgdaSymbol{as}\AgdaSpace{}%
+\AgdaModule{AlgebraStructures}\<%
+\\
+%
+\>[2]\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Algebra.Definitions}\AgdaSpace{}%
+\AgdaSymbol{as}\AgdaSpace{}%
+\AgdaModule{AlgebraDefinitions}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaKeyword{private}\<%
+\\
+\>[2][@{}l@{\AgdaIndent{0}}]%
+\>[4]\AgdaKeyword{variable}\<%
+\\
+\>[4][@{}l@{\AgdaIndent{0}}]%
+\>[6]\AgdaGeneralizable{N}\AgdaSpace{}%
+\AgdaGeneralizable{m}\AgdaSpace{}%
+\AgdaGeneralizable{r₁}\AgdaSpace{}%
+\AgdaGeneralizable{x}\AgdaSpace{}%
+\AgdaGeneralizable{y}\AgdaSpace{}%
+\AgdaGeneralizable{k₀}\AgdaSpace{}%
+\AgdaGeneralizable{k₁}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{ℕ}\<%
+\\
+%
+\>[4]\AgdaKeyword{postulate}%
+\>[15]\AgdaComment{--\ I\ realise\ how\ horrendusly\ cursed\ postulating\ an\ instance\ is...}\<%
+\\
+\>[4][@{}l@{\AgdaIndent{0}}]%
+\>[6]\AgdaKeyword{instance}\AgdaSpace{}%
+\AgdaComment{--\ but\ it\ works...}\<%
+\\
+\>[6][@{}l@{\AgdaIndent{0}}]%
+\>[8]\AgdaPostulate{nonZero-n}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaRecord{NonZero}\AgdaSpace{}%
+\AgdaGeneralizable{N}\<%
+\\
+%
+\>[8]\AgdaPostulate{nonZero-r₁}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaRecord{NonZero}\AgdaSpace{}%
+\AgdaGeneralizable{r₁}\<%
+\\
+%
+\>[8]\AgdaPostulate{nonZero-x}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaRecord{NonZero}\AgdaSpace{}%
+\AgdaGeneralizable{x}\<%
+\\
+\>[0]\<%
+\end{code}
+\begin{code}%
+\>[0][@{}l@{\AgdaIndent{1}}]%
+\>[2]\AgdaKeyword{record}\AgdaSpace{}%
+\AgdaRecord{Cplx}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaPrimitive{Set₁}\AgdaSpace{}%
+\AgdaKeyword{where}\<%
+\end{code}
+\begin{code}[hide]%
+\>[2][@{}l@{\AgdaIndent{1}}]%
+\>[4]\AgdaKeyword{infix}%
+\>[11]\AgdaNumber{8}\AgdaSpace{}%
+\AgdaOperator{\AgdaField{-\AgdaUnderscore{}}}\<%
+\\
+%
+\>[4]\AgdaKeyword{infixl}\AgdaSpace{}%
+\AgdaNumber{7}\AgdaSpace{}%
+\AgdaOperator{\AgdaField{\AgdaUnderscore{}*\AgdaUnderscore{}}}\<%
+\\
+%
+\>[4]\AgdaKeyword{infixl}\AgdaSpace{}%
+\AgdaNumber{6}\AgdaSpace{}%
+\AgdaOperator{\AgdaField{\AgdaUnderscore{}+\AgdaUnderscore{}}}\ \AgdaUnderscore{}-\AgdaUnderscore{}\<%
+\end{code}
+\todo[color=green]{Consider describing that ℂ is the carrier set}
+\begin{code}%
+%
+\>[4]\AgdaKeyword{field}\<%
+\\
+\>[4][@{}l@{\AgdaIndent{0}}]%
+\>[6]\AgdaField{ℂ}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaPrimitive{Set}\<%
+\\
+%
+\>[6]\AgdaOperator{\AgdaField{\AgdaUnderscore{}+\AgdaUnderscore{}}}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaField{ℂ}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaField{ℂ}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaField{ℂ}\<%
+\end{code}
+\begin{code}[hide]%
+%
+\>[6]\AgdaOperator{\AgdaField{\AgdaUnderscore{}*\AgdaUnderscore{}}}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaField{ℂ}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaField{ℂ}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaField{ℂ}\<%
+\\
+%
+\>[6]\AgdaOperator{\AgdaField{\AgdaUnderscore{}-\AgdaUnderscore{}}}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaField{ℂ}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaField{ℂ}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaField{ℂ}\<%
+\\
+%
+\>[6]\AgdaOperator{\AgdaField{-\AgdaUnderscore{}}}%
+\>[10]\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaField{ℂ}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaField{ℂ}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[6]\AgdaField{fromℝ}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaField{ℝ}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaField{ℂ}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[6]\AgdaOperator{\AgdaField{e\textasciicircum{}i\AgdaUnderscore{}}}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaField{ℝ}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaField{ℂ}\<%
+\\
+%
+\>[6]\AgdaField{ℂ-conjugate}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaField{ℂ}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaField{ℂ}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[6]\AgdaComment{--+ω\ :\ ∀\ (N\ :\ ℕ)\ (k\ :\ ℕ)\ →\ ℂ}\<%
+\\
+%
+\>[6]\AgdaComment{--\ Instance\ arguments\ seem\ pretty\ good\ https://agda.readthedocs.io/en/v2.5.4/language/instance-arguments.html}\<%
+\\
+%
+\>[6]\AgdaComment{--\ ω\ really\ goes\ here}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[4]\AgdaFunction{0ℂ}%
+\>[8]\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaField{ℂ}\<%
+\\
+%
+\>[4]\AgdaFunction{0ℂ}%
+\>[8]\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaField{fromℝ}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{0ℝ}\AgdaSymbol{)}\<%
+\\
+%
+\>[4]\AgdaFunction{-1ℂ}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaField{ℂ}\<%
+\\
+%
+\>[4]\AgdaFunction{-1ℂ}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaField{fromℝ}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{-1ℝ}\AgdaSymbol{)}\<%
+\\
+%
+\>[4]\AgdaFunction{1ℂ}%
+\>[8]\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaField{ℂ}\<%
+\\
+%
+\>[4]\AgdaFunction{1ℂ}%
+\>[8]\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaField{fromℝ}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{1ℝ}\AgdaSymbol{)}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[4]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaModule{AlgebraStructures}%
+\>[28]\AgdaSymbol{\{}\AgdaArgument{A}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaField{ℂ}\AgdaSymbol{\}}\AgdaSpace{}%
+\AgdaOperator{\AgdaDatatype{\AgdaUnderscore{}≡\AgdaUnderscore{}}}\<%
+\\
+%
+\>[4]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaModule{AlgebraDefinitions}\AgdaSpace{}%
+\AgdaSymbol{\{}\AgdaArgument{A}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaField{ℂ}\AgdaSymbol{\}}\AgdaSpace{}%
+\AgdaOperator{\AgdaDatatype{\AgdaUnderscore{}≡\AgdaUnderscore{}}}\<%
+\\
+\>[0]\<%
+\\
+%
+\>[4]\AgdaKeyword{field}\<%
+\end{code}
+Addition, multiplication and negation must be proven to form a commutative ring. 
+\todo[color=green]{ I should describe a) what a commutative ring is b) why we give a shit as well as citing what a commutative ring is }
+\begin{code}%
+\>[4][@{}l@{\AgdaIndent{1}}]%
+\>[6]\AgdaField{+-*-isCommutativeRing}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaRecord{IsCommutativeRing}\AgdaSpace{}%
+\AgdaOperator{\AgdaField{\AgdaUnderscore{}+\AgdaUnderscore{}}}\AgdaSpace{}%
+\AgdaOperator{\AgdaField{\AgdaUnderscore{}*\AgdaUnderscore{}}}\AgdaSpace{}%
+\AgdaOperator{\AgdaField{-\AgdaUnderscore{}}}\AgdaSpace{}%
+\AgdaFunction{0ℂ}\AgdaSpace{}%
+\AgdaFunction{1ℂ}\<%
+\end{code}
+\paragraph{Roots of unity}\label{para:roots_of_unity} as described for Complex numbers in Equation 
+\ref{eq:ComplexRootsOfUnity}, must be defined for some non-zero divisor $N$ 
+and some power $K$, along with some properties on them.
+The this \AF{nonZero} property is an instance argument, allowing an instance resolution algorithm\todo[color=green]{CITE}
+to perform automatic resolution on it, simplifying further proofs.
+\begin{code}%
+%
+\>[6]\AgdaField{-ω}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{N}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{ℕ}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaSymbol{.⦃}\AgdaSpace{}%
+\AgdaBound{nonZero-n}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaRecord{NonZero}\AgdaSpace{}%
+\AgdaBound{N}\AgdaSpace{}%
+\AgdaSymbol{⦄}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{k}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{ℕ}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaField{ℂ}\<%
+\\
+%
+\>[6]\AgdaField{ω-N-0}%
+\>[17]\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaField{-ω}\AgdaSpace{}%
+\AgdaGeneralizable{N}\AgdaSpace{}%
+\AgdaNumber{0}%
+\>[43]\AgdaOperator{\AgdaDatatype{≡}}\AgdaSpace{}%
+\AgdaFunction{1ℂ}\<%
+\\
+%
+\>[6]\AgdaField{ω-N-mN}%
+\>[17]\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaField{-ω}\AgdaSpace{}%
+\AgdaGeneralizable{N}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaGeneralizable{N}\AgdaSpace{}%
+\AgdaOperator{\AgdaPrimitive{*ₙ}}\AgdaSpace{}%
+\AgdaGeneralizable{m}\AgdaSymbol{)}%
+\>[43]\AgdaOperator{\AgdaDatatype{≡}}\AgdaSpace{}%
+\AgdaFunction{1ℂ}\<%
+\\
+%
+\>[6]\AgdaField{ω-r₁x-r₁y}%
+\>[17]\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaField{-ω}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaGeneralizable{r₁}\AgdaSpace{}%
+\AgdaOperator{\AgdaPrimitive{*ₙ}}\AgdaSpace{}%
+\AgdaGeneralizable{x}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaGeneralizable{r₁}\AgdaSpace{}%
+\AgdaOperator{\AgdaPrimitive{*ₙ}}\AgdaSpace{}%
+\AgdaGeneralizable{y}\AgdaSymbol{)}%
+\>[43]\AgdaOperator{\AgdaDatatype{≡}}\AgdaSpace{}%
+\AgdaField{-ω}\AgdaSpace{}%
+\AgdaGeneralizable{x}\AgdaSpace{}%
+\AgdaGeneralizable{y}\<%
+\\
+%
+\>[6]\AgdaField{ω-N-k₀+k₁}%
+\>[17]\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaField{-ω}\AgdaSpace{}%
+\AgdaGeneralizable{N}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaGeneralizable{k₀}\AgdaSpace{}%
+\AgdaOperator{\AgdaPrimitive{+ₙ}}\AgdaSpace{}%
+\AgdaGeneralizable{k₁}\AgdaSymbol{)}%
+\>[43]\AgdaOperator{\AgdaDatatype{≡}}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaField{-ω}\AgdaSpace{}%
+\AgdaGeneralizable{N}\AgdaSpace{}%
+\AgdaGeneralizable{k₀}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaOperator{\AgdaField{*}}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaField{-ω}\AgdaSpace{}%
+\AgdaGeneralizable{N}\AgdaSpace{}%
+\AgdaGeneralizable{k₁}\AgdaSymbol{)}\<%
+\end{code}
+\end{AgdaAlign}
+
+As well as avoiding the difficulties which would comes from floating point arithmetic,
+isolating the definition of the Complex numbers allows for any proof made upon them
+to be lifted onto any finite field with complex roots of unity which holds the
+required properties.\todo[color=green]{this could do with better explanation}
+In turn this means that any implementations of the FFT using
+this definition can be utilised upon such a field allowing, for example, for fast
+multiplication to be performed on this field.
+
+\subsection{Matricies}
+In Equations \ref{eq:DFT_Definition} and \ref{eq:FFTDefinitionFromDFT}, the DFT 
+and FFT are both defined for any input vector $x$ of length $N$ and length 
+$r_1\times r_2$ respectively. 
+This implies that it would be possible to represent the input structure for both 
+the DFT and the FFT in vector form, possibly using the Agda standard libraries functional
+vector definition, \verb|Data.Vec.Functionals|.
+
+Although this structure is ideal for the DFT, the FFTs reliance on index splitting,
+as described in Equation \ref{eq:IndexManipulation}, would mean any such definition 
+would require a large amount of low level index manipulation.
+This would make an kind of reasoning on the FFT, as well as any generalisation 
+where the FFT is called iteratively difficult as both would be
+pulled down to require the same low level of index manipulation.
+
+The need for this low level manipulation can be removed, by creating some
+definition for shaped, multi-dimensional matrices, and allowing the FFT to 
+accept these shaped matrices as inputs.
+As well as removing the need these low level manipulations, using this definition 
+will also abstract the splitting of the input vector out of the FFT making any    % This may be better discussed in the FFT section...
+definition radix independent.
+
+\begin{AgdaAlign}
+\begin{code}[hide]%
+\>[0]\AgdaKeyword{module}\AgdaSpace{}%
+\AgdaModule{Matrix}\AgdaSpace{}%
+\AgdaKeyword{where}\<%
+\\
+\>[0][@{}l@{\AgdaIndent{0}}]%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Data.Nat}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaDatatype{ℕ}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaInductiveConstructor{suc}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaInductiveConstructor{zero}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaRecord{NonZero}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaOperator{\AgdaPrimitive{\AgdaUnderscore{}+\AgdaUnderscore{}}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaOperator{\AgdaPrimitive{\AgdaUnderscore{}*\AgdaUnderscore{}}}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Data.Fin}\AgdaSpace{}%
+\AgdaSymbol{as}\AgdaSpace{}%
+\AgdaModule{F}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaDatatype{Fin}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{join}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaKeyword{renaming}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{zero}\AgdaSpace{}%
+\AgdaSymbol{to}\AgdaSpace{}%
+\AgdaInductiveConstructor{fzero}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaInductiveConstructor{suc}\AgdaSpace{}%
+\AgdaSymbol{to}\AgdaSpace{}%
+\AgdaInductiveConstructor{fsuc}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Data.Product.Base}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaOperator{\AgdaFunction{\AgdaUnderscore{}×\AgdaUnderscore{}}}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaKeyword{renaming}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{\AgdaUnderscore{},\AgdaUnderscore{}}}\AgdaSpace{}%
+\AgdaSymbol{to}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⟨\AgdaUnderscore{},\AgdaUnderscore{}⟩}}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Data.Sum.Base}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{inj₁}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaInductiveConstructor{inj₂}\AgdaSymbol{)}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaKeyword{private}\<%
+\\
+\>[2][@{}l@{\AgdaIndent{0}}]%
+\>[4]\AgdaKeyword{variable}\<%
+\\
+\>[4][@{}l@{\AgdaIndent{0}}]%
+\>[6]\AgdaGeneralizable{n}\AgdaSpace{}%
+\AgdaGeneralizable{m}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{ℕ}\<%
+\\
+%
+\>[6]\AgdaGeneralizable{X}\AgdaSpace{}%
+\AgdaGeneralizable{Y}\AgdaSpace{}%
+\AgdaGeneralizable{Z}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaPrimitive{Set}\<%
+\end{code}
+Matrix shapes take the form of tensor products, meaning any shape is either a 
+leaf, or a product of two shapes.
+Each leaf, \AR{ι n}, is constructed from a natural number, one leaf 
+can be considered to add one dimension to the overall shape. 
+% A matrix of shape \AC(ι n) would therefore be dual to a vector of length $n$.
+Each product is then constructed on two shapes and takes the form \AR{s ⊗ p}.
+This allows shapes to form binary trees which are able to describe the structure of any
+multidimensional matrix.
+
+\begin{code}%
+%
+\>[2]\AgdaKeyword{data}\AgdaSpace{}%
+\AgdaDatatype{Shape}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaPrimitive{Set}\AgdaSpace{}%
+\AgdaKeyword{where}\<%
+\\
+\>[2][@{}l@{\AgdaIndent{0}}]%
+\>[4]\AgdaInductiveConstructor{ι}%
+\>[8]\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{ℕ}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaDatatype{Shape}\<%
+\\
+%
+\>[4]\AgdaOperator{\AgdaInductiveConstructor{\AgdaUnderscore{}⊗\AgdaUnderscore{}}}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Shape}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaDatatype{Shape}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaDatatype{Shape}\<%
+\end{code}
+\begin{code}[hide]%
+%
+\>[2]\AgdaKeyword{private}\<%
+\\
+\>[2][@{}l@{\AgdaIndent{0}}]%
+\>[4]\AgdaKeyword{variable}\<%
+\\
+\>[4][@{}l@{\AgdaIndent{0}}]%
+\>[6]\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Shape}\<%
+\end{code}
+
+Matrices can then be inductively defined as a dependant type on Shapes.
+This definition takes the same form as that of shapes and defines the position 
+of a non-leaf nodes as being constructed by the positions of its two children 
+position nodes, while leaf nodes are bound by the length of that leaf.
+This binding on the length of the leaf, allows the type checker to require
+evidence that the length is not greater than the length, removing the possibility
+for runtime out of bounds errors.
+
+
+\begin{code}%
+%
+\>[2]\AgdaKeyword{data}\AgdaSpace{}%
+\AgdaDatatype{Position}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Shape}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaPrimitive{Set}\AgdaSpace{}%
+\AgdaKeyword{where}\<%
+\\
+\>[2][@{}l@{\AgdaIndent{0}}]%
+\>[4]\AgdaInductiveConstructor{ι}%
+\>[8]\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Fin}\AgdaSpace{}%
+\AgdaGeneralizable{n}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaDatatype{Position}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaGeneralizable{n}\AgdaSymbol{)}\<%
+\\
+%
+\>[4]\AgdaOperator{\AgdaInductiveConstructor{\AgdaUnderscore{}⊗\AgdaUnderscore{}}}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Position}\AgdaSpace{}%
+\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaDatatype{Position}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaDatatype{Position}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSymbol{)}\<%
+\end{code}
+
+\AF{Position} can then be used to define the matrix data encoding, such that
+matrices form indexed types \todo[color=green]{cite agda.readthedocs.io data-types.html indexed-datatypes }
+accepting a position and returning the value at that position.
+
+\begin{code}%
+%
+\>[2]\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Shape}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaPrimitive{Set}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaPrimitive{Set}\<%
+\\
+%
+\>[2]\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaBound{s}\AgdaSpace{}%
+\AgdaBound{X}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaDatatype{Position}\AgdaSpace{}%
+\AgdaBound{s}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaBound{X}\<%
+\end{code}
+This means any given matrix of \AF{Shape} \AR{s} and type \AR{X} accept a
+\AF{Position} of shape \AR{s} and returns a value of type \AR{X}.
+\todo[color=green]{TODO: Talk about how this is related to AS's definition in the blocked multiplication paper}
+\end{AgdaAlign}
+
+\subsubsection{Methods on one dimension}
+Given the definition of matrices, some basic operations upon them can be described.
+The first of these definitions can be restricted to operate only upon the one
+dimensional case
+
+\paragraph{Head and Tail} allow for the deconstruction of any matrix of shape 
+\AF{ι (suc n)}. 
+\AF{head₁} returns the first element of the matrix, while
+\AF{tail₁} returns all following elements in a matrix of shape \AF{ι n}.
+These operations allow recursion over single dimensional matrices to be defined.
+
+\begin{code}%
+%
+\>[2]\AgdaFunction{head₁}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{suc}\AgdaSpace{}%
+\AgdaGeneralizable{n}\AgdaSymbol{))}\AgdaSpace{}%
+\AgdaGeneralizable{X}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaGeneralizable{X}\<%
+\\
+%
+\>[2]\AgdaFunction{head₁}\AgdaSpace{}%
+\AgdaBound{ar}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaBound{ar}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaInductiveConstructor{fzero}\AgdaSymbol{)}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaFunction{tail₁}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{suc}\AgdaSpace{}%
+\AgdaGeneralizable{n}\AgdaSymbol{))}\AgdaSpace{}%
+\AgdaGeneralizable{X}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaGeneralizable{n}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaGeneralizable{X}\<%
+\\
+%
+\>[2]\AgdaFunction{tail₁}\AgdaSpace{}%
+\AgdaBound{ar}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaBound{x}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaBound{ar}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{fsuc}\AgdaSpace{}%
+\AgdaBound{x}\AgdaSymbol{))}\<%
+\end{code}
+
+% This wouldn't be good for a paper, but I feel like its useful to observe when
+% describing for the thesis
+One feature of Agda which I make use of regularly is seen here, pattern
+matching.
+This is a feature taken from Haskell \todo[color=green]{CITE this claim}
+which allows us to break down some types of input fields to the 
+types they are built on. 
+In the above example \AR{ι x} is of type \AD{Position (suc n)}, 
+which is deconstructed to expose \AR{x} of type \AD{Fin (suc n)}.
+
+\paragraph{Sum} can then be defined over the one dimensional case.
+%, making use of \AF{head₁} and \AF{tail₁}.
+One interesting observation of the implementation of \AF{sum} here, is that it is
+defined for any carrier set $X$, and commutative monoid \AF{\_⋆\_}. 
+\todo[color=green]{Add citation for what a monoid is, and a description}
+Although in this case \AF{sum} is only used on the addition of Complex 
+numbers, the same definition could, for example, be used to produce an
+implementation of $\Pi$ over the Natural numbers. 
+As \AF{sum} is defined in this general manor, ε is used to represent the identity 
+element, for our summation ($\Sigma$), this is bound to 0 while \AF{\_⋆\_} is bound 
+to \AF{\_+\_}.\footnote{The definition of sum described here differs slightly from that used in the final proof which contains some minor optimisations to ease proofs}
+
+\begin{code}[hide]%
+\>[0]\AgdaKeyword{module}\AgdaSpace{}%
+\AgdaModule{Sum}\AgdaSpace{}%
+\AgdaSymbol{\{}\AgdaBound{A}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaPrimitive{Set}\AgdaSymbol{\}}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaOperator{\AgdaBound{\AgdaUnderscore{}⋆\AgdaUnderscore{}}}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaFunction{Op₂}\AgdaSpace{}%
+\AgdaBound{A}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{ε}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaBound{A}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{isCommutativeMonoid}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaRecord{IsCommutativeMonoid}\AgdaSpace{}%
+\AgdaSymbol{\{}\AgdaArgument{A}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaBound{A}\AgdaSymbol{\}}\AgdaSpace{}%
+\AgdaOperator{\AgdaDatatype{\AgdaUnderscore{}≡\AgdaUnderscore{}}}\AgdaSpace{}%
+\AgdaOperator{\AgdaBound{\AgdaUnderscore{}⋆\AgdaUnderscore{}}}\AgdaSpace{}%
+\AgdaBound{ε}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaKeyword{where}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+\>[0][@{}l@{\AgdaIndent{0}}]%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Data.Product.Base}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaField{proj₁}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaField{proj₂}\AgdaSymbol{)}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Data.Nat.Base}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaDatatype{ℕ}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaInductiveConstructor{zero}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaInductiveConstructor{suc}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaOperator{\AgdaPrimitive{\AgdaUnderscore{}+\AgdaUnderscore{}}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaOperator{\AgdaPrimitive{\AgdaUnderscore{}*\AgdaUnderscore{}}}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Data.Nat.Properties}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{*-zeroʳ}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Data.Fin.Base}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{()}\AgdaSpace{}%
+\AgdaKeyword{renaming}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{zero}\AgdaSpace{}%
+\AgdaSymbol{to}\AgdaSpace{}%
+\AgdaInductiveConstructor{fzero}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaInductiveConstructor{suc}\AgdaSpace{}%
+\AgdaSymbol{to}\AgdaSpace{}%
+\AgdaInductiveConstructor{fsuc}\AgdaSymbol{)}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Matrix}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{Ar}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaDatatype{Position}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaInductiveConstructor{ι}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{\AgdaUnderscore{}⊗\AgdaUnderscore{}}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{head₁}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{tail₁}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{splitArₗ}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{splitArᵣ}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Matrix.Equality}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaOperator{\AgdaFunction{\AgdaUnderscore{}≅\AgdaUnderscore{}}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{reduce-≅}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Matrix.Properties}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{tail₁-const}\AgdaSymbol{)}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Matrix.Reshape}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{reshape}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{reindex}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{|s|≡|sᵗ|}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaOperator{\AgdaFunction{\AgdaUnderscore{}⟨\AgdaUnderscore{}⟩}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaInductiveConstructor{split}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{\AgdaUnderscore{}∙\AgdaUnderscore{}}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaInductiveConstructor{eq}\AgdaSymbol{)}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaComment{-----------------------------------------}\<%
+\\
+%
+\>[2]\AgdaComment{---\ Pull\ out\ properties\ of\ the\ monoid\ ---}\<%
+\\
+%
+\>[2]\AgdaComment{-----------------------------------------}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaModule{AlgebraDefinitions}\AgdaSpace{}%
+\AgdaSymbol{\{}\AgdaArgument{A}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaBound{A}\AgdaSymbol{\}}\AgdaSpace{}%
+\AgdaOperator{\AgdaDatatype{\AgdaUnderscore{}≡\AgdaUnderscore{}}}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaModule{IsCommutativeMonoid}\AgdaSpace{}%
+\AgdaBound{isCommutativeMonoid}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{identity}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{assoc}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaField{comm}\AgdaSymbol{)}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaKeyword{private}\<%
+\\
+\>[2][@{}l@{\AgdaIndent{0}}]%
+\>[4]\AgdaFunction{identityˡ}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaFunction{LeftIdentity}\AgdaSpace{}%
+\AgdaBound{ε}\AgdaSpace{}%
+\AgdaOperator{\AgdaBound{\AgdaUnderscore{}⋆\AgdaUnderscore{}}}\<%
+\\
+%
+\>[4]\AgdaFunction{identityˡ}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaField{proj₁}\AgdaSpace{}%
+\AgdaFunction{identity}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[4]\AgdaFunction{identityʳ}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaFunction{RightIdentity}\AgdaSpace{}%
+\AgdaBound{ε}\AgdaSpace{}%
+\AgdaOperator{\AgdaBound{\AgdaUnderscore{}⋆\AgdaUnderscore{}}}\<%
+\\
+%
+\>[4]\AgdaFunction{identityʳ}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaField{proj₂}\AgdaSpace{}%
+\AgdaFunction{identity}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[4]\AgdaKeyword{variable}\<%
+\\
+\>[4][@{}l@{\AgdaIndent{0}}]%
+\>[6]\AgdaGeneralizable{n}\AgdaSpace{}%
+\AgdaGeneralizable{m}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{ℕ}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaComment{----------------------}\<%
+\\
+%
+\>[2]\AgdaComment{---\ Sum\ Definition\ ---}\<%
+\\
+%
+\>[2]\AgdaComment{----------------------}\<%
+\\
+\>[0]\<%
+\end{code}
+\begin{code}%
+\>[0][@{}l@{\AgdaIndent{1}}]%
+\>[2]\AgdaFunction{sum}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{xs}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaGeneralizable{n}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaBound{A}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaBound{A}\<%
+\\
+%
+\>[2]\AgdaFunction{sum}\AgdaSpace{}%
+\AgdaSymbol{\{}\AgdaInductiveConstructor{zero}\AgdaSymbol{\}}%
+\>[15]\AgdaBound{xs}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaBound{ε}\<%
+\\
+%
+\>[2]\AgdaFunction{sum}\AgdaSpace{}%
+\AgdaSymbol{\{}\AgdaInductiveConstructor{suc}\AgdaSpace{}%
+\AgdaBound{n}\AgdaSymbol{\}}%
+\>[15]\AgdaBound{xs}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{head₁}\AgdaSpace{}%
+\AgdaBound{xs}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaOperator{\AgdaBound{⋆}}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{sum}\AgdaSpace{}%
+\AgdaOperator{\AgdaFunction{∘}}\AgdaSpace{}%
+\AgdaFunction{tail₁}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaBound{xs}\<%
+\end{code}
+
+\begin{code}[hide]%
+\>[0]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Complex}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaRecord{Cplx}\AgdaSymbol{)}\<%
+\\
+\>[0]\AgdaKeyword{module}\AgdaSpace{}%
+\AgdaModule{FFT}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{real}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaRecord{Real}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{cplx}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaRecord{Cplx}\AgdaSpace{}%
+\AgdaBound{real}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaKeyword{where}\<%
+\\
+\>[0][@{}l@{\AgdaIndent{0}}]%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaModule{Cplx}\AgdaSpace{}%
+\AgdaBound{cplx}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaField{ℂ}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaOperator{\AgdaField{\AgdaUnderscore{}*\AgdaUnderscore{}}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaField{-ω}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaOperator{\AgdaField{e\textasciicircum{}i\AgdaUnderscore{}}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaOperator{\AgdaField{\AgdaUnderscore{}+\AgdaUnderscore{}}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{0ℂ}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaField{+-*-isCommutativeRing}\AgdaSymbol{)}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaModule{AlgebraStructures}%
+\>[26]\AgdaSymbol{\{}\AgdaArgument{A}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaField{ℂ}\AgdaSymbol{\}}\AgdaSpace{}%
+\AgdaOperator{\AgdaDatatype{\AgdaUnderscore{}≡\AgdaUnderscore{}}}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaModule{IsCommutativeRing}\AgdaSpace{}%
+\AgdaField{+-*-isCommutativeRing}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{+-isCommutativeMonoid}\AgdaSymbol{)}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Data.Fin.Base}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaDatatype{Fin}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{toℕ}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaKeyword{renaming}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{zero}\AgdaSpace{}%
+\AgdaSymbol{to}\AgdaSpace{}%
+\AgdaInductiveConstructor{fzero}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaInductiveConstructor{suc}\AgdaSpace{}%
+\AgdaSymbol{to}\AgdaSpace{}%
+\AgdaInductiveConstructor{fsuc}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Data.Nat.Base}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaDatatype{ℕ}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaInductiveConstructor{suc}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaRecord{NonZero}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaKeyword{renaming}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaOperator{\AgdaPrimitive{\AgdaUnderscore{}+\AgdaUnderscore{}}}\AgdaSpace{}%
+\AgdaSymbol{to}\AgdaSpace{}%
+\AgdaOperator{\AgdaPrimitive{\AgdaUnderscore{}+ₙ\AgdaUnderscore{}}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaOperator{\AgdaPrimitive{\AgdaUnderscore{}*\AgdaUnderscore{}}}\AgdaSpace{}%
+\AgdaSymbol{to}\AgdaSpace{}%
+\AgdaOperator{\AgdaPrimitive{\AgdaUnderscore{}*ₙ\AgdaUnderscore{}}}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Data.Nat.Properties}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{nonZero?}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Relation.Nullary}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Matrix}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{Ar}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaDatatype{Shape}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaDatatype{Position}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaInductiveConstructor{ι}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{\AgdaUnderscore{}⊗\AgdaUnderscore{}}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{zipWith}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{mapRows}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{length}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Matrix.Sum}\AgdaSpace{}%
+\AgdaOperator{\AgdaField{\AgdaUnderscore{}+\AgdaUnderscore{}}}\AgdaSpace{}%
+\AgdaFunction{0ℂ}\AgdaSpace{}%
+\AgdaFunction{+-isCommutativeMonoid}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{sum}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Matrix.Reshape}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{recursive-transpose}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{reshape}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaInductiveConstructor{swap}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaOperator{\AgdaFunction{\AgdaUnderscore{}⟨\AgdaUnderscore{}⟩}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{♯}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{recursive-transposeᵣ}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Matrix.NonZero}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaDatatype{NonZeroₛ}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaInductiveConstructor{ι}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{\AgdaUnderscore{}⊗\AgdaUnderscore{}}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{nonZeroₛ-s⇒nonZero-s}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{nonZeroDec}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{nonZeroₛ-s⇒nonZeroₛ-sᵗ}\AgdaSymbol{)}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaKeyword{private}\<%
+\\
+\>[2][@{}l@{\AgdaIndent{0}}]%
+\>[4]\AgdaKeyword{variable}\<%
+\\
+\>[4][@{}l@{\AgdaIndent{0}}]%
+\>[6]\AgdaGeneralizable{N}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{ℕ}\<%
+\\
+%
+\>[6]\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Shape}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaComment{------------------------------------}\<%
+\\
+%
+\>[2]\AgdaComment{---\ DFT\ and\ FFT\ helper\ functions\ ---}\<%
+\\
+%
+\>[2]\AgdaComment{------------------------------------}\<%
+\end{code}
+
+\todo[color=green]{Consider removing or shrinking the below definition}
+\paragraph{Index's in a single dimension}. As defined above, \AF{Position} encodes 
+the bounds on a given index, as well as the index itself. 
+When calculating the DFT some arithmetic on this index is required,
+this arithmetic would be overly complex if performed while the index is 
+wrapped in a position, and so
+helper functions are required to convert a given position to its index value.
+This helper function for the single dimensional case is shown below.
+
+\begin{code}%
+%
+\>[2]\AgdaFunction{iota}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaGeneralizable{N}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaDatatype{ℕ}\<%
+\\
+%
+\>[2]\AgdaFunction{iota}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaBound{i}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaFunction{toℕ}\AgdaSpace{}%
+\AgdaBound{i}\<%
+\end{code}
+
+\subsection{DFT}
+Given the above definition of the complex numbers, matrices, and methods on one 
+dimensional matrices, the formation of the DFT is now trivial.
+First a function \AF{DFT′} is formed, this is of the same shape as Equation 
+\ref{eq:DFT_Definition}, but requires that the length of any input vector is 
+non zero, as to satisfy this same condition on the divisor of \AF{-ω} as defined 
+in \ref{para:roots_of_unity}.
+
+\begin{code}%
+%
+\>[2]\AgdaFunction{DFT′}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaSymbol{⦃}\AgdaSpace{}%
+\AgdaBound{nonZero-N}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaRecord{NonZero}\AgdaSpace{}%
+\AgdaGeneralizable{N}\AgdaSpace{}%
+\AgdaSymbol{⦄}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaGeneralizable{N}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaField{ℂ}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaGeneralizable{N}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaField{ℂ}\<%
+\\
+%
+\>[2]\AgdaFunction{DFT′}\AgdaSpace{}%
+\AgdaSymbol{\{}\AgdaBound{N}\AgdaSymbol{\}}\AgdaSpace{}%
+\AgdaBound{xs}\AgdaSpace{}%
+\AgdaBound{j}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaFunction{sum}\AgdaSpace{}%
+\AgdaSymbol{λ}\AgdaSpace{}%
+\AgdaBound{k}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaBound{xs}\AgdaSpace{}%
+\AgdaBound{k}\AgdaSpace{}%
+\AgdaOperator{\AgdaField{*}}\AgdaSpace{}%
+\AgdaField{-ω}\AgdaSpace{}%
+\AgdaBound{N}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{iota}\AgdaSpace{}%
+\AgdaBound{k}\AgdaSpace{}%
+\AgdaOperator{\AgdaPrimitive{*ₙ}}\AgdaSpace{}%
+\AgdaFunction{iota}\AgdaSpace{}%
+\AgdaBound{j}\AgdaSymbol{)}\<%
+\end{code}
+
+It is then trivial to form the \AF{DFT} without this restriction, by 
+checking if a given array is of length zero, and returning that same array of
+length zero when this is the case.
+
+% Could probably get away without showing this
+\begin{code}[hide]%
+%
+\>[2]\AgdaFunction{DFT}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaGeneralizable{N}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaField{ℂ}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaGeneralizable{N}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaField{ℂ}\<%
+\\
+%
+\>[2]\AgdaFunction{DFT}\AgdaSpace{}%
+\AgdaSymbol{\{}\AgdaBound{N}\AgdaSymbol{\}}\AgdaSpace{}%
+\AgdaBound{arr}\AgdaSpace{}%
+\AgdaKeyword{with}\AgdaSpace{}%
+\AgdaFunction{nonZero?}\AgdaSpace{}%
+\AgdaBound{N}\<%
+\\
+%
+\>[2]\AgdaSymbol{...}\AgdaSpace{}%
+\AgdaSymbol{|}\AgdaSpace{}%
+\AgdaInductiveConstructor{no}%
+\>[12]\AgdaBound{¬nonZero-s}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaBound{arr}\<%
+\\
+%
+\>[2]\AgdaSymbol{...}\AgdaSpace{}%
+\AgdaSymbol{|}\AgdaSpace{}%
+\AgdaInductiveConstructor{yes}%
+\>[13]\AgdaBound{nonZero-s}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaFunction{DFT′}\AgdaSpace{}%
+\AgdaSymbol{⦃}\AgdaSpace{}%
+\AgdaBound{nonZero-s}\AgdaSpace{}%
+\AgdaSymbol{⦄}\AgdaSpace{}%
+\AgdaBound{arr}\<%
+\end{code}
+
+
+\subsection{Reshape}
+\begin{code}[hide]%
+\>[0]\AgdaKeyword{module}\AgdaSpace{}%
+\AgdaModule{Reshape}\AgdaSpace{}%
+\AgdaKeyword{where}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+\>[0][@{}l@{\AgdaIndent{0}}]%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Data.Nat}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaDatatype{ℕ}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaOperator{\AgdaPrimitive{\AgdaUnderscore{}*\AgdaUnderscore{}}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaRecord{NonZero}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Data.Nat.Properties}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{*-comm}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Data.Fin}\AgdaSpace{}%
+\AgdaSymbol{as}\AgdaSpace{}%
+\AgdaModule{F}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaDatatype{Fin}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{combine}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{remQuot}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{quotRem}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{toℕ}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{cast}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Data.Fin.Properties}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{remQuot-combine}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{combine-remQuot}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{cast-is-id}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{cast-trans}\AgdaSymbol{)}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Data.Product}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaOperator{\AgdaInductiveConstructor{\AgdaUnderscore{},\AgdaUnderscore{}}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaField{proj₁}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaField{proj₂}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Matrix}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaDatatype{Shape}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaDatatype{Position}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaInductiveConstructor{ι}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{\AgdaUnderscore{}⊗\AgdaUnderscore{}}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{length}\AgdaSymbol{)}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Relation.Binary.PropositionalEquality}\AgdaSpace{}%
+\AgdaSymbol{as}\AgdaSpace{}%
+\AgdaModule{Eq}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaModule{Eq}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaOperator{\AgdaDatatype{\AgdaUnderscore{}≡\AgdaUnderscore{}}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaInductiveConstructor{refl}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{cong}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{trans}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{subst}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{sym}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaModule{Eq.≡-Reasoning}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaKeyword{variable}\<%
+\\
+\>[2][@{}l@{\AgdaIndent{0}}]%
+\>[4]\AgdaGeneralizable{m}\AgdaSpace{}%
+\AgdaGeneralizable{n}\AgdaSpace{}%
+\AgdaGeneralizable{k}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{ℕ}\<%
+\\
+%
+\>[4]\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSpace{}%
+\AgdaGeneralizable{q}\AgdaSpace{}%
+\AgdaGeneralizable{r}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Shape}\<%
+\\
+%
+\>[4]\AgdaGeneralizable{X}\AgdaSpace{}%
+\AgdaGeneralizable{Y}\AgdaSpace{}%
+\AgdaGeneralizable{Z}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaPrimitive{Set}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaKeyword{infixr}\AgdaSpace{}%
+\AgdaNumber{5}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{\AgdaUnderscore{}∙\AgdaUnderscore{}}}\<%
+\\
+%
+\>[2]\AgdaKeyword{infixl}\AgdaSpace{}%
+\AgdaNumber{10}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{\AgdaUnderscore{}⊕\AgdaUnderscore{}}}\<%
+\end{code}
+
+For any definition of FFT, some operations such as transpose, are be required 
+to modify the shape of the input and intermediate matrix.
+As many such operations exist, a language of reshapes can be created, allowing
+the creation of general rules across all reshape operations.
+
+For this language, each reshape operations can be considered as a bijective function
+from shape \AF{s} to shape \AF{p}. 
+As this ensures that no matrix can loose or gain data, creating a strict reshape 
+language will strengthen any reasoning in future proofs.
+This also means that any reshape operation is reversible which will allow for the
+formation of rules which are general to all operations in the reshape language.
+
+The reshape language is defined as a set of operations from shape to shape as follows.
+\begin{code}%
+%
+\>[2]\AgdaKeyword{data}\AgdaSpace{}%
+\AgdaDatatype{Reshape}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Shape}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaDatatype{Shape}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaPrimitive{Set}\AgdaSpace{}%
+\AgdaKeyword{where}\<%
+\\
+\>[2][@{}l@{\AgdaIndent{0}}]%
+\>[4]\AgdaInductiveConstructor{eq}%
+\>[11]\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Reshape}\AgdaSpace{}%
+\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaGeneralizable{s}%
+\>[67]\AgdaComment{--\ Identity}\<%
+\\
+%
+\>[4]\AgdaOperator{\AgdaInductiveConstructor{\AgdaUnderscore{}∙\AgdaUnderscore{}}}%
+\>[11]\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Reshape}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSpace{}%
+\AgdaGeneralizable{q}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaDatatype{Reshape}\AgdaSpace{}%
+\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaDatatype{Reshape}\AgdaSpace{}%
+\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaGeneralizable{q}%
+\>[67]\AgdaComment{--\ Composition\ of\ Reshapes}\<%
+\\
+%
+\>[4]\AgdaOperator{\AgdaInductiveConstructor{\AgdaUnderscore{}⊕\AgdaUnderscore{}}}%
+\>[11]\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Reshape}\AgdaSpace{}%
+\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaDatatype{Reshape}\AgdaSpace{}%
+\AgdaGeneralizable{q}\AgdaSpace{}%
+\AgdaGeneralizable{r}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaDatatype{Reshape}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaGeneralizable{q}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaGeneralizable{p}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaGeneralizable{r}\AgdaSymbol{)}%
+\>[67]\AgdaComment{--\ Left/\ Right\ application}\<%
+\\
+%
+\>[4]\AgdaInductiveConstructor{split}%
+\>[11]\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Reshape}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaGeneralizable{m}\AgdaSpace{}%
+\AgdaOperator{\AgdaPrimitive{*}}\AgdaSpace{}%
+\AgdaGeneralizable{n}\AgdaSymbol{))}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaGeneralizable{m}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaGeneralizable{n}\AgdaSymbol{)}%
+\>[67]\AgdaComment{--\ "Vector"\ →\ 2D\ Matrix}\<%
+\\
+%
+\>[4]\AgdaInductiveConstructor{flat}%
+\>[11]\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Reshape}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaGeneralizable{m}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaGeneralizable{n}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaGeneralizable{m}\AgdaSpace{}%
+\AgdaOperator{\AgdaPrimitive{*}}\AgdaSpace{}%
+\AgdaGeneralizable{n}\AgdaSymbol{))}%
+\>[67]\AgdaComment{--\ 2D\ Matrix\ →\ "Vector"}\<%
+\\
+%
+\>[4]\AgdaInductiveConstructor{swap}%
+\>[11]\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Reshape}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaGeneralizable{p}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaGeneralizable{s}\AgdaSymbol{)}%
+\>[67]\AgdaComment{--\ Transposition}\<%
+\end{code}
+
+Using this definition of reshape and some standard library methods on Fin, 
+it is then possible do define the application of reshape to positions and matrices.
+\begin{code}%
+%
+\>[2]\AgdaOperator{\AgdaFunction{\AgdaUnderscore{}⟨\AgdaUnderscore{}⟩}}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Position}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaDatatype{Reshape}\AgdaSpace{}%
+\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaDatatype{Position}\AgdaSpace{}%
+\AgdaGeneralizable{s}\<%
+\\
+%
+\>[2]\AgdaBound{i}%
+\>[15]\AgdaOperator{\AgdaFunction{⟨}}\AgdaSpace{}%
+\AgdaInductiveConstructor{eq}%
+\>[25]\AgdaOperator{\AgdaFunction{⟩}}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaBound{i}\<%
+\\
+%
+\>[2]\AgdaBound{i}%
+\>[15]\AgdaOperator{\AgdaFunction{⟨}}\AgdaSpace{}%
+\AgdaBound{r}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{∙}}\AgdaSpace{}%
+\AgdaBound{r₁}%
+\>[25]\AgdaOperator{\AgdaFunction{⟩}}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaBound{i}\AgdaSpace{}%
+\AgdaOperator{\AgdaFunction{⟨}}\AgdaSpace{}%
+\AgdaBound{r}\AgdaSpace{}%
+\AgdaOperator{\AgdaFunction{⟩}}\AgdaSpace{}%
+\AgdaOperator{\AgdaFunction{⟨}}\AgdaSpace{}%
+\AgdaBound{r₁}\AgdaSpace{}%
+\AgdaOperator{\AgdaFunction{⟩}}\<%
+\\
+%
+\>[2]\AgdaSymbol{(}\AgdaBound{i}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaBound{j}\AgdaSymbol{)}%
+\>[15]\AgdaOperator{\AgdaFunction{⟨}}\AgdaSpace{}%
+\AgdaBound{r}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊕}}\AgdaSpace{}%
+\AgdaBound{r₁}%
+\>[25]\AgdaOperator{\AgdaFunction{⟩}}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{i}\AgdaSpace{}%
+\AgdaOperator{\AgdaFunction{⟨}}\AgdaSpace{}%
+\AgdaBound{r}\AgdaSpace{}%
+\AgdaOperator{\AgdaFunction{⟩}}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{j}\AgdaSpace{}%
+\AgdaOperator{\AgdaFunction{⟨}}\AgdaSpace{}%
+\AgdaBound{r₁}\AgdaSpace{}%
+\AgdaOperator{\AgdaFunction{⟩}}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaBound{i}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaBound{j}\AgdaSymbol{)}%
+\>[15]\AgdaOperator{\AgdaFunction{⟨}}\AgdaSpace{}%
+\AgdaInductiveConstructor{split}%
+\>[25]\AgdaOperator{\AgdaFunction{⟩}}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{combine}\AgdaSpace{}%
+\AgdaBound{i}\AgdaSpace{}%
+\AgdaBound{j}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaBound{i}%
+\>[15]\AgdaOperator{\AgdaFunction{⟨}}\AgdaSpace{}%
+\AgdaInductiveConstructor{flat}%
+\>[25]\AgdaOperator{\AgdaFunction{⟩}}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaKeyword{let}\AgdaSpace{}%
+\AgdaBound{a}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{,}}\AgdaSpace{}%
+\AgdaBound{b}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaFunction{remQuot}\AgdaSpace{}%
+\AgdaSymbol{\AgdaUnderscore{}}\AgdaSpace{}%
+\AgdaBound{i}\AgdaSpace{}%
+\AgdaKeyword{in}\AgdaSpace{}%
+\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaBound{a}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaBound{b}\<%
+\\
+%
+\>[2]\AgdaSymbol{(}\AgdaBound{i}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaBound{j}\AgdaSymbol{)}%
+\>[15]\AgdaOperator{\AgdaFunction{⟨}}\AgdaSpace{}%
+\AgdaInductiveConstructor{swap}%
+\>[25]\AgdaOperator{\AgdaFunction{⟩}}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaBound{j}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaBound{i}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaFunction{reshape}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Reshape}\AgdaSpace{}%
+\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaGeneralizable{X}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSpace{}%
+\AgdaGeneralizable{X}\<%
+\\
+%
+\>[2]\AgdaFunction{reshape}\AgdaSpace{}%
+\AgdaBound{r}\AgdaSpace{}%
+\AgdaBound{a}\AgdaSpace{}%
+\AgdaBound{ix}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaBound{a}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{ix}\AgdaSpace{}%
+\AgdaOperator{\AgdaFunction{⟨}}\AgdaSpace{}%
+\AgdaBound{r}\AgdaSpace{}%
+\AgdaOperator{\AgdaFunction{⟩}}\AgdaSpace{}%
+\AgdaSymbol{)}\<%
+\end{code}
+\subsubsection{Reverse}
+As each reshape operation is a bijective function, it is trivial to define a reverse
+method.
+\begin{code}%
+%
+\>[2]\AgdaFunction{rev}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Reshape}\AgdaSpace{}%
+\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaDatatype{Reshape}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSpace{}%
+\AgdaGeneralizable{s}\<%
+\\
+%
+\>[2]\AgdaFunction{rev}\AgdaSpace{}%
+\AgdaInductiveConstructor{eq}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaInductiveConstructor{eq}\<%
+\\
+%
+\>[2]\AgdaFunction{rev}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{r}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊕}}\AgdaSpace{}%
+\AgdaBound{r₁}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaFunction{rev}\AgdaSpace{}%
+\AgdaBound{r}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊕}}\AgdaSpace{}%
+\AgdaFunction{rev}\AgdaSpace{}%
+\AgdaBound{r₁}\<%
+\\
+%
+\>[2]\AgdaFunction{rev}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{r}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{∙}}\AgdaSpace{}%
+\AgdaBound{r₁}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaFunction{rev}\AgdaSpace{}%
+\AgdaBound{r₁}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{∙}}\AgdaSpace{}%
+\AgdaFunction{rev}\AgdaSpace{}%
+\AgdaBound{r}\<%
+\\
+%
+\>[2]\AgdaFunction{rev}\AgdaSpace{}%
+\AgdaInductiveConstructor{split}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaInductiveConstructor{flat}\<%
+\\
+%
+\>[2]\AgdaFunction{rev}\AgdaSpace{}%
+\AgdaInductiveConstructor{flat}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaInductiveConstructor{split}\<%
+\\
+%
+\>[2]\AgdaFunction{rev}\AgdaSpace{}%
+\AgdaInductiveConstructor{swap}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaInductiveConstructor{swap}\<%
+\end{code}
+From this operation, rules on reshape can be defined, allow for formation of
+relations between reshape operations.
+This allows for the reduction of the reshape language when operations such as 
+\AF{split ∙ flat} occur.
+\begin{code}[hide]%
+%
+\>[2]\AgdaKeyword{postulate}\<%
+\end{code}
+\begin{code}%
+\>[2][@{}l@{\AgdaIndent{1}}]%
+\>[4]\AgdaPostulate{rev-eq}\AgdaSpace{}%
+\AgdaSymbol{:}\<%
+\\
+\>[4][@{}l@{\AgdaIndent{0}}]%
+\>[6]\AgdaSymbol{∀}%
+\>[921I]\AgdaSymbol{(}\AgdaBound{r}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Reshape}\AgdaSpace{}%
+\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSymbol{)}\<%
+\\
+\>[.][@{}l@{}]\<[921I]%
+\>[8]\AgdaSymbol{(}\AgdaBound{i}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Position}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSpace{}%
+\AgdaSymbol{)}\<%
+\\
+%
+\>[6]\AgdaComment{---------------------}\<%
+\\
+%
+\>[6]\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaBound{i}\AgdaSpace{}%
+\AgdaOperator{\AgdaFunction{⟨}}\AgdaSpace{}%
+\AgdaBound{r}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{∙}}\AgdaSpace{}%
+\AgdaFunction{rev}\AgdaSpace{}%
+\AgdaBound{r}\AgdaSpace{}%
+\AgdaOperator{\AgdaFunction{⟩}}\AgdaSpace{}%
+\AgdaOperator{\AgdaDatatype{≡}}\AgdaSpace{}%
+\AgdaBound{i}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[4]\AgdaPostulate{rev-rev}\AgdaSpace{}%
+\AgdaSymbol{:}\<%
+\\
+\>[4][@{}l@{\AgdaIndent{0}}]%
+\>[6]\AgdaSymbol{∀}%
+\>[940I]\AgdaSymbol{(}\AgdaBound{r}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Reshape}\AgdaSpace{}%
+\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSymbol{)}\<%
+\\
+\>[.][@{}l@{}]\<[940I]%
+\>[8]\AgdaSymbol{(}\AgdaBound{i}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Position}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSpace{}%
+\AgdaSymbol{)}\<%
+\\
+%
+\>[6]\AgdaComment{-----------------------------}\<%
+\\
+%
+\>[6]\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaBound{i}\AgdaSpace{}%
+\AgdaOperator{\AgdaFunction{⟨}}\AgdaSpace{}%
+\AgdaFunction{rev}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{rev}\AgdaSpace{}%
+\AgdaBound{r}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaOperator{\AgdaFunction{⟩}}\AgdaSpace{}%
+\AgdaOperator{\AgdaDatatype{≡}}\AgdaSpace{}%
+\AgdaBound{i}\AgdaSpace{}%
+\AgdaOperator{\AgdaFunction{⟨}}\AgdaSpace{}%
+\AgdaBound{r}\AgdaSpace{}%
+\AgdaOperator{\AgdaFunction{⟩}}\<%
+\end{code}
+
+\subsubsection{Recursive Reshaping}
+While the above operations of reshape can be applied to matrices of a fixed shape
+this language of reshapes can be improved with the creation of recursive reshape
+operations.
+
+\paragraph{Flatten and Unflatten} enable the recursive application of flat and 
+split respectively.
+This allows for an $N$-dimensional matrix to be flattened, and for any single dimensional
+matrix of size \AF{length s} to be unflattened into a matrix of shape s.
+\begin{code}%
+%
+\>[2]\AgdaFunction{♭}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Reshape}\AgdaSpace{}%
+\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{length}\AgdaSpace{}%
+\AgdaGeneralizable{s}\AgdaSymbol{))}\<%
+\\
+%
+\>[2]\AgdaFunction{♭}\AgdaSpace{}%
+\AgdaSymbol{\{}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaBound{x}%
+\>[11]\AgdaSymbol{\}}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaInductiveConstructor{eq}\<%
+\\
+%
+\>[2]\AgdaFunction{♭}\AgdaSpace{}%
+\AgdaSymbol{\{}\AgdaBound{s}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaBound{s₁}\AgdaSymbol{\}}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaInductiveConstructor{flat}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{∙}}\AgdaSpace{}%
+\AgdaFunction{♭}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊕}}\AgdaSpace{}%
+\AgdaFunction{♭}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaComment{--\ Unflatten\ is\ free\ from\ flatten}\<%
+\\
+%
+\>[2]\AgdaFunction{♯}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Reshape}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{length}\AgdaSpace{}%
+\AgdaGeneralizable{s}\AgdaSymbol{))}\AgdaSpace{}%
+\AgdaGeneralizable{s}\<%
+\\
+%
+\>[2]\AgdaFunction{♯}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaFunction{rev}\AgdaSpace{}%
+\AgdaFunction{♭}\<%
+\end{code}
+
+\paragraph{Recursive transpose} defines an application of transposition for any 
+multi dimensional matrix.
+Recursive transpose applies swap to any non leaf nodes, allowing for any given 
+function designed to operate on multi dimensional matrices, such as the FFT, to
+do the same.
+\todo[color=green]{Either this is poorly worded or I'm silly, rewrite maybe?}
+\begin{code}%
+%
+\>[2]\AgdaFunction{recursive-transpose}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Shape}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaDatatype{Shape}\<%
+\\
+%
+\>[2]\AgdaFunction{recursive-transpose}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaBound{x}%
+\>[29]\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaBound{x}\<%
+\\
+%
+\>[2]\AgdaFunction{recursive-transpose}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{s}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaBound{s₁}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaFunction{recursive-transpose}\AgdaSpace{}%
+\AgdaBound{s₁}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaFunction{recursive-transpose}\AgdaSpace{}%
+\AgdaBound{s}\<%
+\end{code}
+
+
+\subsection{Multi dimensional matrix operations} \todo[color=green]{Insert text here about needing more before making FFT}
+\paragraph{Zip With}\label{para:zipWith} performs pointwise application of a 
+given function \AD{f} over two matrices of the same shape. 
+\begin{code}[hide]%
+\>[0]\AgdaKeyword{module}\AgdaSpace{}%
+\AgdaModule{Matrix2}\AgdaSpace{}%
+\AgdaKeyword{where}\<%
+\\
+\>[0][@{}l@{\AgdaIndent{0}}]%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Matrix}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{Ar}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaDatatype{Shape}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaDatatype{Position}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{\AgdaUnderscore{}⊗\AgdaUnderscore{}}}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaKeyword{private}\<%
+\\
+\>[2][@{}l@{\AgdaIndent{0}}]%
+\>[4]\AgdaKeyword{variable}\<%
+\\
+\>[4][@{}l@{\AgdaIndent{0}}]%
+\>[6]\AgdaGeneralizable{X}\AgdaSpace{}%
+\AgdaGeneralizable{Y}\AgdaSpace{}%
+\AgdaGeneralizable{Z}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaPrimitive{Set}\<%
+\\
+%
+\>[6]\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Shape}\<%
+\end{code}
+\begin{code}%
+%
+\>[2]\AgdaFunction{zipWith}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaGeneralizable{X}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaGeneralizable{Y}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaGeneralizable{Z}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaGeneralizable{X}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaGeneralizable{Y}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaGeneralizable{Z}\<%
+\\
+%
+\>[2]\AgdaFunction{zipWith}\AgdaSpace{}%
+\AgdaBound{f}\AgdaSpace{}%
+\AgdaBound{arr₁}\AgdaSpace{}%
+\AgdaBound{arr₂}\AgdaSpace{}%
+\AgdaBound{pos}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaBound{f}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{arr₁}\AgdaSpace{}%
+\AgdaBound{pos}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{arr₂}\AgdaSpace{}%
+\AgdaBound{pos}\AgdaSymbol{)}\<%
+\end{code}
+This has many uses, below is shown one example where zipWith is used
+over matrices $x$ and $y$, of shape \AF{(ι n ⊗ ι m)},\todo[color=green]{Check this is the correct way round, syntax highlight}
+to add the values at each position.
+
+\begin{displaymath}
+  \text{zipWith  \_+\_}
+  \begin{bmatrix}
+    x_{1,1} & \dots  & x_{1,n} \\
+    \vdots  & \ddots & \vdots \\
+    x_{m,1} & \dots  & x_{m,n}
+  \end{bmatrix}
+  \begin{bmatrix}
+    y_{1,1} & \dots  & y_{1,n} \\
+    \vdots  & \ddots & \vdots \\
+    y_{m,1} & \dots  & y_{m,n}
+  \end{bmatrix}
+  \equiv 
+  \begin{bmatrix}
+    x_{1,1} + y_{1,1} & \dots  & x_{1,n} + y_{1,n} \\
+    \vdots                  & \ddots & \vdots \\
+    x_{m,1} + y_{m,1} & \dots  & x_{m,n} + y_{m,n}
+  \end{bmatrix}
+\end{displaymath}
+
+
+\paragraph{Map} is similar to \AF{zipWith}, but operates over a singular matrix, 
+applying a function \AF{f} to each element.
+\begin{code}%
+%
+\>[2]\AgdaFunction{map}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{f}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaGeneralizable{X}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaGeneralizable{Y}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaGeneralizable{X}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaGeneralizable{Y}\<%
+\\
+%
+\>[2]\AgdaFunction{map}\AgdaSpace{}%
+\AgdaBound{f}\AgdaSpace{}%
+\AgdaBound{arr}\AgdaSpace{}%
+\AgdaBound{i}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaBound{f}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{arr}\AgdaSpace{}%
+\AgdaBound{i}\AgdaSymbol{)}\<%
+\end{code}
+The functions \AF{nest} and \AF{unnest} can then be defined to create an 
+isomorphism between matrices of the form \AF{Ar (s ⊗ p) X} and nested matrices 
+of the form \AF{A s (Ar p X)}.
+This allows for the definition of a new function \AF{mapRows} which can apply a
+given function to the rows of a given matrix.
+
+\begin{code}%
+%
+\>[2]\AgdaFunction{nest}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaGeneralizable{X}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSpace{}%
+\AgdaGeneralizable{X}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaFunction{nest}\AgdaSpace{}%
+\AgdaBound{arr}\AgdaSpace{}%
+\AgdaBound{i}\AgdaSpace{}%
+\AgdaBound{j}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaBound{arr}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{i}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaBound{j}\AgdaSymbol{)}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaFunction{unnest}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSpace{}%
+\AgdaGeneralizable{X}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaGeneralizable{X}\<%
+\\
+%
+\>[2]\AgdaFunction{unnest}\AgdaSpace{}%
+\AgdaBound{arr}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{i}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaBound{j}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaBound{arr}\AgdaSpace{}%
+\AgdaBound{i}\AgdaSpace{}%
+\AgdaBound{j}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaFunction{mapRows}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaSymbol{∀}\AgdaSpace{}%
+\AgdaSymbol{\{}\AgdaBound{s}\AgdaSpace{}%
+\AgdaBound{p}\AgdaSpace{}%
+\AgdaBound{t}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Shape}\AgdaSymbol{\}}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaBound{p}\AgdaSpace{}%
+\AgdaGeneralizable{X}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaBound{t}\AgdaSpace{}%
+\AgdaGeneralizable{Y}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{s}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaBound{p}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaGeneralizable{X}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{s}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaBound{t}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaGeneralizable{Y}\<%
+\\
+%
+\>[2]\AgdaFunction{mapRows}\AgdaSpace{}%
+\AgdaBound{f}\AgdaSpace{}%
+\AgdaBound{arr}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaFunction{unnest}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{map}\AgdaSpace{}%
+\AgdaBound{f}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{nest}\AgdaSpace{}%
+\AgdaBound{arr}\AgdaSymbol{))}\<%
+\end{code}
+
+
+\clearpage
+\subsection{FFT}
+Given the above operations, it is now possible to begin forming a definition for
+the FFT.
+For these initial definitions, it is assumed that all input vectors are non zero.
+In the final implementation this property is a requirement for each function,
+however, it decreases readability and as such is not shown here.
+
+Looking at the basic derivation of the Cooley Tukey FFT over an input vector
+defined in Equation \ref{eq:FFTDefinitionFromDFT}, three distinct sections can
+be observed.
+\begin{align}
+    X_{j_1r_1+j_0}
+      &=\underbrace{\sum^{r_2-1}_{k_0=0}{
+        \left[
+          \underbrace{
+            \left(
+              \underbrace{
+                \sum^{r_1-1}_{k_1=0}x_{k_1r_2+k_0}\omega_{r_1}^{k_1j_0}
+              }_{Section A} \right
+            ) \omega_{r_1r_2}^{k_0j_1}
+          }_{Section B}
+        \right]
+        \omega_{r_2}^{k_0j_1}
+      }}_{Section C}
+    \label{eq:FFTDefinitionLabeled}
+\end{align}
+Section A takes the form of a DFT of length $r_1$.
+In vector form, the first element of the input for this DFT is located at index $k₀$, 
+each subsequent input is then found taken by making a step of $r_2$, $r_1$ times.
+In vector form this is a relatively complex input to reason upon, when we can 
+instead consider our input in matrix form, initially, as a matrix of shape \AF{ι r₁ ⊗ ι r₂}.
+In this form, Section A can be considered to apply the DFT to each column of the
+input matrix.
+Similar to Section A, Section C then takes the form of a DFT of length $r_2$.
+In our \AF{ι r₁ ⊗ ι r₂} matrix form, this is equivalent to the application of 
+the DFT over the rows of the result of section B.
+
+Section B differs to section A and C, and applies what are generally referred to
+as, the twiddle factors.
+In matrix form this section is equivalent to a point wise multiplication 
+over each element from Section A.
+This step can be represented in Agda as \AF{zipWith \_*\_}, on a matrix containing 
+these "twiddle factors".
+
+\begin{code}[hide]%
+\>[0]\AgdaKeyword{module}\AgdaSpace{}%
+\AgdaModule{FFT2}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{real}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaRecord{Real}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{cplx}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaRecord{Cplx}\AgdaSpace{}%
+\AgdaBound{real}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaKeyword{where}\<%
+\\
+\>[0][@{}l@{\AgdaIndent{0}}]%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Matrix}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{Ar}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaDatatype{Shape}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaDatatype{Position}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{\AgdaUnderscore{}⊗\AgdaUnderscore{}}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaInductiveConstructor{ι}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{length}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{mapRows}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{zipWith}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Matrix.NonZero}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Matrix.Reshape}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaOperator{\AgdaFunction{\AgdaUnderscore{}⟨\AgdaUnderscore{}⟩}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{♯}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{recursive-transpose}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{reshape}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaInductiveConstructor{swap}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{FFT}\AgdaSpace{}%
+\AgdaBound{real}\AgdaSpace{}%
+\AgdaBound{cplx}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{iota}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{DFT}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{DFT′}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaKeyword{import}\AgdaSpace{}%
+\AgdaModule{Data.Nat.Base}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{()}\AgdaSpace{}%
+\AgdaKeyword{renaming}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaOperator{\AgdaPrimitive{\AgdaUnderscore{}*\AgdaUnderscore{}}}\AgdaSpace{}%
+\AgdaSymbol{to}\AgdaSpace{}%
+\AgdaOperator{\AgdaPrimitive{\AgdaUnderscore{}*ₙ\AgdaUnderscore{}}}\AgdaSymbol{)}\<%
+\\
+%
+\>[2]\AgdaKeyword{open}\AgdaSpace{}%
+\AgdaModule{Cplx}\AgdaSpace{}%
+\AgdaBound{cplx}\AgdaSpace{}%
+\AgdaKeyword{using}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaField{ℂ}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaOperator{\AgdaField{\AgdaUnderscore{}*\AgdaUnderscore{}}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaField{-ω}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaOperator{\AgdaField{e\textasciicircum{}i\AgdaUnderscore{}}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaOperator{\AgdaField{\AgdaUnderscore{}+\AgdaUnderscore{}}}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaFunction{0ℂ}\AgdaSymbol{;}\AgdaSpace{}%
+\AgdaField{+-*-isCommutativeRing}\AgdaSymbol{)}\<%
+\\
+%
+\\[\AgdaEmptyExtraSkip]%
+%
+\>[2]\AgdaKeyword{private}\<%
+\\
+\>[2][@{}l@{\AgdaIndent{0}}]%
+\>[4]\AgdaKeyword{variable}\<%
+\\
+\>[4][@{}l@{\AgdaIndent{0}}]%
+\>[6]\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Shape}\<%
+\\
+%
+\>[6]\AgdaGeneralizable{r₁}\AgdaSpace{}%
+\AgdaGeneralizable{r₂}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{ℕ}\<%
+\end{code}
+ \todo[color=green]{confirm that k₀ and j₁ are the right variable names here}
+\begin{code}%
+%
+\>[2]\AgdaFunction{2D-twiddles}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaGeneralizable{r₂}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaGeneralizable{r₁}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaField{ℂ}\<%
+\\
+%
+\>[2]\AgdaFunction{2D-twiddles}\AgdaSpace{}%
+\AgdaSymbol{\{}\AgdaBound{r₁}\AgdaSymbol{\}}\AgdaSpace{}%
+\AgdaSymbol{\{}\AgdaBound{r₂}\AgdaSymbol{\}}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{k₀}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaBound{j₁}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaField{-ω}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{r₂}\AgdaSpace{}%
+\AgdaOperator{\AgdaPrimitive{*ₙ}}\AgdaSpace{}%
+\AgdaBound{r₁}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{iota}\AgdaSpace{}%
+\AgdaBound{k₀}\AgdaSpace{}%
+\AgdaOperator{\AgdaPrimitive{*ₙ}}\AgdaSpace{}%
+\AgdaFunction{iota}\AgdaSpace{}%
+\AgdaBound{j₁}\AgdaSpace{}%
+\AgdaSymbol{)}\<%
+\end{code}
+\begin{code}[hide]%
+\>[2][@{}l@{\AgdaIndent{1}}]%
+\>[6]\AgdaKeyword{where}\<%
+\\
+\>[6][@{}l@{\AgdaIndent{0}}]%
+\>[8]\AgdaKeyword{postulate}\<%
+\\
+\>[8][@{}l@{\AgdaIndent{0}}]%
+\>[10]\AgdaKeyword{instance}\<%
+\\
+\>[10][@{}l@{\AgdaIndent{0}}]%
+\>[12]\AgdaSymbol{\AgdaUnderscore{}}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaRecord{NonZero}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{r₂}\AgdaSpace{}%
+\AgdaOperator{\AgdaPrimitive{*ₙ}}\AgdaSpace{}%
+\AgdaBound{r₁}\AgdaSymbol{)}\<%
+\end{code}
+
+Using this twiddle matrix, the definition for the two dimensional FFT is generated
+by forming each section into its own step.
+Of note in the definition below are the three uses of swap.
+The first swap allows DFT′ to map over the columns of the input array,
+while the next allows it to instead map over the rows.
+The final swap is performed because, given an input in row major order, the 
+result of the FFT is read in column major order, and so the output matrix should
+be the transposition of the input matrix.
+
+\begin{code}%
+%
+\>[2]\AgdaFunction{2D-FFT}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaGeneralizable{r₁}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaGeneralizable{r₂}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaField{ℂ}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaGeneralizable{r₂}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaGeneralizable{r₁}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaField{ℂ}\<%
+\\
+%
+\>[2]\AgdaFunction{2D-FFT}\AgdaSpace{}%
+\AgdaSymbol{\{}\AgdaBound{r₁}\AgdaSymbol{\}}\AgdaSpace{}%
+\AgdaSymbol{\{}\AgdaBound{r₂}\AgdaSymbol{\}}\AgdaSpace{}%
+\AgdaBound{arr}\AgdaSpace{}%
+\AgdaSymbol{=}\<%
+\\
+\>[2][@{}l@{\AgdaIndent{0}}]%
+\>[6]\AgdaKeyword{let}\<%
+\\
+\>[6][@{}l@{\AgdaIndent{0}}]%
+\>[10]\AgdaBound{innerDFTapplied}%
+\>[33]\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaFunction{mapRows}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{DFT′}\AgdaSpace{}%
+\AgdaSymbol{\{}\AgdaBound{r₁}\AgdaSymbol{\})}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{reshape}\AgdaSpace{}%
+\AgdaInductiveConstructor{swap}\AgdaSpace{}%
+\AgdaBound{arr}\AgdaSymbol{)}\<%
+\\
+%
+\>[10]\AgdaBound{twiddleFactorsApplied}%
+\>[33]\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaFunction{zipWith}\AgdaSpace{}%
+\AgdaOperator{\AgdaField{\AgdaUnderscore{}*\AgdaUnderscore{}}}%
+\>[49]\AgdaBound{innerDFTapplied}\AgdaSpace{}%
+\AgdaFunction{2D-twiddles}\<%
+\\
+%
+\>[10]\AgdaBound{outerDFTapplied}%
+\>[33]\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaFunction{mapRows}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{DFT′}\AgdaSpace{}%
+\AgdaSymbol{\{}\AgdaBound{r₂}\AgdaSymbol{\})}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{reshape}\AgdaSpace{}%
+\AgdaInductiveConstructor{swap}\AgdaSpace{}%
+\AgdaBound{twiddleFactorsApplied}\AgdaSymbol{)}\<%
+\\
+%
+\>[6]\AgdaKeyword{in}%
+\>[10]\AgdaFunction{reshape}\AgdaSpace{}%
+\AgdaInductiveConstructor{swap}\AgdaSpace{}%
+\AgdaBound{outerDFTapplied}\<%
+\end{code}
+\begin{code}[hide]%
+%
+\>[6]\AgdaKeyword{where}\<%
+\\
+\>[6][@{}l@{\AgdaIndent{0}}]%
+\>[8]\AgdaKeyword{postulate}\<%
+\\
+\>[8][@{}l@{\AgdaIndent{0}}]%
+\>[10]\AgdaKeyword{instance}\<%
+\\
+\>[10][@{}l@{\AgdaIndent{0}}]%
+\>[12]\AgdaSymbol{\AgdaUnderscore{}}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaRecord{NonZero}\AgdaSpace{}%
+\AgdaBound{r₁}\<%
+\\
+%
+\>[12]\AgdaSymbol{\AgdaUnderscore{}}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaRecord{NonZero}\AgdaSpace{}%
+\AgdaBound{r₂}\<%
+\\
+%
+\>[12]\AgdaSymbol{\AgdaUnderscore{}}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{NonZeroₛ}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaBound{r₂}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaBound{r₁}\AgdaSymbol{)}\<%
+\end{code}
+
+\begin{AgdaAlign}
+
+Given knowledge that the DFT should be equivalent to the FFT, the two dimensional
+definition can then be improved by applying the FFT at each step.
+This requires the slight modification of the FFT implementation such that it 
+accepts a matrix of any shape \AF{s} as input.
+
+The definition for the twiddle factors must also be redefined, such that twiddles
+can be computed for any shape with more than two dimensions.
+It is easy to see, that the previous base of the roots of unity, $r₁\times r₂$,
+maps directly to the flat \AF{length} of any given matrix.
+To calculate the power of the root of unity, we can define \AF{offset-prod}
+to multiply the flattened index values of the left and right position trees. \todo[color=green]{This explination doesn't sit right with me}
+\begin{code}%
+%
+\>[2]\AgdaFunction{offset-prod}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{Position}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaDatatype{ℕ}\<%
+\\
+%
+\>[2]\AgdaFunction{offset-prod}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{k}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaBound{j}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaFunction{iota}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{k}\AgdaSpace{}%
+\AgdaOperator{\AgdaFunction{⟨}}\AgdaSpace{}%
+\AgdaFunction{♯}\AgdaSpace{}%
+\AgdaOperator{\AgdaFunction{⟩}}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaOperator{\AgdaPrimitive{*ₙ}}\AgdaSpace{}%
+\AgdaFunction{iota}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{j}\AgdaSpace{}%
+\AgdaOperator{\AgdaFunction{⟨}}\AgdaSpace{}%
+\AgdaFunction{♯}\AgdaSpace{}%
+\AgdaOperator{\AgdaFunction{⟩}}\AgdaSymbol{)}\<%
+\\
+\>[0]\<%
+\\
+%
+\>[2]\AgdaFunction{twiddles}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaGeneralizable{p}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaField{ℂ}\<%
+\\
+%
+\>[2]\AgdaFunction{twiddles}\AgdaSpace{}%
+\AgdaSymbol{\{}\AgdaBound{s}\AgdaSymbol{\}}\AgdaSpace{}%
+\AgdaSymbol{\{}\AgdaBound{p}\AgdaSymbol{\}}\AgdaSpace{}%
+\AgdaBound{i}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaField{-ω}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{length}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{s}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaBound{p}\AgdaSymbol{))}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{offset-prod}\AgdaSpace{}%
+\AgdaBound{i}\AgdaSymbol{)}\<%
+\end{code}
+\begin{code}[hide]%
+\>[2][@{}l@{\AgdaIndent{1}}]%
+\>[6]\AgdaKeyword{where}\<%
+\\
+\>[6][@{}l@{\AgdaIndent{0}}]%
+\>[8]\AgdaKeyword{postulate}\<%
+\\
+\>[8][@{}l@{\AgdaIndent{0}}]%
+\>[10]\AgdaKeyword{instance}\<%
+\\
+\>[10][@{}l@{\AgdaIndent{0}}]%
+\>[12]\AgdaSymbol{\AgdaUnderscore{}}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaRecord{NonZero}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{length}\AgdaSpace{}%
+\AgdaBound{s}\AgdaSpace{}%
+\AgdaOperator{\AgdaPrimitive{*ₙ}}\AgdaSpace{}%
+\AgdaFunction{length}\AgdaSpace{}%
+\AgdaBound{p}\AgdaSymbol{)}\<%
+\end{code}
+\end{AgdaAlign}
+
+The definition of this general twiddle matrix now allows for FFT′ to be defined
+for an input of any shape.
+Where the two dimensional FFT returned the transposition of the input, the new
+general case FFT now returns the recursive transposition, as whenever the FFT is
+applied the sub matrices are transposed.
+
+\begin{AgdaSuppressSpace}
+\begin{code}%
+%
+\>[2]\AgdaFunction{FFT′}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaGeneralizable{s}\AgdaSpace{}%
+\AgdaField{ℂ}\AgdaSpace{}%
+\AgdaSymbol{→}\AgdaSpace{}%
+\AgdaFunction{Ar}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{recursive-transpose}\AgdaSpace{}%
+\AgdaGeneralizable{s}\AgdaSymbol{)}\AgdaSpace{}%
+\AgdaField{ℂ}\<%
+\\
+%
+\>[2]\AgdaFunction{FFT′}\AgdaSpace{}%
+\AgdaSymbol{\{}\AgdaInductiveConstructor{ι}\AgdaSpace{}%
+\AgdaBound{N}\AgdaSymbol{\}}\AgdaSpace{}%
+\AgdaBound{arr}\AgdaSpace{}%
+\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaFunction{DFT′}\AgdaSpace{}%
+\AgdaBound{arr}\<%
+\end{code}
+\begin{code}[hide]%
+\>[2][@{}l@{\AgdaIndent{1}}]%
+\>[4]\AgdaKeyword{where}\<%
+\\
+\>[4][@{}l@{\AgdaIndent{0}}]%
+\>[6]\AgdaKeyword{postulate}\<%
+\\
+\>[6][@{}l@{\AgdaIndent{0}}]%
+\>[8]\AgdaKeyword{instance}\<%
+\\
+\>[8][@{}l@{\AgdaIndent{0}}]%
+\>[10]\AgdaPostulate{\AgdaUnderscore{}}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaRecord{NonZero}\AgdaSpace{}%
+\AgdaBound{N}\<%
+\end{code}
+\begin{code}%
+%
+\>[2]\AgdaFunction{FFT′}\AgdaSpace{}%
+\AgdaSymbol{\{}\AgdaBound{r₁}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaBound{r₂}\AgdaSymbol{\}}\AgdaSpace{}%
+\AgdaBound{arr}\AgdaSpace{}%
+\AgdaSymbol{=}\<%
+\\
+\>[2][@{}l@{\AgdaIndent{0}}]%
+\>[6]\AgdaKeyword{let}\<%
+\\
+\>[6][@{}l@{\AgdaIndent{0}}]%
+\>[10]\AgdaBound{innerDFTapplied}%
+\>[33]\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaFunction{mapRows}\AgdaSpace{}%
+\AgdaFunction{FFT′}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{reshape}\AgdaSpace{}%
+\AgdaInductiveConstructor{swap}\AgdaSpace{}%
+\AgdaBound{arr}\AgdaSymbol{)}\<%
+\\
+%
+\>[10]\AgdaBound{twiddleFactorsApplied}%
+\>[33]\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaFunction{zipWith}\AgdaSpace{}%
+\AgdaOperator{\AgdaField{\AgdaUnderscore{}*\AgdaUnderscore{}}}%
+\>[49]\AgdaBound{innerDFTapplied}\AgdaSpace{}%
+\AgdaFunction{twiddles}\<%
+\\
+%
+\>[10]\AgdaBound{outerDFTapplied}%
+\>[33]\AgdaSymbol{=}\AgdaSpace{}%
+\AgdaFunction{mapRows}\AgdaSpace{}%
+\AgdaFunction{FFT′}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{reshape}\AgdaSpace{}%
+\AgdaInductiveConstructor{swap}\AgdaSpace{}%
+\AgdaBound{twiddleFactorsApplied}\AgdaSymbol{)}\<%
+\\
+%
+\>[6]\AgdaKeyword{in}%
+\>[10]\AgdaFunction{reshape}\AgdaSpace{}%
+\AgdaInductiveConstructor{swap}\AgdaSpace{}%
+\AgdaBound{outerDFTapplied}\<%
+\end{code}
+\begin{code}[hide]%
+%
+\>[6]\AgdaKeyword{where}\<%
+\\
+\>[6][@{}l@{\AgdaIndent{0}}]%
+\>[8]\AgdaKeyword{postulate}\<%
+\\
+\>[8][@{}l@{\AgdaIndent{0}}]%
+\>[10]\AgdaKeyword{instance}\<%
+\\
+\>[10][@{}l@{\AgdaIndent{0}}]%
+\>[12]\AgdaPostulate{\AgdaUnderscore{}}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{NonZeroₛ}\AgdaSpace{}%
+\AgdaBound{r₁}\<%
+\\
+%
+\>[12]\AgdaPostulate{\AgdaUnderscore{}}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{NonZeroₛ}\AgdaSpace{}%
+\AgdaBound{r₂}\<%
+\\
+%
+\>[12]\AgdaPostulate{\AgdaUnderscore{}}\AgdaSpace{}%
+\AgdaSymbol{:}\AgdaSpace{}%
+\AgdaDatatype{NonZeroₛ}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaBound{r₂}\AgdaSpace{}%
+\AgdaOperator{\AgdaInductiveConstructor{⊗}}\AgdaSpace{}%
+\AgdaSymbol{(}\AgdaFunction{recursive-transpose}\AgdaSpace{}%
+\AgdaBound{r₁}\AgdaSymbol{))}\<%
+\end{code}
+\end{AgdaSuppressSpace}
+
+Because of its generallity, this expression of the FFT is very good. 
+As time was invested at the start of the project into a the creation of a language 
+on matrices and reshaping, every case of the Cooley Tukey algorithm can be 
+represented within the three lines shown above. 
+Given a proof of correctness, this generalitlty makes way for further experiments 
+into different radix sizes, and combination of radix sizes, to be easily undertaken.
+
+If this was instead written in \verb|C|, or a \verb|C| style language, this level
+of generality would be almost impossible.
+Any such general, \verb|C| style implementation would require many, low level,
+index manipulations.
+Without structures such as those defined for here for position, these index manipulations 
+become increasingly complex as the radix sizes, and levels of nesting, increase.
+This complexity makes it difficult to reason upon any such implementation meaning
+garuntees are more challenging to achive.
+
+
+
+% Spend some time explaining why expressing the FFT in the way we did is very good - Its a family of cooley tukey algorithms in 3 lines
+% - The reason we can do this because we have invsted in these arrays and combinators on them
+% - Doing this in C would be hell - we need to spoon feed this to the reader, this FFT definition is very cool!
+
+
+
