@@ -1,15 +1,33 @@
 \section{Background}
 \subsection{Fourier Transforms}
-Fourier Transforms are mathematical operations which transform functions from their time domain to their frequency domain.
-Fourier Transforms, and derivatives of, receive their name from the French mathematician and physicist Jean-Baptiste-Joseph Fourier who proposed in his $1822$\cite{Fourier1822} treatise that any given function can be represented as a harmonic series.\cite{Saribulut2013} 
+Described as ``perhaps the most ubiquitous algorithm in use today''\cite{Top10Algos},
+Fourier Transforms are mathematical operations which transform functions between 
+the time domain and the frequency domain.
+Fourier Transforms, and derivatives of, receive their name from the French 
+mathematician and physicist Jean-Baptiste-Joseph Fourier who proposed in his 
+$1822$\cite{Fourier1822} treatise that any given function can be represented as 
+a harmonic series.\cite{Saribulut2013} 
 % https://mathoverflow.net/questions/417034/who-introduced-the-discrete-fourier-transform
-While bearing Fourier's name, some early forms of the Discrete Fourier Transform (DFT), a Fourier Transform which works on evenly spaced samples of a function, can be found before Fourier's time.
-As discussed by Heideman and Johnson in "Gauss and the History of the Fast Fourier Transform"\cite{Heideman1985}, the earliest known example of this can be found in work published by Alexis-Claude Clairaut in $1754$\cite{Clairaut1754}.
-Clairaut defined a variation of the DFT which exclusively used what we now refer to as the cosine component, thus restricting the input domain to the set of even functions\footnote{The term ``even function'' refers to the set of functions $f(x)$ such that $f(-x)=f(x)$, that is to say, the set of functions which are symmetric over the y-axis.  \cite{Gelfand1990}\cite{Tolstov1962}}.\cite{Heideman1985}
-Carl Friedrich Gauss extended Clairaut's definition to make use of both cosine and sine components, removing the need for the input domain to be restricted to the set of even functions and allowing for the analysis of any periodic function.\cite{Gauss1866}\cite{Heideman1985}
-This definition was published posthumously in $1866$, however, it is believed that it was originally written in $1805$.\cite{Heideman1985} 
+While bearing Fourier's name, some early forms of the Discrete Fourier 
+Transform (DFT), a Fourier Transform which works on evenly spaced samples of a 
+function, can be found before Fourier's time.
+As discussed by Heideman and Johnson in ``Gauss and the History of the Fast 
+Fourier Transform''\cite{Heideman1985}, the earliest known example of this can 
+be found in work published by Alexis-Claude Clairaut in $1754$\cite{Clairaut1754}.
+Clairaut defined a variation of the DFT which exclusively used what we now refer 
+to as the cosine component, thus restricting the input domain to the set of 
+even functions\footnote{The term ``even function'' refers to the set of 
+functions $f(x)$ such that $f(-x)=f(x)$, that is to say, the set of functions 
+which are symmetric over the y-axis.  \cite{Gelfand1990}\cite{Tolstov1962}}.\cite{Heideman1985}
+Carl Friedrich Gauss extended Clairaut's definition to make use of both cosine 
+and sine components, removing the need for the input domain to be restricted 
+to the set of even functions and allowing for the analysis of any periodic 
+function.\cite{Gauss1866}\cite{Heideman1985}
+This definition was published posthumously in $1866$, however, it is believed 
+that it was originally written in $1805$.\cite{Heideman1985} 
 
-We can use the historical definitions discussed above to create our modern definition for the DFT as follows.
+We can use the historical definitions discussed above to create our modern 
+definition for the DFT as follows.
 Given an input sequence $x = 
         (x_0,x_1,\dots,x_{n-1})$,
             where $x_i\in\mathbb{C}
@@ -34,7 +52,9 @@ is given as follows.
 %    &= \cos{\left(\frac{2\pi}{N}\right)}-i\sin{\left(\frac{2\pi}{N}\right)}
 %\end{align}
 
-The DFT Eq. \ref{eq:DFT_Definition} has applications in a variety of fields, such as digital signal processing\cite{Bellanger2024}, however, when implemented naïvely, it has poor performance scaling, requiring  
+The DFT Eq. \ref{eq:DFT_Definition} has applications in a variety of fields, 
+such as digital signal processing\cite{Bellanger2024}.
+When implemented naïvely, however, it has poor performance scaling, requiring  
 ``$\mathcal{O}\left(n^2\right)$ complex operations'' \cite{VanLoan1992}.
 Methods to reduce the number of complex operations required when computing the DFT were first investigated by Gauss in his $1805$ treatise such that the ``tediousness of mechanical calculations''\cite{Gauss1866} could be reduced.\cite{Heideman1985}
 In part due to his lack of research into the complexity scaling factor of his method, Gauss's research into how computation complexity could be reduced was not widely recognised until $1977$ when H. H. Goldstine highlighted Gauss's research in an article for the Journal of Applied Mathematics and Mechanics.\cite{Heideman1985}\cite{Heinrich1980}
@@ -43,9 +63,16 @@ These algorithms, however, where only applicable to a subset of the domain\cite{
 
 In $1965$ James William Cooley and John Tukey succeeded in discovering an FFT algorithm through the inadvertent reinvention of Gauss's algorithm for fast computation of the DFT; This would henceforth be known as the Cooley-Tukey FFT Algorithm.\cite{Cooley1965}\cite{Heideman1985}
 This FFT Algorithm allows for a given DFT to be computed with $\mathcal{O}\left(n\log n\right)$ complex operations through recursive splitting of the input.\cite{Cooley1965}
-Although other FFT Algorithms were discovered before and after the Cooley-Tukey FFT, it is commonly considered to be "the most important FFT"\cite{Frigo2005}.
+Although other FFT Algorithms were discovered before and after the Cooley-Tukey FFT, it is commonly considered to be ``the most important FFT''\cite{Frigo2005}.
+This is because this improvement in time complexity allowed algorithms with 
+time complexity previously bounded by use of the DFT, to reduce this complexity 
+to, at the lowest, $\mathcal{O}\left(n^2\right)$.
+In the example of polynomial multiplication, this allowed for the computation
+to be moved into the frequency domain, reducing the time complexity from 
+$\Theta\left(n^2\right)$ to $\Theta\left(n\log n\right)$.\cite{IntroToAlgos}
 
-The Cooley-Tukey FFT can be derived from the DFT Eq. \ref{eq:DFT_Definition} by splitting any non-prime input $n$ into the composite $n=r_1r_2$. and expressing the indices $k$ and $j$ as follows.
+
+The Cooley-Tukey FFT can be derived from the DFT Eq. \ref{eq:DFT_Definition} by splitting any non-prime input $n$ into the composite $n=r_1r_2$ and expressing the indices $k$ and $j$ as follows.
 \begin{align}\label{eq:IndexManipulation}
     \begin{aligned}
         j&=j_1r_1+j_0 \\
@@ -95,26 +122,55 @@ When written in this form our recursive step, and thus the core idea of the Cool
 
 
 \subsection{Agda}
-Agda\footnote{Reference to ``Agda'' throughout this report will always refer to version 2 unless explicitly stated otherwise} is a functional programming language which implements Martin-Löf Type Theory.\cite{Norell2007}\cite{Martin-Lf1984}
-Martin-Löf type theory provides the definition of, and Agda allows for the construction of, dependent types, these allow Agda to act as a proof assistant meaning programs constructed with it can contain proofs asserting their correctness.
+Agda\footnote{Reference to ``Agda'' throughout this report will always refer to 
+version 2 unless explicitly stated otherwise} is a functional programming 
+language which implements Martin-Löf Type Theory.\cite{Norell2007}\cite{Martin-Lf1984}
+Martin-Löf type theory provides the definition of, and Agda allows for the 
+construction of, dependent types.\cite{Norell2007}
+These types allow for the definition of invariant properties which are checked
+at compile time.\cite{Norell2007}
+As well as making a variety of common errors, such as out-of-bound indexing,
+unreachable, invariance properties can be used to guarantee functional
+properties.\cite{Norell2007}
+When evidence that properties hold is non trivial, proofs that the properties
+hold must be provided.
+This allows for strong guarantees to be formed on any program defined in Agda.
 These proofs allow systems to be built which are provably correct allowing for a high confidence in their reliability.\cite{Norell2007}
 
-% Add some work here on other proof assistants
+Agda is not the only such proof assistant, and others exist with Agda's main 
+contender being Coq.
+Coq considers programs and proofs - or as it refers to them, tactics - 
+separately.
+This means that ``every concept has to be learned twice''\cite{PLFA}, for its 
+program component and tactic component. \cite{Barras1999}
+In Agda, however, proofs and programs are considered in the same light, removing
+the need for this additional syntax and simplifying the programs within it.
+
 \subsection{Related work}
 FFTW\cite{Frigo2005} is a \verb|C| code library which is generally accepted within academia and industry as the fastest method with which the FFT can be correctly computed.\cite{Frigo1999} 
-It achieves this title by implementing its own ``special-purpose compiler''\cite{Frigo1999}, \verb|genfft|, this compiler accepts the size of the transform as input and outputs a kernel - a \verb|C| code implementations of some known algorithm (i.e. the Cooley-Tukey FFT \cite{Cooley1965} Eq .\ref{eq:FFTDefinitionFromDFT}) optimised for that sized transform and the current hardware.\cite{Frigo1999} 
+It achieves this title by implementing its own ``special-purpose compiler''\cite{Frigo1999}, \verb|genfft|, this compiler accepts the size of the transform as input and outputs a kernel - a \verb|c| code implementations of some known algorithm (i.e. the Cooley-Tukey FFT \cite{Cooley1965} Eq .\ref{eq:FFTDefinitionFromDFT}) optimised for that sized transform and the current hardware.\cite{Frigo1999} 
 Although it is known through rigorous testing and real-world use that FFTW is correct, there is no formal verification of its correctness. %to provide a formal verification of the library would also be a very challenging undertaking requiring analysis of the low-level code which makes up the library.
 % An alternate approach to formally verifying its correctens
 
-As FFTW does not come with formal guarantees % Although this is true, I do not have the time to find a source, as such: https://www.youtube.com/watch?v=r7l0Rq9E8MY
+As FFTW does not come with such formal guarantees 
 separate definitions of various FFTs have been created before in proof assistance such as Coq\cite{Barras1999} and Hol\cite{Gordon1993} with various methods and goals. In the paper ``Certifying the Fast Fourier Transform with Coq''\cite{Capretta2001}, Capretta makes use of binary trees to create a definition of the Cooley-Tukey FFT\cite{Cooley1965} for the radix-2 case (when $r_1=2$).
 This definition is then proven to be extensionally equal to that of the DFT.
 This provides a good definition for the radix-2 case of the FFT, allowing for it to be built on to create future proofs should they require the FFT, however, it does not cover the generalisation on the radix restricting the proof to specific splitting strategies.
 % Theres probably allot more waffle I can put in here
-In another paper, ``A Methodology for the Formal Verification of FFT Algorithms in HOL'',\cite{Akbarpour2004} Akbarpour and Tahar create two definitions of the Cooley-Tukey FFT\cite{Cooley1965} in Hol for the radix-2 and radix-4 cases.
-With a primary focus on the radix-2 case Akbarpour and Tahar go on to show equivalence to the DFT across various levels of abstraction.\cite{Akbarpour2004}
-At one stage of this abstraction, Akbarpour and Tahar introduce floating and fixed point arithmetic, showing an analysis of the resultant errors.\cite{Akbarpour2004}
-Much like Capretta\cite{Capretta2001}, this paper also does not make use of a general radix, however, it does highlight how its methodology can be used to analyse general radix FFT implementations.
 
-% It achieves this title by implementing its own ``special-purpose compiler''\cite{Frigo1999ACompiler}, \verb|genfft|, this compiler accepts the size of the transform as input and outputs \verb|C| code optimised for that sized transform and the current hardware.\cite{Frigo1999ACompiler}
+In another paper, ``A Methodology for the Formal Verification of FFT Algorithms in 
+HOL'',\cite{Akbarpour2004} Akbarpour and Tahar create two definitions of the 
+Cooley-Tukey FFT\cite{Cooley1965} in Hol for the radix-2 and radix-4 cases.
+With a primary focus on the radix-2 case Akbarpour and Tahar go on to show 
+equivalence to the DFT across various levels of abstraction.\cite{Akbarpour2004}
+At one stage of this abstraction, Akbarpour and Tahar introduce floating and 
+fixed point arithmetic, showing an analysis of the resultant errors.\cite{Akbarpour2004}
 
+Much like Capretta\cite{Capretta2001}, this paper also does not make use of 
+a general radix, however, it does highlight how its methodology can be used to 
+analyse general radix FFT implementations.
+Currently, all previous work to formally verify the Cooley Tukey FFT has used 
+fixed radices, while most common implementations utilise mixed radices which 
+``are adapted to the hardware''\cite{Frigo2005}.
+This show a gap in the existing research, as no verification on these mixed
+radix cases is present.

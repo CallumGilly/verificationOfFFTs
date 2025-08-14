@@ -197,9 +197,10 @@ and Jackson},
    author = {Lütfü Saribulut and Ahmet Teke and Mehmet Tümay},
    doi = {10.5897/JEEER2013.0436},
    issue = {1},
+   journal = {Journal of Electrical and Electronics Engineering Research},
    keywords = {Fourier transform,Power quality disturbances,harmonics,literature review},
    pages = {9-22},
-   title = {Journal of Electrical and Electronics Engineering Research Fundamentals and literature review of Fourier transform in power quality issues},
+   title = {Fundamentals and literature review of Fourier transform in power quality issues},
    volume = {5},
    url = {http://www.academicjournals.org/JEEER},
    year = {2013}
@@ -217,4 +218,130 @@ and Jackson},
    title = {Computational Frameworks for the Fast Fourier Transform},
    volume = {10},
    year = {1992}
+}
+@article{Donnelle2005,
+   author = {D Donnelle and B Rust},
+   doi = {10.1109/MCSE.2005.42},
+   issn = {1558-366X},
+   issue = {2},
+   journal = {Computing in Science \& Engineering},
+   pages = {80-88},
+   title = {The fast Fourier transform for experimentalists. Part I. Concepts},
+   volume = {7},
+   year = {2005}
+}
+@inproceedings{PetersenHaskell,
+   abstract = {Papers on functional language implementations frequently set the goal of achieving performance "comparable to C", and sometimes report results comparing benchmark results to concrete C implementations of the same problem. A key pair of questions for such comparisons is: what C program to compare to, and what C compiler to compare with? In a 2012 paper, Satish et al [9] compare naive serial C implementations of a range of throughput-oriented benchmarks to best-optimized implementations parallelized on a six-core machine and demonstrate an average 23X (up to 53X) speedup. Even accounting for thread parallel speedup, these results demonstrate a substantial performance gap between naive and tuned C code. In this current paper, we choose a subset of the benchmarks studied by Satish et al to port to Haskell. We measure performance of these Haskell benchmarks compiled with the standard Glasgow Haskell Compiler and with our experimental Intel Labs Haskell Research Compiler and report results as compared to our best reconstructions of the algorithms used by Satish et al. Results are reported as measured both on an Intel Xeon E5-4650 32-core machine, and on an Intel Xeon Phi co-processor. We hope that this study provides valuable data on the concrete performance of Haskell relative to C.},
+   author = {Leaf Petersen and Todd A Anderson and Hai Liu and Neal Glew},
+   city = {New York, NY, USA},
+   doi = {10.1145/2620678.2620685},
+   isbn = {9781450329880},
+   booktitle = {Proceedings of the 25th Symposium on Implementation and Application of Functional Languages},
+   pages = {61-72},
+   publisher = {Association for Computing Machinery},
+   title = {Measuring the Haskell Gap},
+   url = {https://doi.org/10.1145/2620678.2620685},
+   year = {2013}
+}
+@article{ChoosingIsLosing,
+   author = {Artjoms Sinkarovs and Jesper Cockx},
+   journal = {CoRR},
+   title = {Choosing is Losing: How to combine the benefits of shallow and deep
+embeddings through reflection},
+   volume = {abs/2105.10819},
+   url = {https://arxiv.org/abs/2105.10819},
+   year = {2021}
+}
+@article{ScholzSaC,
+   author = {Scen-Bodo Scholz},
+   doi = {10.1017/S0956796802004458},
+   issue = {6},
+   journal = {Journal of Functional Programming},
+   pages = {1005-1059},
+   title = {Single Assignment C: efficient support for high-level array operations in a functional setting},
+   volume = {13},
+   year = {2003}
+}
+@inproceedings{BlockedSinkarovs,
+   author = {Artjoms Šinkarovs and Thomas Koopman and Sven-Bodo Scholz},
+   booktitle = {Proceedings of the 11th ACM SIGPLAN International Workshop on Functional High-Performance and Numerical Computing},
+   pages = {1-14},
+   title = {Rank-Polymorphism for Shape-Guided Blocking},
+   year = {2023}
+}
+@inproceedings{FFT4Profit,
+   author = {W Morven Gentleman and Gordon Sande},
+   booktitle = {Proceedings of the November 7-10, 1966, fall joint computer conference},
+   pages = {563-578},
+   title = {Fast fourier transforms: for fun and profit},
+   year = {1966}
+}
+@book{TheDFT,
+   author = {D Sundararajan},
+   city = {Singapore},
+   isbn = {9789812810298; 9812810293; 9810245211; 9789810245214; 1281951803; 9781281951809},
+   publisher = {World Scientific},
+   title = {The Discrete Fourier Transform: Theory, Algorithms and Applications},
+   url = {http://site.ebrary.com/id/10255910},
+   year = {2001}
+}
+@techReport{IEEE754,
+   doi = {10.1109/IEEESTD.2008.4610935},
+   journal = {IEEE Std 754-2008},
+   keywords = {IEEE standards;floating point arithmetic;programming;IEEE standard;arithmetic formats;computer programming;decimal floating-point arithmetic;754-2008;NaN;arithmetic;binary;computer;decimal;exponent;floating-point;format;interchange;number;rounding;significand;subnormal},
+   month = {8},
+   pages = {1-70},
+   title = {IEEE Standard for Floating-Point Arithmetic},
+   year = {2008}
+}
+@book{CommRingTheory,
+   author = {Hideyuki Matsumura},
+   isbn = {0521367646},
+   issue = {8},
+   publisher = {Cambridge university press},
+   title = {Commutative ring theory},
+   year = {1989}
+}
+@article{InstanceArgs,
+   abstract = {We present instance arguments: an alternative to type classes and related features in the dependently typed, purely functional programming language/proof assistant Agda. They are a new, general type of function arguments, resolved from call-site scope in a type-directed way. The mechanism is inspired by both Scala's implicits and Agda's existing implicit arguments, but differs from both in important ways. Our mechanism is designed and implemented for Agda, but our design choices can be applied to other programming languages as well.Like Scala's implicits, we do not provide a separate structure for type classes and their instances, but instead rely on Agda's standard dependently typed records, so that standard language mechanisms provide features that are missing or expensive in other proposals. Like Scala, we support the equivalent of local instances. Unlike Scala, functions taking our new arguments are first-class citizens and can be abstracted over and manipulated in standard ways. Compared to other proposals, we avoid the pitfall of introducing a separate type-level computational model through the instance search mechanism. All values in scope are automatically candidates for instance resolution. A final novelty of our approach is that existing Agda libraries using records gain the benefits of type classes without any modification.We discuss our implementation in Agda (to be part of Agda 2.2.12) and we use monads as an example to show how it allows existing concepts in the Agda standard library to be used in a similar way as corresponding Haskell code using type classes. We also demonstrate and discuss equivalents and alternatives to some advanced type class-related patterns from the literature and some new patterns specific to our system.},
+   author = {Dominique Devriese and Frank Piessens},
+   city = {New York, NY, USA},
+   doi = {10.1145/2034574.2034796},
+   issn = {0362-1340},
+   issue = {9},
+   journal = {SIGPLAN Not.},
+   keywords = {ad hoc polymorphism,agda,instance arguments,type classes},
+   month = {9},
+   pages = {143-155},
+   publisher = {Association for Computing Machinery},
+   title = {On the bright side of type classes: instance arguments in Agda},
+   volume = {46},
+   url = {https://doi.org/10.1145/2034574.2034796},
+   year = {2011}
+}
+@article{Top10Algos,
+   author = {J Dongarra and F Sullivan},
+   doi = {10.1109/MCISE.2000.814652},
+   issn = {1558-366X},
+   issue = {1},
+   journal = {Computing in Science \& Engineering},
+   pages = {22-23},
+   title = {Guest Editors Introduction to the top 10 algorithms},
+   volume = {2},
+   year = {2000}
+}
+@inproceedings{PLFA,
+   author = {Philip Wadler},
+   booktitle = {Brazilian Symposium on Formal Methods},
+   pages = {56-73},
+   publisher = {Springer},
+   title = {Programming language foundations in agda},
+   year = {2018}
+}
+@book{IntroToAlgos,
+   author = {Thomas H Cormen and Charles E Leiserson and Ronald L Rivest and Clifford Stein},
+   isbn = {0262367505},
+   publisher = {MIT press},
+   title = {Introduction to algorithms},
+   year = {2022}
 }

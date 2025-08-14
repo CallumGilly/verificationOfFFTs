@@ -9,6 +9,7 @@
 \usepackage{pdflscape}
 \usepackage{todonotes}
 % Required to set the margin sizes to avoid \vspace{-9em}
+\usepackage{siunitx}
 \usepackage{geometry}
 \geometry{
     a4paper,
@@ -93,8 +94,6 @@
 
 \newunicodechar{ʹ}{\ensuremath{\prime}}
 \newunicodechar{≢}{\ensuremath{\not\equiv}}
-\newunicodechar{⦃}{\textlbrackdbl}
-\newunicodechar{⦄}{\textrbrackdbl}
 \newunicodechar{ω}{\ensuremath{\omega}}
 \newunicodechar{ₙ}{\ensuremath{_n}}
 \newunicodechar{₀}{\ensuremath{_0}}
@@ -105,6 +104,9 @@
 \newunicodechar{≅}{\ensuremath{\cong}}
 \newunicodechar{ᵗ}{\ensuremath{^t}}
 \newunicodechar{⊡}{\ensuremath{\boxdot}}
+\newunicodechar{∔}{\ensuremath{^+}}
+\newunicodechar{ℝ}{\ensuremath{\mathbb{R}}}
+\newunicodechar{⊤}{\ensuremath{\top}}
 % Some shortcut commands for agda symbols
 \newcommand{\AD}[1]{\AgdaDatatype{#1}}
 \newcommand{\AC}[1]{\AgdaInductiveConstructor{#1}}
@@ -159,8 +161,13 @@
     \vspace*{60mm}
     
     % \large Project Brief
-    \large \textbf{Supervisor:} Artjoms Šinkarovs (\verb|a.sinkarovs@soton.ac.uk|)
-    \large \textbf{Second Examiner:} Vahid Yazdanpanah (\verb|v.yazdanpanah@soton.ac.uk|)
+    \large \textbf{Supervisor:} Artjoms Šinkarovs 
+
+    (\verb|a.sinkarovs@soton.ac.uk|)
+
+    \large \textbf{Second Examiner:} Vahid Yazdanpanah 
+
+    (\verb|v.yazdanpanah@soton.ac.uk|)
 
     \vspace*{10mm}
     \normalsize A Project Report submitted for the award of \\
@@ -172,15 +179,26 @@
 \clearpage
 \addcontentsline{toc}{section}{Abstract}
 \section*{Abstract}
-Discrete Fourier Transforms (DFTs) are key operations within Digital Signal Processing and other fields, Fast Fourier Transforms (FFTs) allow for the time complexity of computing the DFT to be significantly reduced. 
-Implementations of the FFT often comprise large, low-level libraries written with efficiency in mind, making verification of their correctness challenging.
-Agda is a dependently typed functional language which implements Martin-Löf type theory allowing proofs to be embedded within code.
-As a result of including these proofs, programs written in Agda can contain formal guarantees of their correctness, for the FFT this requires proving that the DFT is equal to the FFT for all cases.
+Discrete Fourier Transforms (DFTs) are key operations within Digital Signal 
+Processing and other fields, Fast Fourier Transforms (FFTs) allow for the time 
+complexity of computing the DFT to be significantly reduced. 
+Traditionally, implementations of the FFT are formed in low level 
+languages, with large amounts of index manipulation. 
+This is error prone and challenging to reason upon, especially for generalized 
+implementations
+
+Agda is a dependently typed functional language implementing Martin-Löf type 
+theory allowing proofs to be embedded within code.
+Including these proofs allows programs in Agda to contain
+formal guarantees of their correctness.
+For the FFT this requires embedding proofs that the DFT is equal to the FFT for 
+all cases.
+
+In this project, I have created a generalised Agda definition of the DFT and FFT
+and have provided proof that these are equal.
 
 
-In this project, I have thus far created an Agda definition of the DFT and FFT.
-I now plan to implement proof that the two definitions are equal for all possible inputs.
-Given such a proof I will then use the FFT definition to generate a low-level library of my own which can perform Fourier Transforms with strict guarantees on its correctness.
+
 
 \clearpage
 %TC:endignore
@@ -212,7 +230,9 @@ Given such a proof I will then use the FFT definition to generate a low-level li
 \include{Thesis/Background}
 \include{Thesis/Model}
 \include{Thesis/ProofWriteup}
-\section{Review of Implementation}
+\include{Thesis/Implementation}
+\include{Thesis/ProjectPlanning}
+\include{Thesis/Conclusion}
 \clearpage
 \bibliographystyle{IEEEtran}
 \bibliography{Thesis/References}

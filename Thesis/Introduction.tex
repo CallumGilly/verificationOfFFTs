@@ -1,18 +1,44 @@
 \section{Introduction}
 
-The Discrete Fourier Transform (DFT) is a staple operation within Computer Science, Physics, and other fields with many applications.
-Fast Fourier Transforms are implementations of the DFT with improved performance characteristics.
-Most current implementations, such as WFFT\cite{Frigo2005}, take the form of large libraries written in low-level languages. 
-A key component of these libraries is the use of multiple implementations of the same algorithm, with each implementation (or kernel) containing optimisations suited towards specific input sizes and hardware profiles. 
-When the user wants to compute the result of a Fourier Transform, the library chooses the optimal kernel based on the input size and the user's hardware.
+The Discrete Fourier Transform (DFT) is a staple operation within Computer 
+Science, Physics, and other fields with many applications.
+Fast Fourier Transforms are implementations of the DFT with improved 
+performance characteristics.
+One such use of the FFT is polynomial multiplication, the time 
+complexity of which can be reduced from $\mathcal{O}\left(n^2\right)$ to
+$\mathcal{O}\left(n\log n\right)$.
 
-The large number of kernels makes it very challenging to verify that a given FFT library provides the same result as the naïve DFT.
-This is because to do so would involve analysing the low-level implementation of each kernel, individually, and proving that it gives the same result as the naïve DFT for all possible inputs.
-An alternate approach is as follows. % This sentence doesn't add much, but I'm not sure that it flows too well without it
-Instead of analysing existing code to confirm its correctness, we can create a single specification of the FFT such that it can be instantiated to any kernel, giving us a usable kernel and formal proof that said kernel computes the expected values.
+Most current implementations, such as WFFT\cite{Frigo2005}, take the form of 
+large libraries written in low-level languages. 
+A key component of these libraries is the use of multiple implementations of 
+the same algorithm, with each implementation (or kernel) containing 
+optimisations suited towards specific input sizes and hardware profiles. 
+When the user wants to compute the result of a Fourier Transform, the library 
+chooses the optimal kernel based on the input size and the user's hardware.
 
-Agda is a dependently typed functional language which allows for formal properties of programs written in it to be proven.\cite{Norell2007} 
-This paper discusses the use of Agda to create a general case implementation of the FFT which can be proven to always compute the same value as the naïve DFT.
-This general case definition can then be used to generate the kernels for any size in a low-level, efficient language.
-This allows the proof of correctness to be propagated down to any kernels generated from it allowing for a library of formally correct kernels to be generated with associated guarantees of its correctness.
+The large number of kernels makes it very challenging to verify that a given 
+FFT library provides the same result as the naïve DFT.
+This is because to do so would involve analysing the low-level implementation 
+of each kernel, individually, and proving that it gives the same result as the 
+naïve DFT for all possible inputs.
+An alternate approach is as follows. % This sentence doesn't add much, 
+                                     % but I'm not sure that it flows too well 
+                                     % without it
+Instead of analysing existing code to confirm its correctness, we can create a 
+single specification of the FFT such that it can be instantiated to any kernel, 
+giving us a usable kernel and formal proof that said kernel computes the 
+expected values.
 
+Agda is a dependently typed functional language which allows for formal 
+properties of programs written in it to be proven.\cite{Norell2007} 
+This paper discusses the use of Agda to create a general case implementation 
+of the FFT which is then proven to always compute the same value as the naïve 
+DFT.
+
+Such an implementation would allow for future research in Agda to make use of
+the FFT in definitions, before substituting it with the DFT when it comes to
+generating proofs.
+This would be useful for research into algorithms which utilise the FFT, such as
+efficient polynomial multiplication.
+Such an implementation would also allow for future generation of low-level, 
+efficient kernels, with a formally verified basis.

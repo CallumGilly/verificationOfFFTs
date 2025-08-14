@@ -48,8 +48,8 @@ nest a i j = a (i ⊗ j)
 unnest : Ar s (Ar p X) → Ar (s ⊗ p) X
 unnest a (i ⊗ j) = a i j
 
-mapRows : ∀ {s p t : Shape} → (Ar p X → Ar t Y) → Ar (s ⊗ p) X → Ar (s ⊗ t) Y
-mapRows f ar = unnest (map f (nest ar))
+mapLeft : ∀ {s p t : Shape} → (Ar p X → Ar t Y) → Ar (s ⊗ p) X → Ar (s ⊗ t) Y
+mapLeft f ar = unnest (map f (nest ar))
 
 head₁ : Ar (ι (suc n)) X → X
 head₁ ar = ar (ι fzero)

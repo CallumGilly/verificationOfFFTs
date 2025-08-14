@@ -1,0 +1,33 @@
+\section{Conclusion}
+This paper provides a formally verified implementation of the Cooley Tukey Fast 
+Fourier Transform.
+This implementation is built inductively, first defining representations of
+tensors and complex numbers.
+A trivial implementation of the Discrete Fourier Transform is then provided.
+This is then used to define an implementation of the Fast Fourier Transform.
+
+Unlike most verifiable implementations of the FFT, this implementations of the
+FFT is radix generic and is defined on an abstract definition of Complex.
+Defining the FFT generically allows for any non prime input
+to be split optimally, and for the structure of any future parallelism to be 
+defined at run time.
+
+Given this general implementation of the FFT, I have then provided a proof that
+it is equal to the DFT for all possible inputs.
+With a basic implementation of the complex numbers, and a basic compiler,
+this allowed for the generation of a runnable, verified, instance of the FFT.
+
+In future research I wish to investigate the generation of optimised code, 
+through translation into an intermediate language such as SaC.
+The speed and floating point accuracy of such code would ideally be 
+comparable to, or an improvement upon, the speed and accuracy of most similar
+kernels in FFTW.
+Should such comparison show significant improvement over the results of FFTW,
+investigation into the generation of a kernel for FFTW would be possible.
+
+Additionally, within the Agda community, this work allows future research 
+projects to make use of the FFT interchangeably with the DFT.
+This allows for future research into the verification of many signal processing 
+algorithms, such as fast convolution or correlation, or for more general 
+methods such as fast polynomial multiplication.
+

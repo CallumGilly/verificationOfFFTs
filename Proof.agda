@@ -35,7 +35,7 @@ open import Data.Product.Base using (∃; ∃₂; _×_; proj₁; proj₂; map₁
 open import Data.Sum.Base using (inj₁; inj₂; _⊎_)
 open import Data.Unit using (⊤; tt)
 
-open import Matrix using (Ar; Shape; _⊗_; ι; Position; mapRows; zipWith; nest; map; unnest; head₁; tail₁; zip; iterate; ι-cons; nil; length; splitAr; splitArₗ; splitArᵣ)
+open import Matrix using (Ar; Shape; _⊗_; ι; Position; mapLeft; zipWith; nest; map; unnest; head₁; tail₁; zip; iterate; ι-cons; nil; length; splitAr; splitArₗ; splitArᵣ)
 open import Matrix.Equality using (_≅_; reduce-≅; tail₁-cong)
 open import Matrix.Properties using (splitArᵣ-zero; tail₁-const; zipWith-congˡ)
 open import Matrix.NonZero using (NonZeroₛ; ι; _⊗_; nonZeroₛ-s⇒nonZero-s; nonZeroDec; nonZeroₛ-s⇒nonZeroₛ-sᵗ; nonZeroₛ-s⇒nonZero-sᵗ; ¬nonZeroₛ-s⇒¬nonZero-sᵗ; ¬nonZero-N⇒PosN-irrelevant; ¬nonZero-sᵗ⇒¬nonZero-s)

@@ -1,3 +1,4 @@
+%TC:ignore
 \begin{code}[hide]
 
 module Model where -- This allows me to use arbitrary module names from here 
@@ -21,6 +22,7 @@ open import Function.Base using (_$_; _∘_)
 
 open import Data.Product.Base using (_×_; proj₁; proj₂) renaming (_,_ to ⟨_,_⟩)
 \end{code}
+%TC:endignore
 % From Equation \ref{eq:DFT_Definition} we have a definition of the DFT which we 
 % know to be correct, but this is not yet in a useable form. 
 % In order to prove against this definition we must define our DFT in Agda given 
@@ -50,37 +52,27 @@ structure in which these numbers can be represented.
 The Agda Standard library does not provide definitions for Complex numbers, it
 is therefore necessary for us to design and decide upon an encoding.
 
-One method defining this encoding would be to directly use the \verb|Builtin| 
-definition of floating point numbers, and create strict definitions for each 
-of the basic operations. 
-This method would, however, be non ideal.
-Unlike the definitions for other number systems in Agda, 
-\verb|Agda.Builtin.Float| exists only as an interface around IEEE754  \todo[color=green]{Cite the IEEE754 definition}
-floating point numbers and does not have a corresponding Agda definition. \todo[color=green]{cite https://agda.readthedocs.io/en/latest/language/built-ins.html}
-As this is not built up directly in Agda properties on these floating point
-numbers cannot be formed without assumptions.
-This would make any proof built upon them weaker.
-% Maybe talk about IEEE not being commutative and all that...
-%Directly defining Complex numbers on builtin floating point numbers would also 
-%restrict any all proofs to work only on this definition.
+It is well known \cite{TheDFT}
+that the DFT and FFT can be implemented on an arbitrary field-\textit{like}
+\footnote{This structure is only field-\textit{like} because it does not require multiplicative inverses}
+structure with roots of unity.
+Agda allows this this idea to be captured precisely though the creation of a
+structure, \AF{Cplx}, which axiomatizes this field and its properties which the FFT
+and correctness proof rely on.
+This is similar to Java interfaces, defining the carrier and operations, but also
+allows for the properties (such as the associativity of addition) of this field to 
+be defined.
 
-Instead, a record defining the operations and properties required of any Complex 
-number can be created.
-This is equivalent to the definition of an interface in Java, and keeps 
-definitions and proofs on the Fourier Transforms separate to the definition of 
-\textit{number} chosen. 
-
-% To encode Complex numbers, I have instead created a record which defines what
-% operations are required of these Complex numbers, and what properties must hold
-% on these operations.
-% This means that my Fourier Transform definitions and proofs can be lifted to any
-% any definition of numbers, given that it holds all required properties.
-
-As well as defining addition, multiplication, and other operations, any 
-implementation of complex numbers requires some specific properties be present.
-Below is a minimal example of this defintion of Complex.
-
-\begin{AgdaAlign}
+This isolation means allows the definition of the DFT, FFT and proofs to be instantiated
+for any implementation of \AF{Cplx}.
+This generality allows the use of any modular field of 
+sufficient size which holds the required properties, allowing operations such as 
+fast multiplication to be performed upon these fields.
+As Agda provides a builtin wrapper around IEEE754 floats\cite{IEEE754}
+the examples shown in this paper, use a simple implementation of \AF{Cplx} built 
+from pair of floating point numbers.
+\begin{AgdaMultiCode}
+%TC:ignore
 \begin{code}[hide]
 module ComplexMini (real : Real) where
   open Real.Real real using (ℝ; 0ℝ; 1ℝ; -1ℝ)
@@ -98,20 +90,23 @@ module ComplexMini (real : Real) where
         nonZero-x : NonZero x
 
 \end{code}
+%TC:endignore
 \begin{code}
   record Cplx : Set₁ where
 \end{code}
+%TC:ignore
 \begin{code}[hide]
     infix  8 -_
     infixl 7 _*_
     infixl 6 _+_ _-_
 \end{code}
-\todo[color=green]{Consider describing that ℂ is the carrier set}
+%TC:endignore
 \begin{code}
     field
       ℂ : Set
       _+_ : ℂ → ℂ → ℂ
 \end{code}
+%TC:ignore
 \begin{code}[hide]
       _*_ : ℂ → ℂ → ℂ
       _-_ : ℂ → ℂ → ℂ
@@ -138,34 +133,32 @@ module ComplexMini (real : Real) where
     
     field
 \end{code}
-Addition, multiplication and negation must be proven to form a commutative ring. 
-\todo[color=green]{ I should describe a) what a commutative ring is b) why we give a shit as well as citing what a commutative ring is }
+%TC:endignore
+Addition, multiplication and negation must be proven to form a commutative ring,
+meaning that a set of properties, such as multiplication distributes over addition
+must hold. \cite{CommRingTheory}
 \begin{code}
       +-*-isCommutativeRing : IsCommutativeRing _+_ _*_ -_ 0ℂ 1ℂ
 \end{code}
 \paragraph{Roots of unity}\label{para:roots_of_unity} as described for Complex numbers in Equation 
 \ref{eq:ComplexRootsOfUnity}, must be defined for some non-zero divisor $N$ 
 and some power $K$, along with some properties on them.
-The this \AF{nonZero} property is an instance argument, allowing an instance resolution algorithm\todo[color=green]{CITE}
+To ensure that the divisor $N$ is never zero, a \AF{NonZero} proof argument is 
+required on $N$, guaranteeing division by zero to be impossible.
+This \AF{NonZero} property is an instance argument, allowing an instance 
+resolution algorithm\cite{InstanceArgs}
 to perform automatic resolution on it, simplifying further proofs.
 \begin{code}
-      -ω : (N : ℕ) → .⦃ nonZero-n : NonZero N ⦄ → (k : ℕ) → ℂ
+      -ω : (N : ℕ) → .{{ nonZero-n : NonZero N }} → (k : ℕ) → ℂ
       ω-N-0      : -ω N 0                  ≡ 1ℂ
       ω-N-mN     : -ω N (N *ₙ m)           ≡ 1ℂ
       ω-r₁x-r₁y  : -ω (r₁ *ₙ x) (r₁ *ₙ y)  ≡ -ω x y
       ω-N-k₀+k₁  : -ω N (k₀ +ₙ k₁)         ≡ (-ω N k₀) * (-ω N k₁)
 \end{code}
-\end{AgdaAlign}
+\end{AgdaMultiCode}
 
-As well as avoiding the difficulties which would comes from floating point arithmetic,
-isolating the definition of the Complex numbers allows for any proof made upon them
-to be lifted onto any finite field with complex roots of unity which holds the
-required properties.\todo[color=green]{this could do with better explanation}
-In turn this means that any implementations of the FFT using
-this definition can be utilised upon such a field allowing, for example, for fast
-multiplication to be performed on this field.
 
-\subsection{Matricies}
+\subsection{Tensors}
 In Equations \ref{eq:DFT_Definition} and \ref{eq:FFTDefinitionFromDFT}, the DFT 
 and FFT are both defined for any input vector $x$ of length $N$ and length 
 $r_1\times r_2$ respectively. 
@@ -173,21 +166,28 @@ This implies that it would be possible to represent the input structure for both
 the DFT and the FFT in vector form, possibly using the Agda standard libraries functional
 vector definition, \verb|Data.Vec.Functionals|.
 
-Although this structure is ideal for the DFT, the FFTs reliance on index splitting,
-as described in Equation \ref{eq:IndexManipulation}, would mean any such definition 
-would require a large amount of low level index manipulation.
-This would make an kind of reasoning on the FFT, as well as any generalisation 
-where the FFT is called iteratively difficult as both would be
+Although this structure is ideal for the DFT, the FFTs relies on index splitting,
+as described in Equation \ref{eq:IndexManipulation}, to decompose the input vector
+into $r₁$ parts.
+For vectors this would require low level index manipulation, for a single layer 
+of splitting, this is not unreasonable, but can still complicate any definitions.
+For multiple layers however, where the input is split into $n$ factors, this quickly
+becomes complex as the multipliers and split position for each factor must be carried
+through.
+This would make an kind of reasoning on the FFT, as well as generalisation,
+where the FFT is called iteratively, difficult as both would be
 pulled down to require the same low level of index manipulation.
 
 The need for this low level manipulation can be removed, by creating some
-definition for shaped, multi-dimensional matrices, and allowing the FFT to 
-accept these shaped matrices as inputs.
+definition for shaped tensors, and allowing the FFT to 
+accept these tensors as inputs.
+These shaped tensors can also be considered as Multi-dimensional arrays.
 As well as removing the need these low level manipulations, using this definition 
 will also abstract the splitting of the input vector out of the FFT making any    % This may be better discussed in the FFT section...
 definition radix independent.
 
 \begin{AgdaAlign}
+%TC:ignore
 \begin{code}[hide]
 module Matrix where
   open import Data.Nat using (ℕ; suc; zero; NonZero; _+_; _*_)
@@ -200,32 +200,52 @@ module Matrix where
       n m : ℕ
       X Y Z : Set
 \end{code}
-Matrix shapes take the form of tensor products, meaning any shape is either a 
-leaf, or a product of two shapes.
-Each leaf, \AR{ι n}, is constructed from a natural number, one leaf 
+%TC:endignore
+The shape of any given tensor can be described as a full binary tree of natural 
+numbers.
+Each leaf, \AR{ι n}, is one such natural number, one leaf 
 can be considered to add one dimension to the overall shape. 
-% A matrix of shape \AC(ι n) would therefore be dual to a vector of length $n$.
-Each product is then constructed on two shapes and takes the form \AR{s ⊗ p}.
-This allows shapes to form binary trees which are able to describe the structure of any
-multidimensional matrix.
+Each parent note, \AR{s ⊗ p}, joins two subtrees.
+A given shape tree encodes the split of $N$ into $m$ many multipliers.
 
 \begin{code}
   data Shape : Set where
     ι   : ℕ → Shape
     _⊗_ : Shape → Shape → Shape
 \end{code}
+
+Defining shapes as trees in place of lists allows for more information to be 
+encoded about the structure of the shape. 
+This data loss can be identified by converting the below tensor shapes into their
+list forms, both of which are \AF{s :: p :: r :: q :: []}.
+For the FFT, this additional information should allow for the structure of parallelism 
+to be defined by the shape of the input tensor for a parallelised implementation.
+
+%TC:ignore
 \begin{code}[hide]
   private
     variable
       s p : Shape
+  tmp : Shape → Shape → Shape → Shape → Shape 
+  tmp s p r q = let
 \end{code}
+%TC:endignore
+\begin{code}
+    s₁ = (  s  ⊗  p) ⊗ (r ⊗ q)
+    s₂ =    s  ⊗ (p  ⊗ (r ⊗ q))
+\end{code}
+%TC:ignore
+\begin{code}[hide]
+    in ι 4
+\end{code}
+%TC:endignore
 
-Matrices can then be inductively defined as a dependant type on Shapes.
+Tensors can then be inductively defined as a dependant type on Shapes.
 This definition takes the same form as that of shapes and defines the position 
 of a non-leaf nodes as being constructed by the positions of its two children 
-position nodes, while leaf nodes are bound by the length of that leaf.
+nodes, while leaf nodes are bound by the length of that leaf.
 This binding on the length of the leaf, allows the type checker to require
-evidence that the length is not greater than the length, removing the possibility
+evidence that a positions index is not greater than the length, removing the possibility
 for runtime out of bounds errors.
 
 
@@ -235,29 +255,57 @@ for runtime out of bounds errors.
     _⊗_ : Position s → Position p → Position (s ⊗ p)
 \end{code}
 
-\AF{Position} can then be used to define the matrix data encoding, such that
-matrices form indexed types \todo[color=green]{cite agda.readthedocs.io data-types.html indexed-datatypes }
+\AF{Position} can then be used to define the tensor data encoding, such that
+tensors form indexed types
 accepting a position and returning the value at that position.
 
 \begin{code}
   Ar : Shape → Set → Set
   Ar s X = Position s → X
 \end{code}
-This means any given matrix of \AF{Shape} \AR{s} and type \AR{X} accept a
+This means any given tensor of \AF{Shape} \AR{s} and type \AR{X} accepts a
 \AF{Position} of shape \AR{s} and returns a value of type \AR{X}.
-\todo[color=green]{TODO: Talk about how this is related to AS's definition in the blocked multiplication paper}
+This is a similar definition to that used in \cite{BlockedSinkarovs}, and
+provides a basis on which tensors can be discussed
 \end{AgdaAlign}
+\subsubsection{Tensor length}
+The most simple property which can be extracted from a tensor shape is its length.
+This can be easily extracted with a recursive function on the shape.
+The shorthand \AF{\#} is often used to indicate the use of length.
+\begin{code}
+  length : Shape → ℕ
+  length (ι x) = x
+  length (s ⊗ s₁) = length s * length s₁
+
+
+  # : Shape → ℕ
+  # = length
+\end{code}
+
+This property is requrired for the DFT and FFT to determine the base of the
+roots of unity.
+This base, however, requires a non zero proof argument to be provided.\ref{para:roots_of_unity}.
+This can be easily achived by restricting the DFT and FFT to operate only on
+tensors where no leaf is zero.
+This means that any implementation of the DFT and FFT must be provided, or generate,
+a proof argument that no leaf is of zero length.
+For the simplicity of this paper we use the notation $Ar∔$ % Judge me how you will for using this symbol here and then changing what it really is in newunicodechar... its cursed, its horrible... but it works
+to indicate that a tensor is provided such a proof argument.
+This is done more explicitly in the final implementation, however, this 
+adds additional arguments which obfuscate the key points.
+
 
 \subsubsection{Methods on one dimension}
-Given the definition of matrices, some basic operations upon them can be described.
-The first of these definitions can be restricted to operate only upon the one
-dimensional case
+Given the definition of tensors, some basic operations upon them can be described.
+The first of these definitions can be restricted to operate only upon the single
+dimensional case.
+Tensors with only one dimension can also be referred to for succinctness as vectors.
 
-\paragraph{Head and Tail} allow for the deconstruction of any matrix of shape 
+\paragraph{Head and Tail} allow for the deconstruction of any tensor of shape 
 \AF{ι (suc n)}. 
-\AF{head₁} returns the first element of the matrix, while
-\AF{tail₁} returns all following elements in a matrix of shape \AF{ι n}.
-These operations allow recursion over single dimensional matrices to be defined.
+\AF{head₁} returns the first element of the tensor, while
+\AF{tail₁} returns all following elements in a tensor of shape \AF{ι n}.
+These operations allow for recursion over vectors to be defined.
 
 \begin{code}
   head₁ : Ar (ι (suc n)) X → X
@@ -269,29 +317,33 @@ These operations allow recursion over single dimensional matrices to be defined.
 
 % This wouldn't be good for a paper, but I feel like its useful to observe when
 % describing for the thesis
-One feature of Agda which I make use of regularly is seen here, pattern
-matching.
-This is a feature taken from Haskell \todo[color=green]{CITE this claim}
-which allows us to break down some types of input fields to the 
+One feature of Agda used regularly is seen here, pattern matching.
+This is a feature taken from Haskell \cite{Norell2007}
+which allows for the breaking down of some types of input fields to the 
 types they are built on. 
 In the above example \AR{ι x} is of type \AD{Position (suc n)}, 
 which is deconstructed to expose \AR{x} of type \AD{Fin (suc n)}.
 
-\paragraph{Sum} can then be defined over the one dimensional case.
-%, making use of \AF{head₁} and \AF{tail₁}.
-One interesting observation of the implementation of \AF{sum} here, is that it is
-defined for any carrier set $X$, and commutative monoid \AF{\_⋆\_}. 
-\todo[color=green]{Add citation for what a monoid is, and a description}
-Although in this case \AF{sum} is only used on the addition of Complex 
-numbers, the same definition could, for example, be used to produce an
-implementation of $\Pi$ over the Natural numbers. 
-As \AF{sum} is defined in this general manor, ε is used to represent the identity 
-element, for our summation ($\Sigma$), this is bound to 0 while \AF{\_⋆\_} is bound 
-to \AF{\_+\_}.\footnote{The definition of sum described here differs slightly from that used in the final proof which contains some minor optimisations to ease proofs}
-
-\begin{code}[hide]
+\paragraph{Sum} can then be defined over vectors using \AF{head₁} 
+and \AF{tail₁}.
+This definition is created generally, meaning it can be instantiated for any
+commutative monoid \AF{(X, \_⋆\_, ε)} where 
+\begin{itemize}
+  \item \AF{X} is a set
+  \item \AF{\_⋆\_} is some operation \AF{X → X → X}, such that 
+  \begin{itemize}
+      \item \AF{x ⋆ y ≡ y ⋆ x}
+      \item \AF{(x ⋆ y) ⋆ z ≡ x ⋆ (y ⋆ z)}
+  \end{itemize}
+  \item \AF{ε} is an identity element in \AF{X} such that \AF{ε ⋆ x ≡ x}
+\end{itemize}
+With the above definition, sum can be defined as below.
+\begin{AgdaMultiCode}
+\begin{code}
 module Sum {A : Set} (_⋆_ : Op₂ A) (ε : A) (isCommutativeMonoid : IsCommutativeMonoid {A = A} _≡_ _⋆_ ε) where
-
+\end{code}
+%TC:ignore
+\begin{code}[hide]
   open import Data.Product.Base using (proj₁; proj₂)
 
   open import Data.Nat.Base using (ℕ; zero; suc; _+_; _*_)
@@ -329,12 +381,23 @@ module Sum {A : Set} (_⋆_ : Op₂ A) (ε : A) (isCommutativeMonoid : IsCommuta
   ----------------------
 
 \end{code}
+%TC:endignore
 \begin{code}
   sum : (xs : Ar (ι n) A) → A
   sum {zero}   xs = ε
   sum {suc n}  xs = (head₁ xs) ⋆ (sum ∘ tail₁) xs
 \end{code}
+\end{AgdaMultiCode}
+For the DFT and FFT in this paper, this is instantiated over complex addition,
+described as the monoid \AF{(ℂ, \_+\_, 0ℂ)}.
+However, this definition allows for any fold-like operation to be defined for 
+any instance of \AF{(X, \_⋆\_, ε)} meaning operations such as $\Pi$ can be 
+instantiated with the same definition and general rules.
+This is similar to how the DFT and FFT can be instantiated for any definition of
+\AF{Cplx}.
 
+
+%TC:ignore
 \begin{code}[hide]
 open import Complex using (Cplx)
 module FFT (real : Real) (cplx : Cplx real) where
@@ -348,7 +411,7 @@ module FFT (real : Real) (cplx : Cplx real) where
   open import Data.Nat.Properties using (nonZero?)
   open import Relation.Nullary
 
-  open import Matrix using (Ar; Shape; Position; ι; _⊗_; zipWith; mapRows; length)
+  open import Matrix using (Ar; Shape; Position; ι; _⊗_; zipWith; mapLeft; length)
   open import Matrix.Sum _+_ 0ℂ +-isCommutativeMonoid using (sum)
   open import Matrix.Reshape using (recursive-transpose; reshape; swap; _⟨_⟩; ♯; recursive-transposeᵣ)
   open import Matrix.NonZero using (NonZeroₛ; ι; _⊗_; nonZeroₛ-s⇒nonZero-s; nonZeroDec; nonZeroₛ-s⇒nonZeroₛ-sᵗ)
@@ -358,12 +421,15 @@ module FFT (real : Real) (cplx : Cplx real) where
       N : ℕ
       s p : Shape
 
+  Ar∔ : Shape → Set → Set
+  Ar∔ = Ar
+
   ------------------------------------
   --- DFT and FFT helper functions ---
   ------------------------------------
 \end{code}
+%TC:endignore
 
-\todo[color=green]{Consider removing or shrinking the below definition}
 \paragraph{Index's in a single dimension}. As defined above, \AF{Position} encodes 
 the bounds on a given index, as well as the index itself. 
 When calculating the DFT some arithmetic on this index is required,
@@ -378,32 +444,34 @@ This helper function for the single dimensional case is shown below.
 \end{code}
 
 \subsection{DFT}
-Given the above definition of the complex numbers, matrices, and methods on one 
-dimensional matrices, the formation of the DFT is now trivial.
-First a function \AF{DFT′} is formed, this is of the same shape as Equation 
-\ref{eq:DFT_Definition}, but requires that the length of any input vector is 
-non zero, as to satisfy this same condition on the divisor of \AF{-ω} as defined 
-in \ref{para:roots_of_unity}.
+Given the above definition of the complex numbers, tensors, and methods on one 
+dimensional tensors, the formation of the DFT is now trivial.
+This is of the same shape as Equation \ref{eq:DFT_Definition}, requiring through 
+use of \AF{Ar∔} that the length of any input vector is non zero, as to satisfy 
+this same condition on the divisor of \AF{-ω} as defined in \ref{para:roots_of_unity}.
 
 \begin{code}
-  DFT′ : ⦃ nonZero-N : NonZero N ⦄ → Ar (ι N) ℂ → Ar (ι N) ℂ
-  DFT′ {N} xs j = sum λ k → xs k * -ω N (iota k *ₙ iota j)
+  DFT : Ar∔ (ι N) ℂ → Ar∔ (ι N) ℂ
+  DFT {N} xs j = sum λ k → xs k * -ω N (iota k *ₙ iota j)
 \end{code}
-
-It is then trivial to form the \AF{DFT} without this restriction, by 
-checking if a given array is of length zero, and returning that same array of
-length zero when this is the case.
-
-% Could probably get away without showing this
+%TC:ignore
 \begin{code}[hide]
-  DFT : Ar (ι N) ℂ → Ar (ι N) ℂ
-  DFT {N} arr with nonZero? N
-  ... | no  ¬nonZero-s = arr
-  ... | yes  nonZero-s = DFT′ ⦃ nonZero-s ⦄ arr
+    where
+      postulate
+        instance
+          _ : NonZero N
 \end{code}
+%TC:endignore
+
+
+% It is then trivial to form the \AF{DFT} without this restriction, by 
+% checking if a given array is of length zero, and returning that same array of
+% length zero when this is the case.
+
 
 
 \subsection{Reshape}
+%TC:ignore
 \begin{code}[hide]
 module Reshape where
 
@@ -427,11 +495,18 @@ module Reshape where
   infixr 5 _∙_
   infixl 10 _⊕_
 \end{code}
+%TC:endignore
 
-For any definition of FFT, some operations such as transpose, are be required 
-to modify the shape of the input and intermediate matrix.
-As many such operations exist, a language of reshapes can be created, allowing
-the creation of general rules across all reshape operations.
+When working with tensors, it is often necessary for elements to be rearranged, 
+through operations such as transpose or flatten, without any additions or removals.
+The naïve approach to this, would be to define each rearrange as a function of type \AF{Ar s X → Ar p X}.
+This approach however, would operate on too large a space, meaning reasoning upon
+such functions would be difficult and could not be generalised.
+An alternate approach is to define a small language of reshapes.
+This language captures a small set of rearrangements, as well as methods to allow
+for their composition.
+Generalised properties, such as how each reshape is applied to a position, can 
+then be defined on this language or reshapes.
 
 For this language, each reshape operations can be considered as a bijective function
 from shape \AF{s} to shape \AF{p}. 
@@ -443,16 +518,20 @@ formation of rules which are general to all operations in the reshape language.
 The reshape language is defined as a set of operations from shape to shape as follows.
 \begin{code}
   data Reshape : Shape → Shape → Set where
-    eq     : Reshape s s                                           -- Identity
-    _∙_    : Reshape p q → Reshape s p → Reshape s q               -- Composition of Reshapes
-    _⊕_    : Reshape s p → Reshape q r → Reshape (s ⊗ q) (p ⊗ r)   -- Left/ Right application
-    split  : Reshape (ι (m * n)) (ι m ⊗ ι n)                       -- "Vector" → 2D Matrix
-    flat   : Reshape (ι m ⊗ ι n) (ι (m * n))                       -- 2D Matrix → "Vector"
-    swap   : Reshape (s ⊗ p) (p ⊗ s)                               -- Transposition
+    eq     : Reshape s s                      -- Identity
+    _∙_    : Reshape p q                      -- Composition of Reshapes
+           → Reshape s p 
+           → Reshape s q               
+    _⊕_    : Reshape s p                      -- Left/ Right application
+           → Reshape q r 
+           → Reshape (s ⊗ q) (p ⊗ r)   
+    split  : Reshape (ι (m * n)) (ι m ⊗ ι n)  -- "Vector" → 2D Tensor
+    flat   : Reshape (ι m ⊗ ι n) (ι (m * n))  -- 2D Tensor → "Vector"
+    swap   : Reshape (s ⊗ p) (p ⊗ s)          -- Transposition
 \end{code}
 
 Using this definition of reshape and some standard library methods on Fin, 
-it is then possible do define the application of reshape to positions and matrices.
+it is then possible do define the application of reshape to positions and tensors.
 \begin{code}
   _⟨_⟩ : Position p → Reshape s p → Position s
   i            ⟨ eq      ⟩ = i
@@ -481,9 +560,11 @@ From this operation, rules on reshape can be defined, allow for formation of
 relations between reshape operations.
 This allows for the reduction of the reshape language when operations such as 
 \AF{split ∙ flat} occur.
+%TC:ignore
 \begin{code}[hide]
   postulate
 \end{code}
+%TC:endignore
 \begin{code}
     rev-eq : 
       ∀ (r : Reshape s p) 
@@ -505,8 +586,8 @@ operations.
 
 \paragraph{Flatten and Unflatten} enable the recursive application of flat and 
 split respectively.
-This allows for an $N$-dimensional matrix to be flattened, and for any single dimensional
-matrix of size \AF{length s} to be unflattened into a matrix of shape s.
+This allows for an $N$-dimensional tensor to be flattened, and for any single dimensional
+tensor of size \AF{length s} to be unflattened into a tensor of shape s.
 \begin{code}
   ♭ : Reshape s (ι (length s))
   ♭ {ι x   } = eq
@@ -517,22 +598,27 @@ matrix of size \AF{length s} to be unflattened into a matrix of shape s.
   ♯ = rev ♭
 \end{code}
 
-\paragraph{Recursive transpose} defines an application of transposition for any 
-multi dimensional matrix.
-Recursive transpose applies swap to any non leaf nodes, allowing for any given 
+\paragraph{Transpose} flips a tensor over its diagonal by swapping the left and
+right sub-shape at each level.
+Transpose applies swap to any non leaf nodes, allowing for any given 
 function designed to operate on multi dimensional matrices, such as the FFT, to
-do the same.
-\todo[color=green]{Either this is poorly worded or I'm silly, rewrite maybe?}
+do the same swap at each level.
+It can be seen below that transpose is defined through use of the postfix operator, 
+meaning the input shape goes before \AF{ᵗ}
 \begin{code}
-  recursive-transpose : Shape → Shape
-  recursive-transpose (ι x   ) = ι x
-  recursive-transpose (s ⊗ s₁) = recursive-transpose s₁ ⊗ recursive-transpose s
+  infixl 11 _ᵗ
+  _ᵗ : Shape → Shape
+  _ᵗ (ι x   ) = ι x
+  _ᵗ (s ⊗ s₁) = (s₁ ᵗ) ⊗ (s ᵗ)
 \end{code}
 
 
-\subsection{Multi dimensional matrix operations} \todo[color=green]{Insert text here about needing more before making FFT}
-\paragraph{Zip With}\label{para:zipWith} performs pointwise application of a 
-given function \AD{f} over two matrices of the same shape. 
+\subsection{Multi dimensional tensor operations}
+In addition to the above reshape operations, some methods which can operate 
+directly on multi dimensional tensors are required.
+\paragraph{Zip With}\label{para:zipWith} performs point-wise application of a 
+given function \AD{f} over two tensors of the same shape. 
+%TC:ignore
 \begin{code}[hide]
 module Matrix2 where
   open import Matrix using (Ar; Shape; Position; _⊗_)
@@ -541,13 +627,17 @@ module Matrix2 where
       X Y Z : Set
       s p : Shape
 \end{code}
+%TC:endignore
 \begin{code}
   zipWith : (X → Y → Z) → Ar s X → Ar s Y → Ar s Z
   zipWith f arr₁ arr₂ pos = f (arr₁ pos) (arr₂ pos)
 \end{code}
 This has many uses, below is shown one example where zipWith is used
-over matrices $x$ and $y$, of shape \AF{(ι n ⊗ ι m)},\todo[color=green]{Check this is the correct way round, syntax highlight}
+over matrices $x$ and $y$, of shape \AF{(ι n ⊗ ι m)},
 to add the values at each position.
+This two dimensional shape is defined arbitrarily for ease of readability, 
+however, \AF{zipWith} is not restricted on the shape meaning a tensor of any shape can
+be used.
 
 \begin{displaymath}
   \text{zipWith  \_+\_}
@@ -570,7 +660,7 @@ to add the values at each position.
 \end{displaymath}
 
 
-\paragraph{Map} is similar to \AF{zipWith}, but operates over a singular matrix, 
+\paragraph{Map} is similar to \AF{zipWith}, but operates over a singular tensor, 
 applying a function \AF{f} to each element.
 \begin{code}
   map : (f : X → Y) → Ar s X → Ar s Y
@@ -579,8 +669,8 @@ applying a function \AF{f} to each element.
 The functions \AF{nest} and \AF{unnest} can then be defined to create an 
 isomorphism between matrices of the form \AF{Ar (s ⊗ p) X} and nested matrices 
 of the form \AF{A s (Ar p X)}.
-This allows for the definition of a new function \AF{mapRows} which can apply a
-given function to the rows of a given matrix.
+This allows for the definition of a new function \AF{mapLeft} which can apply a
+given function to each \AF{p} shaped sub tensor.
 
 \begin{code}
   nest : Ar (s ⊗ p) X → Ar s (Ar p X)
@@ -589,8 +679,8 @@ given function to the rows of a given matrix.
   unnest : Ar s (Ar p X) → Ar (s ⊗ p) X
   unnest arr (i ⊗ j) = arr i j
 
-  mapRows : ∀ {s p t : Shape} → (Ar p X → Ar t Y) → Ar (s ⊗ p) X → Ar (s ⊗ t) Y
-  mapRows f arr = unnest (map f (nest arr))
+  mapLeft : ∀ {s p t : Shape} → (Ar p X → Ar t Y) → Ar (s ⊗ p) X → Ar (s ⊗ t) Y
+  mapLeft f arr = unnest (map f (nest arr))
 \end{code}
 
 
@@ -598,9 +688,11 @@ given function to the rows of a given matrix.
 \subsection{FFT}
 Given the above operations, it is now possible to begin forming a definition for
 the FFT.
-For these initial definitions, it is assumed that all input vectors are non zero.
-In the final implementation this property is a requirement for each function,
-however, it decreases readability and as such is not shown here.
+As the FFT can only operate on tensors with at least one element, \AF{Ar∔} is used again
+as the input type to indicate that a given input is paired with a nonZero proof 
+argument.
+This is done slightly differently in the final proof which can be found in the
+attached files.
 
 Looking at the basic derivation of the Cooley Tukey FFT over an input vector
 defined in Equation \ref{eq:FFTDefinitionFromDFT}, three distinct sections can
@@ -639,12 +731,13 @@ over each element from Section A.
 This step can be represented in Agda as \AF{zipWith \_*\_}, on a matrix containing 
 these "twiddle factors".
 
+%TC:ignore
 \begin{code}[hide]
 module FFT2 (real : Real) (cplx : Cplx real) where
-  open import Matrix using (Ar; Shape; Position; _⊗_; ι; length; mapRows; zipWith)
+  open import Matrix using (Ar; Shape; Position; _⊗_; ι; length; mapLeft; zipWith)
   open import Matrix.NonZero
-  open import Matrix.Reshape using (_⟨_⟩; ♯; recursive-transpose; reshape; swap)
-  open import FFT real cplx using (iota; DFT; DFT′)
+  open import Matrix.Reshape using (_⟨_⟩; ♯; reshape; swap) renaming (recursive-transpose to _ᵗ)
+  open import FFT real cplx using (iota) renaming (DFT′ to DFT)
   open import Data.Nat.Base using () renaming (_*_ to _*ₙ_)
   open Cplx cplx using (ℂ; _*_; -ω; e^i_; _+_; 0ℂ; +-*-isCommutativeRing)
 
@@ -652,37 +745,44 @@ module FFT2 (real : Real) (cplx : Cplx real) where
     variable
       s p : Shape
       r₁ r₂ : ℕ
+
+  Ar∔ : Shape → Set → Set
+  Ar∔ = Ar
 \end{code}
- \todo[color=green]{confirm that k₀ and j₁ are the right variable names here}
+%TC:endignore
 \begin{code}
-  2D-twiddles : Ar (ι r₂ ⊗ ι r₁) ℂ
+  2D-twiddles : Ar∔ (ι r₂ ⊗ ι r₁) ℂ
   2D-twiddles {r₁} {r₂} (k₀ ⊗ j₁) = -ω (r₂ *ₙ r₁) (iota k₀ *ₙ iota j₁ )
 \end{code}
+%TC:ignore
 \begin{code}[hide]
       where
         postulate
           instance
             _ : NonZero (r₂ *ₙ r₁)
 \end{code}
+%TC:endignore
 
 Using this twiddle matrix, the definition for the two dimensional FFT is generated
 by forming each section into its own step.
 Of note in the definition below are the three uses of swap.
 The first swap allows DFT′ to map over the columns of the input array,
-while the next allows it to instead map over the rows.
+while the next inverts this and allows map to be performed over the rows.
 The final swap is performed because, given an input in row major order, the 
-result of the FFT is read in column major order, and so the output matrix should
-be the transposition of the input matrix.
+result of the FFT is produced in column major order. 
+For this to be represented correctly when flatten, \AF{♭}, is applied the output
+tensor must be transposed, which can be performed for two dimensions with \AF{swap}.
 
 \begin{code}
-  2D-FFT : Ar (ι r₁ ⊗ ι r₂) ℂ → Ar (ι r₂ ⊗ ι r₁) ℂ
+  2D-FFT : Ar∔ (ι r₁ ⊗ ι r₂) ℂ → Ar∔ ((ι r₁ ⊗ ι r₂) ᵗ) ℂ
   2D-FFT {r₁} {r₂} arr = 
       let 
-          innerDFTapplied        = mapRows (DFT′ {r₁}) (reshape swap arr)   
+          innerDFTapplied        = mapLeft (DFT {r₁}) (reshape swap arr)   
           twiddleFactorsApplied  = zipWith _*_   innerDFTapplied 2D-twiddles
-          outerDFTapplied        = mapRows (DFT′ {r₂}) (reshape swap twiddleFactorsApplied) 
+          outerDFTapplied        = mapLeft (DFT {r₂}) (reshape swap twiddleFactorsApplied) 
       in  reshape swap outerDFTapplied
 \end{code}
+%TC:ignore
 \begin{code}[hide]
       where
         postulate
@@ -691,75 +791,85 @@ be the transposition of the input matrix.
             _ : NonZero r₂
             _ : NonZeroₛ (ι r₂ ⊗ ι r₁)
 \end{code}
+%TC:endignore
 
 \begin{AgdaAlign}
 
 Given knowledge that the DFT should be equivalent to the FFT, the two dimensional
-definition can then be improved by applying the FFT at each step.
-This requires the slight modification of the FFT implementation such that it 
-accepts a matrix of any shape \AF{s} as input.
+definition can then be improved by instead applying the FFT at each step.
+This requires the slight modification of the 2D-FFT implementation such that it 
+accepts a tensor of any shape \AF{s} as input.
 
 The definition for the twiddle factors must also be redefined, such that twiddles
 can be computed for any shape with more than two dimensions.
 It is easy to see, that the previous base of the roots of unity, $r₁\times r₂$,
-maps directly to the flat \AF{length} of any given matrix.
-To calculate the power of the root of unity, we can define \AF{offset-prod}
-to multiply the flattened index values of the left and right position trees. \todo[color=green]{This explination doesn't sit right with me}
+maps directly to the \AF{length} of any given tensor.
+To calculate the power of the root of unity, we can define \AF{offset-prod}.
+This flattens the values of \AF{k} and \AF{j}, before multiplying them together to
+calculate the power.
 \begin{code}
   offset-prod : Position (s ⊗ p) → ℕ
   offset-prod (k ⊗ j) = iota (k ⟨ ♯ ⟩) *ₙ iota (j ⟨ ♯ ⟩)
    
-  twiddles : Ar (s ⊗ p) ℂ
+  twiddles : Ar∔ (s ⊗ p) ℂ
   twiddles {s} {p} i = -ω (length (s ⊗ p)) (offset-prod i)
 \end{code}
+%TC:ignore
 \begin{code}[hide]
       where
         postulate
           instance
             _ : NonZero (length s *ₙ length p)
 \end{code}
+%TC:endignore
 \end{AgdaAlign}
 
-The definition of this general twiddle matrix now allows for FFT′ to be defined
+The definition of this general twiddle matrix now allows for FFT to be defined
 for an input of any shape.
-Where the two dimensional FFT returned the transposition of the input, the new
-general case FFT now returns the recursive transposition, as whenever the FFT is
-applied the sub matrices are transposed.
+The same problem of the output shape must then be dealt with again.
+As the result of the FFT is in column major order, the result must be transposed
+for flatten to represent it correctly.
+This can be achieved through the application of \AF{swap} to \AF{outerDFTapplied}
+before returning, as each sub tensor is the result of the application of the FFT and
+will be transposed.
 
 \begin{AgdaSuppressSpace}
 \begin{code}
-  FFT′ : Ar s ℂ → Ar (recursive-transpose s) ℂ
-  FFT′ {ι N} arr = DFT′ arr
+  FFT : Ar∔ s ℂ → Ar∔ (s ᵗ) ℂ
+  FFT {ι N} arr = DFT arr
 \end{code}
+%TC:ignore
 \begin{code}[hide]
     where
       postulate
         instance
           _ : NonZero N
 \end{code}
+%TC:endignore
 \begin{code}
-  FFT′ {r₁ ⊗ r₂} arr = 
+  FFT {r₁ ⊗ r₂} arr = 
       let 
-          innerDFTapplied        = mapRows FFT′ (reshape swap arr)   
+          innerDFTapplied        = mapLeft FFT (reshape swap arr)   
           twiddleFactorsApplied  = zipWith _*_   innerDFTapplied twiddles
-          outerDFTapplied        = mapRows FFT′ (reshape swap twiddleFactorsApplied) 
+          outerDFTapplied        = mapLeft FFT (reshape swap twiddleFactorsApplied) 
       in  reshape swap outerDFTapplied
 \end{code}
+%TC:ignore
 \begin{code}[hide]
       where
         postulate
           instance
             _ : NonZeroₛ r₁
             _ : NonZeroₛ r₂
-            _ : NonZeroₛ (r₂ ⊗ (recursive-transpose r₁))
+            _ : NonZeroₛ (r₂ ⊗ (r₁ ᵗ))
 \end{code}
+%TC:endignore
 \end{AgdaSuppressSpace}
 
-Because of its generallity, this expression of the FFT is very good. 
 As time was invested at the start of the project into a the creation of a language 
-on matrices and reshaping, every case of the Cooley Tukey algorithm can be 
+on tensors and reshaping, every case of the Cooley Tukey algorithm can be 
 represented within the three lines shown above. 
-Given a proof of correctness, this generalitlty makes way for further experiments 
+Given a proof of correctness, this generality makes way for further experiments 
 into different radix sizes, and combination of radix sizes, to be easily undertaken.
 
 If this was instead written in \verb|C|, or a \verb|C| style language, this level
@@ -772,10 +882,10 @@ This complexity makes it difficult to reason upon any such implementation meanin
 garuntees are more challenging to achive.
 
 
-
 % Spend some time explaining why expressing the FFT in the way we did is very good - Its a family of cooley tukey algorithms in 3 lines
 % - The reason we can do this because we have invsted in these arrays and combinators on them
 % - Doing this in C would be hell - we need to spoon feed this to the reader, this FFT definition is very cool!
+
 
 
 

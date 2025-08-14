@@ -17,7 +17,7 @@ module FFT (real : Real) (cplx : Cplx real) where
   open import Data.Nat.Properties using (nonZero?)
   open import Relation.Nullary
 
-  open import Matrix using (Ar; Shape; Position; ι; _⊗_; zipWith; mapRows; length)
+  open import Matrix using (Ar; Shape; Position; ι; _⊗_; zipWith; mapLeft; length)
   open import Matrix.Sum _+_ 0ℂ +-isCommutativeMonoid using (sum)
   open import Matrix.Reshape using (recursive-transpose; reshape; swap; _⟨_⟩; ♯; recursive-transposeᵣ)
   open import Matrix.NonZero using (NonZeroₛ; ι; _⊗_; nonZeroₛ-s⇒nonZero-s; nonZeroDec; nonZeroₛ-s⇒nonZeroₛ-sᵗ)
@@ -52,9 +52,9 @@ module FFT (real : Real) (cplx : Cplx real) where
   FFT′ {ι N} ⦃ ι nonZero-N ⦄ arr = DFT′ ⦃ nonZero-N ⦄ arr
   FFT′ {r₁ ⊗ r₂} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ arr = 
       let 
-          innerDFTapplied       = mapRows FFT′ (reshape swap arr)   
+          innerDFTapplied       = mapLeft FFT′ (reshape swap arr)   
           twiddleFactorsApplied = zipWith _*_   innerDFTapplied twiddles
-          outerDFTapplied       = mapRows FFT′ (reshape swap twiddleFactorsApplied) 
+          outerDFTapplied       = mapLeft FFT′ (reshape swap twiddleFactorsApplied) 
       in  reshape swap outerDFTapplied
       where
         instance
