@@ -4,20 +4,25 @@ The Discrete Fourier Transform (DFT) is a staple operation within Computer
 Science, Physics, and other fields with many applications.
 Fast Fourier Transforms are implementations of the DFT with improved 
 performance characteristics.
-One such use of the FFT is polynomial multiplication, the time 
-complexity of which can be reduced from $\mathcal{O}\left(n^2\right)$ to
-$\mathcal{O}\left(n\log n\right)$.
+The FFT reduces the complexity of the DFT from 
+$\mathcal{O}\left(n^2\right)$ to $\mathcal{O}\left(n\log n\right)$.
+This has many useful applications and enables the reduction 
+in complexity for algorithms which would otherwise be bounded in time complexity
+by use of the DFT.
 
-Most current implementations, such as WFFT\cite{Frigo2005}, take the form of 
+Most current implementations, such as FFTW\cite{Frigo2005}, take the form of 
 large libraries written in low-level languages. 
 A key component of these libraries is the use of multiple implementations of 
 the same algorithm, with each implementation (or kernel) containing 
 optimisations suited towards specific input sizes and hardware profiles. 
 When the user wants to compute the result of a Fourier Transform, the library 
-chooses the optimal kernel based on the input size and the user's hardware.
+uses the input size, and some heuristics on the users hardware, to construct a 
+plan.
+This plan describes the decomposition of a given input, allowing FFTW to 
+utilise a sequence of optimal kernels to compute the result.
 
-The large number of kernels makes it very challenging to verify that a given 
-FFT library provides the same result as the naïve DFT.
+The large number of kernels makes it very challenging to formally verify that a
+given FFT library provides results equal to those given by the DFT. 
 This is because to do so would involve analysing the low-level implementation 
 of each kernel, individually, and proving that it gives the same result as the 
 naïve DFT for all possible inputs.
@@ -29,11 +34,17 @@ single specification of the FFT such that it can be instantiated to any kernel,
 giving us a usable kernel and formal proof that said kernel computes the 
 expected values.
 
-Agda is a dependently typed functional language which allows for formal 
-properties of programs written in it to be proven.\cite{Norell2007} 
+To introduce formal guarantees, a theorem prover is needed, Agda is
+one such theorem prover which is based on dependent types.
+This basis on dependent types allows for arbitrary properties to be attached
+to programs as types.
+These properties allow us to describe the correctness of a given 
+algorithm as a type, meaning that a given program cannot type check, and thus
+cannot run, if any of the correctness properties do not hold.
+This allows for strong guarantees to be placed on a program.
 This paper discusses the use of Agda to create a general case implementation 
 of the FFT which is then proven to always compute the same value as the naïve 
-DFT.
+implementation of the DFT.
 
 Such an implementation would allow for future research in Agda to make use of
 the FFT in definitions, before substituting it with the DFT when it comes to

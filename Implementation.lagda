@@ -336,7 +336,7 @@ The result of this execution can then be compared against the result of Numpy's
 FFT method, allowing for an average floating point error to be established 
 against a well known implementation.
 We can expect this average error to be low, but not zero, with an expected worst 
-case growth of $\mathcal{O}\left(\log N\right)$\cite{FFT4Profit}.
+case growth bounded by $\left(\log N\right)$\cite{FFT4Profit}.
 This is because each operation on floating point numbers introduces minor
 rounding errors, and these minor errors then grow with each operation.
 As each of the three implementations use different operations in different
@@ -395,20 +395,29 @@ this same negative performance is parsed on.
 
 This is not, however, the only method with which an Agda definition can be
 made runnable.
-My formally proven FFT implementation can instead be ported into SaC
-\cite{ScholzSac}, an array language.
+My formally proven FFT implementation can instead be ported into a high performace array language
+such as SaC \cite{ScholzSac} or Futhark\cite{Futhark}.
 Such a port would then allow for the introduction of parallelism, as well as
-allowing for use of the \verb|sac2c| compiler.
-This \verb|sac2c| compiler would allow for the generation of efficient \verb|c|
+allowing for the generation of efficient \verb|c|
 code, avoiding performance issues caused by use of the Haskell compiler.
-In an ideal world, such a port would allow for the correctness properties of my 
-FFT definition to be parsed on to the definition built from it in SaC.
-This preservation of properties, however, would only truly hold if a verified:
-Agda to SaC translator, SaC to \verb|c| compiler, and \verb|c| compiler where 
-also used.\cite{ChoosingIsLosing}\cite{BlockedSinkarovs}
-In \cite{ChoosingIsLosing}, Šinkarovs and Cockx define method for Agda to Sac 
-translation, however, this is not able to ``guarantee that the extracted code 
-preservers the semantics of the original implementation''\cite{ChoosingIsLosing}
-meaning the above chain loses true verifiability at the first step.
-This conversion is not investigated further within this paper, however it would
-allow for the generation of efficient \verb|c| kernels, with verifiable cores.
+Such a port would ideally allow for the correctness properties of my 
+FFT definition to be parsed on to the definition built from it in the chosen array language.
+% This preservation of properties, however, would only truly hold if a verified:
+% Agda to SaC translator, SaC to \verb|c| compiler, and \verb|c| compiler where 
+% also used.\cite{ChoosingIsLosing}\cite{BlockedSinkarovs}
+In \cite{ChoosingIsLosing}, Šinkarovs and Cockx define such a method for Agda to Sac 
+translation.
+As the number of operations I have used is very limited, and the small number of operations I
+have defined on tensors are very similar to those defined in SaC, this would be 
+a easy next step.
+This would then allow for future investigation into the generation of code with FFTW like
+performance.
+
+% , however, this is not able to ``guarantee that the extracted code 
+% preservers the semantics of the original implementation''\cite{ChoosingIsLosing}
+% meaning the above chain loses true verifiability at the first step.
+% This conversion is not investigated further within this paper, however it would
+% allow for the generation of efficient \verb|c| kernels, with verifiable cores.
+
+
+

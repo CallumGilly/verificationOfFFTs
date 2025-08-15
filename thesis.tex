@@ -179,23 +179,31 @@
 \clearpage
 \addcontentsline{toc}{section}{Abstract}
 \section*{Abstract}
-Discrete Fourier Transforms (DFTs) are key operations within Digital Signal 
-Processing and other fields, Fast Fourier Transforms (FFTs) allow for the time 
-complexity of computing the DFT to be significantly reduced. 
+
+The Discrete Fourier Transform (DFT) is a key operation within Digital Signal 
+Processing and other fields, but when implemented trivially it is slow.
+Fast Fourier Transforms (FFTs) allow for the time complexity of computing the 
+DFT to be significantly reduced, allowing for algorithms with a reliance on the
+DFT to reduce their time complexity.
+
 Traditionally, implementations of the FFT are formed in low level 
 languages, with large amounts of index manipulation. 
-This is error prone and challenging to reason upon, especially for generalized 
-implementations
+These languages rarely provide frameworks for formal verification, 
+meaning that functionality must be confirmed manually, with methods such as unit
+testing.
+Such methods of testing are unable to provide formal guarantees that a 
+implementation is correct for every possible value.
 
 Agda is a dependently typed functional language implementing Martin-Löf type 
-theory allowing proofs to be embedded within code.
-Including these proofs allows programs in Agda to contain
-formal guarantees of their correctness.
-For the FFT this requires embedding proofs that the DFT is equal to the FFT for 
-all cases.
+theory.
+This allows for the embedding of formal proofs allowing programs in Agda to 
+contain formal guarantees of their correctness.
+For the FFT this allows the embedding of a proof that the DFT is equal to the FFT for
+every possible input value.
 
-In this project, I have created a generalised Agda definition of the DFT and FFT
-and have provided proof that these are equal.
+In this project I have provided an implementation of the FFT within Agda.
+I have then provided a proof of equivalence between this implementation and the 
+DFT, thus guaranteeing the correctness of my implementation.
 
 
 

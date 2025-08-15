@@ -9,22 +9,25 @@ a proof of equality between the two can be formed.
 
 To define the relation between DFT and FFT, pointwise equality \AF{\_≅\_} can 
 be used used.
-This defines equality between two matrices of shape \AF{s} to hold when
+This defines equality between two tensors of shape \AF{s} to hold when
 \AF{∀ (i : Position s) → xs i ≡ ys i}.
 This allows for proofs to be defined for a general position \AF{i}.
 
 As the DFT operates on the vector form, reshape operations must be used to
-flatten the input matrix and unflatten the output for comparison.
+flatten the input tensor and unflatten the output for comparison.
 Not mentioned previously, is the reindex reshape operation.
+Reindex allows for poitions to be cast from \AF{ι n} to \AF{ι m} when \AF{n ≡ m}
+without any change in indices.
 As the output of the FFT must be read in column major order, it is of the
 form \AF{s ᵗ}.
-When flattened this gives a matrix of shape \AF{ι (\# s ᵗ)}.
+When flattened this gives a tensor of shape \AF{ι (\# s ᵗ)}.
 Meanwhile, without the use of reindex, the output of the DFT is of shape
 \AF{ι (\# s)}.
 Reindexing allows this to be modeled as \AF{ι (\# s ᵗ)}
-without reordering the results in this matrix.
+without reordering the results in this tensor.
 This allows for the use of pointwise equality.
-
+\begin{figure}[h]
+    \centering
 % https://q.uiver.app/#q=WzAsMTEsWzAsMCwiXFxvdmVyYnJhY2V7XFxiZWdpbntwbWF0cml4fSB4XzEgJiB4XzIgXFxcXCB4XzMgJiB4XzQgXFxcXCB4XzUgJiB4XzYgXFxcXCB4XzcgJiB4XzggXFxlbmR7cG1hdHJpeH19XntcXHZlcmJ8c3x9Il0sWzMsMCwiXFxvdmVyYnJhY2V7XFxiZWdpbntwbWF0cml4fSB4XzEgJiB4XzIgJiB4XzMgJiB4XzQgJiB4XzUgJiB4XzYgJiB4XzcgJiB4XzggXFxlbmR7cG1hdHJpeH19XntcXHZlcmJ8bGVuZ3RoIHN8fSJdLFsyLDBdLFswLDQsIiBcXG92ZXJicmFjZXtcXGJlZ2lue3BtYXRyaXh9IFhfMSAmIFhfMiAmIFhfMyAmIFhfNCBcXFxcIFhfNSAmIFhfNiAmIFhfNyAmIFhfOCBcXGVuZHtwbWF0cml4fX1ee1xcdmVyYnxyZWN1cnNpdmUtdHJhbnNwb3NlIHN8fSJdLFsxLDJdLFszLDIsIlxcb3ZlcmJyYWNle1xcYmVnaW57cG1hdHJpeH0gWF8xICYgWF8yICYgWF8zICYgWF80ICYgWF81ICYgWF82ICYgWF83ICYgWF84IFxcZW5ke3BtYXRyaXh9fV57XFx2ZXJifGxlbmd0aCBzfH0iXSxbMywxXSxbMyw0LCJcXGJlZ2lue3BtYXRyaXh9IFhfMSAmIFhfMiBcXFxcIFhfMyAmIFhfNCBcXFxcIFhfNSAmIFhfNiBcXFxcIFhfNyAmIFhfOCBcXGVuZHtwbWF0cml4fSJdLFs3LDAsIlxcb3ZlcmJyYWNle1xcYmVnaW57cG1hdHJpeH0geF8xICYgeF8yICYgeF8zICYgeF80ICYgeF81ICYgeF82ICYgeF83ICYgeF84IFxcZW5ke3BtYXRyaXh9fV57XFx2ZXJifGxlbmd0aCAocmVjdXJzaXZlLXRyYW5zcG9zZSBzKXx9Il0sWzcsMiwiXFxvdmVyYnJhY2V7XFxiZWdpbntwbWF0cml4fSBYXzEgJiBYXzIgJiBYXzMgJiBYXzQgJiBYXzUgJiBYXzYgJiBYXzcgJiBYXzggXFxlbmR7cG1hdHJpeH19XntcXHZlcmJ8bGVuZ3RoIChyZWN1cnNpdmUtdHJhbnNwb3NlIHMpfH0iXSxbNyw0LCIgXFxvdmVyYnJhY2V7XFxiZWdpbntwbWF0cml4fSBYXzEgJiBYXzIgJiBYXzMgJiBYXzQgXFxcXCBYXzUgJiBYXzYgJiBYXzcgJiBYXzggXFxlbmR7cG1hdHJpeH19XntcXHZlcmJ8cmVjdXJzaXZlLXRyYW5zcG9zZSBzfH0iXSxbMCwxLCJcXHZlcmJ8cmVzaGFwZSB8IFxcZmxhdCJdLFswLDMsIlxcdmVyYnxGRlR8IiwyXSxbMSw1LCJcXHZlcmJ8REZUfCJdLFs1LDcsIlxcdmVyYnxyZXNoYXBlIHxcXHNoYXJwIl0sWzMsNywiXFxub3RcXGNvbmcgXFx0ZXh0e2FzIH1cXHZlcmJ8cmVjdXJzaXZlLXRyYW5zcG9zZSBzfCBcXG5vdFxcZXF1aXYgcyIsMix7InN0eWxlIjp7InRhaWwiOnsibmFtZSI6ImFycm93aGVhZCJ9LCJib2R5Ijp7Im5hbWUiOiJkb3R0ZWQifX19XSxbMSw4LCJcXHZlcmJ8cmVzaGFwZSAocmVpbmRleCB8fHN8XFxlcXVpdnxzXnR8XFx2ZXJifCl8IiwyXSxbOCw5LCJcXHZlcmJ8REZUfCIsMl0sWzksMTAsIlxcdmVyYnxyZXNoYXBlIHwgXFxzaGFycCIsMl0sWzMsMTAsIlxcY29uZyBcXHRleHR7YXMgfVxcdmVyYnxyZWN1cnNpdmUtdHJhbnNwb3NlIHN8IFxcZXF1aXZcXHZlcmJ8cmVjdXJzaXZlLXRyYW5zcG9zZSBzfFxcdGV4dHsgYW5kIGV2ZXJ5IGVsZW1lbnQgaXMgZXF1YWx9IiwyLHsiY3VydmUiOjUsInN0eWxlIjp7InRhaWwiOnsibmFtZSI6ImFycm93aGVhZCJ9fX1dXQ==
 % Made with quiver and then messed with to make it actually work....
 \[
@@ -34,15 +37,15 @@ This allows for the use of pointwise equality.
 		\overbrace{\begin{pmatrix} x_1 & x_2 \\ x_3 & x_4 \\ x_5 & x_6 \\ x_7 & x_8 \end{pmatrix}}^{\text{\texttt{s}}} 
 	\end{array} 
 	\&\& {} \& 
-	{\overbrace{\begin{pmatrix} x_1 & \cdots & x_8 \end{pmatrix}}^{\text{\texttt{length s}}}} 
+	{\overbrace{\begin{pmatrix} x_1 & \cdots & x_8 \end{pmatrix}}^{\text{\texttt{\# s}}}} 
 	\&\&\&\& 
-	{\overbrace{\begin{pmatrix} x_1 & \cdots & x_8 \end{pmatrix}}^{\text{\texttt{length (s ᵗ)}}}} 
+	{\overbrace{\begin{pmatrix} x_1 & \cdots & x_8 \end{pmatrix}}^{\text{\texttt{\# (s ᵗ)}}}} 
 	\\
 	\&\&\& {} \\
 	\& {} \&\& 
-	{\overbrace{\begin{pmatrix} X_1 & \cdots & X_8 \end{pmatrix}}^{\text{\texttt{length s}}}} 
+	{\overbrace{\begin{pmatrix} X_1 & \cdots & X_8 \end{pmatrix}}^{\text{\texttt{\# s}}}} 
 	\&\&\&\& 
-	{\overbrace{\begin{pmatrix} X_1 & \cdots & X_8 \end{pmatrix}}^{\text{\texttt{length (s ᵗ)}}}} 
+	{\overbrace{\begin{pmatrix} X_1 & \cdots & X_8 \end{pmatrix}}^{\text{\texttt{\# (s ᵗ)}}}} 
 	\\
 	\\
 	\begin{array}{c}  
@@ -65,11 +68,14 @@ This allows for the use of pointwise equality.
 	\arrow["{\texttt{DFT}}"', from=1-8, to=3-8]
 	\arrow["{\texttt{reshape } \sharp}", dotted, from=3-4, to=5-4]
 	\arrow["{\texttt{reshape } \sharp}"', from=3-8, to=5-8]
-	\arrow["{\not\cong \text{ as } \texttt{s ᵗ} \not\equiv \texttt{s}}"', dotted, tail reversed, from=5-1, to=5-4]
-	\arrow["{\cong \text{ as } \texttt{s ᵗ} \equiv \texttt{s ᵗ} \text{ and every element is equal}}"', curve={height=60pt}, tail reversed, from=5-1, to=5-8]
+	\arrow["{\not\cong \text{ as } \texttt{s ᵗ}~\not\equiv~\texttt{s}}"', dotted, tail reversed, from=5-1, to=5-4]
+	\arrow["{\cong \text{ as } \texttt{s ᵗ}~\equiv~\texttt{s ᵗ} \text{ and every element is equal}}"', curve={height=60pt}, tail reversed, from=5-1, to=5-8]
 \end{tikzcd}
 }
 \]
+\caption{Diagram showing the effects of reshaping}
+\label{fig:reshape_why}
+\end{figure}
 
 Using what we now know from the above relation, the proposition for this proof 
 describing the relationship between the FFT and DFT can be formed.
@@ -635,7 +641,7 @@ This allows my proof to match the shape of the \AF{FFT} definition.
 \end{code}
 %TC:endignore
 These first two lines of this chain of reasoning split the proof on the shape 
-of the input matrix.
+of the input tensor.
 \ref{code:fft′≡dft′-ιN} pattern matches the case where the shape is one dimensional, 
 as FFT on such a shape is equal by definition to the DFT, no chain of reasoning 
 is required to prove this case.
@@ -854,10 +860,32 @@ applied in the main proof.
               * -ω (r₂ *ₙ r₁) {{ m*n≢0 r₂ r₁ }} (k₀ *ₙ j₀) 
               * -ω (r₂) (k₀ *ₙ j₁)
   cooley-tukey-derivation r₁ r₂ k₀ k₁ j₀ j₁ {{ nonZero-r₁ }} {{ nonZero-r₂ }}
-    = rearrange-ω-power 
-    ⊡ split-ω
-    ⊡ remove-constant-term
-    ⊡ simplify-bases
+    = begin
+        -ω 
+          (r₂ *ₙ r₁) 
+          ( (r₂ *ₙ k₁ +ₙ k₀) *ₙ (r₁ *ₙ j₁ +ₙ j₀) )
+      ≡⟨ rearrange-ω-power ⟩
+        -ω 
+          (r₂ *ₙ r₁) 
+          (    r₂ *ₙ (k₁ *ₙ j₀) 
+            +ₙ k₀ *ₙ j₀ 
+            +ₙ r₁ *ₙ (k₀ *ₙ j₁) 
+            +ₙ r₂ *ₙ (r₁ *ₙ (j₁ *ₙ k₁))
+          )
+      ≡⟨ split-ω ⟩
+           -ω (r₂ *ₙ r₁) (r₂ *ₙ (k₁ *ₙ j₀)) 
+         * -ω (r₂ *ₙ r₁) (k₀ *ₙ j₀) 
+         * -ω (r₂ *ₙ r₁) (r₁ *ₙ (k₀ *ₙ j₁))
+         * -ω (r₂ *ₙ r₁) (r₂ *ₙ r₁ *ₙ (j₁ *ₙ k₁))
+      ≡⟨ remove-constant-term ⟩
+           -ω (r₂ *ₙ r₁) (r₂ *ₙ (k₁ *ₙ j₀)) 
+         * -ω (r₂ *ₙ r₁) (k₀ *ₙ j₀) 
+         * -ω (r₂ *ₙ r₁) (r₁ *ₙ (k₀ *ₙ j₁))
+      ≡⟨ simplify-bases ⟩
+           -ω r₁ (k₁ *ₙ j₀) 
+         * -ω (r₂ *ₙ r₁) (k₀ *ₙ j₀) 
+         * -ω r₂ (k₀ *ₙ j₁)
+      ∎
 \end{code}
 %TC:ignore
 \begin{code}[hide]
@@ -870,9 +898,9 @@ applied in the main proof.
 \end{code}
 %TC:endignore
 
-This derivation is broken down into four distinct steps.
+It can clearly be seen that the above lemma has four distinct steps.
 
-\paragraph{rearrange-ω-power} expands the second term of -ω, and rearanges the result
+\paragraph{Rearrange Power} \AF{rearrange-ω-power} expands the second term of -ω, and rearanges the result
 such that $r₂$ then $r₁$ are the rightmost elements.
 With standard Agda methods, this would require a large chain of reasoning,
 where each set could apply one property on the natural numbers.
@@ -929,7 +957,7 @@ all correctness properties.
 As ring is defined generally, a special syntax must be used to describe the
 lemma to solve.
 
-\paragraph{split-ω} applies \AF{ω-N-k₀+k₁}, which defines that
+\paragraph{Split ω} \AF{split-ω} applies \AF{ω-N-k₀+k₁}, which defines that
 $-ω_{N}^{k₀ + k₁}\equiv -ω_{N}^{k₀} + -ω_{N}^{k₁}$.
 This breaks down the current large power of the root of unity, into four 
 smaller roots of utranspose nity.
@@ -959,7 +987,7 @@ smaller roots of utranspose nity.
 \end{code}
 %TC:endignore
 
-\paragraph{remove-constant-term} applies \AF{ω-N-mN}, which states that $-ω_N^{Nm}\equiv 1$,
+\paragraph{Remove Constant Term} \AF{remove-constant-term} applies \AF{ω-N-mN}, which states that $-ω_N^{Nm}\equiv 1$,
 to remove the last root of unity $-ω_{r₂r₁}^{(r₂r₁)(j₁k₁)}$.
 
 %TC:ignore
@@ -979,7 +1007,7 @@ to remove the last root of unity $-ω_{r₂r₁}^{(r₂r₁)(j₁k₁)}$.
 \end{code}
 %TC:endignore
 
-\paragraph{simplify-bases} applies \AF{ω-r₁x-r₁y}, which states that $ -ω_{r₁x}^{r₁y}  ≡ -ω_x^y $,
+\paragraph{Simplify Bases} \AF{simplify-bases} applies \AF{ω-r₁x-r₁y}, which states that $ -ω_{r₁x}^{r₁y}  ≡ -ω_x^y $,
 to eliminate r₂ or r₁ when they appear in both the power and the base.
 
 %TC:ignore
@@ -1676,17 +1704,16 @@ operates on machine floats, or an abstract implementation of complex.
 
 As this implementation is defined generically on the shape of the input tensor,
 no restriction is placed on the radix choice.
-This provides two main benefits.
-Firstly, this allows for the computation of the FFT on any input with a non prime 
+This allows for the computation of the FFT on any input with a non prime 
 length without the need for padding.
 If the implementation was instead defined for a fixed radix $r$,
 any input would need to be padded to length $r^n$.
 This zero padding is required for some implementations of the FFT, but can 
 increase the amount of computation required.\cite{Donnelle2005}
-Secondly, defining the FFT upon a tensor of shape $s$, allows for the structure of
-future parallelism to be defined by the shape of $s$.
-This will allow any such parallelism to be equally generic, allowing further experiments
-and allowing customisability for the hardware in use.
+% Secondly, defining the FFT upon a tensor of shape $s$, allows for the structure of
+% future parallelism to be defined by the shape of $s$.
+% This will allow any such parallelism to be equally generic, allowing further experiments
+% and allowing customisability for the hardware in use.
 
 These guarantees also allow for this implementation of the FFT to be utilised in
 future Agda projects without the loss of correctness guarantees.
