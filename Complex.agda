@@ -7,10 +7,7 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym)
 open Eq.≡-Reasoning
 
-open import Data.Product.Base using (_×_; proj₁; proj₂) renaming (_,_ to ⟨_,_⟩)
-
-module Complex (real : Real) where
-  open Real.Real real using (ℝ; 0ℝ; 1ℝ; -1ℝ)
+module Complex where
 
   import Algebra.Structures as AlgebraStructures
   import Algebra.Definitions as AlgebraDefinitions
@@ -27,22 +24,12 @@ module Complex (real : Real) where
       -_  : ℂ → ℂ
       _*_ : ℂ → ℂ → ℂ
 
-      fromℝ : ℝ → ℂ
-
-      e^i_ : ℝ → ℂ
-      ℂ-conjugate : ℂ → ℂ
-
       --+ω : ∀ (N : ℕ) (k : ℕ) → ℂ
       -- Instance arguments seem pretty good https://agda.readthedocs.io/en/v2.5.4/language/instance-arguments.html
       -ω : (N : ℕ) → .⦃ nonZero-n : NonZero N ⦄ → (k : ℕ) → ℂ
 
-
-    0ℂ  : ℂ
-    0ℂ  = fromℝ (0ℝ)
-    -1ℂ : ℂ
-    -1ℂ = fromℝ (-1ℝ)
-    1ℂ  : ℂ
-    1ℂ  = fromℝ (1ℝ)
+      0ℂ  : ℂ
+      1ℂ  : ℂ
 
     open AlgebraStructures  {A = ℂ} _≡_
     open AlgebraDefinitions {A = ℂ} _≡_

@@ -68,7 +68,7 @@ module Implementations.Complex (real : Real) where
         → -ω (r₁ *ₙ x) ⦃ m*n≢0 r₁ x ⦄ (r₁ *ₙ y) ≡ -ω x y
       ω-N-k₀+k₁ : ∀ {N k₀ k₁ : ℕ} → ⦃ nonZero-n : NonZero N ⦄ → -ω N (k₀ +ₙ k₁) ≡ (-ω N k₀) * (-ω N k₁)
 
-    complexImplementation : Cplx real
+    complexImplementation : Cplx
     complexImplementation = record {
           ℂ = ℂ₁
 
@@ -76,11 +76,6 @@ module Implementations.Complex (real : Real) where
         ; _-_ = _-_
         ; -_  = -_
         ; _*_ = _*_
-
-        ; fromℝ = fromℝ
-
-        ; e^i_ = e^i_
-        ; ℂ-conjugate = ℂ-conjugate
 
         ; -ω = -ω
 

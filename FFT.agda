@@ -6,8 +6,8 @@ import Algebra.Structures as AlgebraStructures
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_)
 
-module FFT (real : Real) (cplx : Cplx real) where
-  open Cplx cplx using (ℂ; _*_; -ω; e^i_; _+_; 0ℂ; +-*-isCommutativeRing)
+module FFT (cplx : Cplx) where
+  open Cplx cplx using (ℂ; _*_; -ω; _+_; 0ℂ; +-*-isCommutativeRing)
 
   open AlgebraStructures  {A = ℂ} _≡_
   open IsCommutativeRing +-*-isCommutativeRing using (+-isCommutativeMonoid)
