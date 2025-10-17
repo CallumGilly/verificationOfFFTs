@@ -13,7 +13,8 @@ open import Data.Nat.Properties using (m*n≢0)
 open import Agda.Builtin.String
 
 module Implementations.Complex (real : Real) where
-  open Real.Real real using (ℝ; _ᵣ; cos; sin; π) renaming (-_ to -ᵣ_; _+_ to _+ᵣ_; _-_ to _-ᵣ_; _*_ to _*ᵣ_; _/_ to _/ᵣ_)
+  open Real.Real real using (ℝ; _ᵣ; cos; sin; π; 0/N≡0; cos0; sin0; cos-2πn; sin-2πn; 0ℝ; 1ℝ; ᵣ-distrib-*; -distrib-*; Nm/N≡m) renaming (-_ to -ᵣ_; _+_ to _+ᵣ_; _-_ to _-ᵣ_; _*_ to _*ᵣ_; _/_ to _/ᵣ_; +-*-isCommutativeRing to +ᵣ-*ᵣ-isCommutativeRing)
+  open IsCommutativeRing +ᵣ-*ᵣ-isCommutativeRing using (zeroʳ; *-assoc; *-comm)
 
   module Base where
     record ℂ₁ : Set where
@@ -50,17 +51,33 @@ module Implementations.Complex (real : Real) where
     e^i_ : ℝ → ℂ₁
     e^i_ x = (cos x) + (sin x) i
     
-    ℂ-conjugate : ℂ₁ → ℂ₁
-    ℂ-conjugate (re + im i) = re + (-ᵣ im) i
-
     -ω : (N : ℕ) → .⦃ nonZero-n : NonZero N ⦄ → (k : ℕ) → ℂ₁
     -ω N k = e^i (((-ᵣ (2 ᵣ)) *ᵣ π *ᵣ (k ᵣ)) /ᵣ (N ᵣ))
+
+    ω-N-0 : ∀ {N : ℕ} → ⦃ nonZero-n : NonZero N ⦄ → -ω N 0 ≡ 1ℂ
+    ω-N-0 {N} ⦃ nonZero-n ⦄ rewrite 
+        zeroʳ (-ᵣ 2 ᵣ *ᵣ π) 
+      | 0/N≡0 (N ᵣ)
+      | cos0
+      | sin0
+      = refl
+    
+    
+    ω-N-mN : ∀ {N m : ℕ} → ⦃ nonZero-n : NonZero N ⦄ → -ω N (N *ₙ m) ≡ 1ℂ
+    ω-N-mN {N} {m} rewrite 
+        ᵣ-distrib-* N m 
+      | *-comm (-ᵣ 2 ᵣ *ᵣ π) (N ᵣ *ᵣ m ᵣ)
+      | *-assoc (N ᵣ) (m ᵣ) (-ᵣ 2 ᵣ *ᵣ π)
+      | Nm/N≡m (N ᵣ) (m ᵣ *ᵣ (-ᵣ 2 ᵣ *ᵣ π))
+      | *-comm (m ᵣ) (-ᵣ 2 ᵣ *ᵣ π)
+      | -distrib-* (2 ᵣ) π
+      | cos-2πn (m)
+      | sin-2πn (m)
+      = refl
 
 
     postulate
       isCommutativeRing : IsCommutativeRing {A = ℂ₁} _≡_ _+_ _*_ -_ 0ℂ 1ℂ
-      ω-N-0 : ∀ {N : ℕ} → ⦃ nonZero-n : NonZero N ⦄ → -ω N 0 ≡ 1ℂ
-      ω-N-mN : ∀ {N m : ℕ} → ⦃ nonZero-n : NonZero N ⦄ → -ω N (N *ₙ m) ≡ 1ℂ
       ω-r₁x-r₁y : 
         ∀ (r₁ x y : ℕ) 
         → ⦃ nonZero-r₁ : NonZero r₁ ⦄
