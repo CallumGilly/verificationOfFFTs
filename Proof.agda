@@ -9,10 +9,8 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; trans; sym; cong₂; subst; cong-app; cong′; icong)
 open Eq.≡-Reasoning
 
-module Proof (real : Real) (cplx : Cplx) where
+module Proof (cplx : Cplx) where
 
-open Real.Real real using (_ᵣ; ℝ)
-  renaming (_+_ to _+ᵣ_; _-_ to _-ᵣ_; -_ to -ᵣ_; _/_ to _/ᵣ_; _*_ to _*ᵣ_)
 open Cplx cplx using (ℂ; _+_; _*_; -ω; 0ℂ; +-*-isCommutativeRing; ω-r₁x-r₁y; ω-N-mN; ω-N-k₀+k₁)
 
 open AlgebraStructures  {A = ℂ} _≡_

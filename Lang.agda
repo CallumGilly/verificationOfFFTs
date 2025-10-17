@@ -110,13 +110,13 @@ instance
                             r2' = `swap (`unnest `$ r2)
                           in r2'
                           
-module Interp (real : Real) (cplx : Cplx real) where
+module Interp (real : Real) (cplx : Cplx) where
   open Cplx cplx renaming (_+_ to _+𝕔_; _*_ to _*𝕔_)
   open Real.Real real using (_ᵣ)
   
   open import Matrix.Equality
-  open import FFT real cplx
-  open import Proof real cplx
+  open import FFT cplx
+  open import Proof cplx
 
   Sem : Ty → Set
   Sem C = ℂ
