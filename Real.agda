@@ -1,6 +1,6 @@
 module Real where
 
-  open import Data.Nat.Base using (ℕ)
+  open import Data.Nat.Base using (ℕ) renaming (_*_ to _*ₙ_)
 
   import Relation.Binary.PropositionalEquality as Eq
   open Eq using (_≡_; refl; cong; sym)
@@ -43,6 +43,18 @@ module Real where
 
     field
       +-*-isCommutativeRing : IsCommutativeRing _+_ _*_ -_ 0ℝ 1ℝ
+      0/N≡0 : ∀ (N : ℝ) → 0ℝ / N ≡ 0ℝ
+
+      cos0  : cos 0ℝ ≡ 1ℝ
+      sin0  : sin 0ℝ ≡ 0ℝ
+
+      cos-2πn : ∀ (n : ℕ) → cos ((- (2 ᵣ * π)) * (n ᵣ)) ≡ 1ℝ
+      sin-2πn : ∀ (n : ℕ) → sin ((- (2 ᵣ * π)) * (n ᵣ)) ≡ 0ℝ
+
+      ᵣ-distrib-* : ∀ (n m : ℕ) → (n *ₙ m) ᵣ ≡ (n ᵣ) * (m ᵣ)
+      -distrib-* : ∀ (n m : ℝ) → (- n) * m ≡ - (n * m)
+
+      Nm/N≡m : ∀ (N m : ℝ) → (N * m) / N ≡ m
 
       --double-negative : ∀ (x : ℝ) → - (- x) ≡ x
 

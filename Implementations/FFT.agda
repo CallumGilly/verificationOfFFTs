@@ -5,16 +5,16 @@ module Implementations.FFT where
 open import Real using (Real)
 open import Implementations.Real using (realImplementation; showℝ)
 open import Complex using (Cplx)
-open import Implementations.Complex realImplementation using (complexImplementation; _+_i)
+open import Implementations.Complex realImplementation using (complexImplementation; _+_i; fromℝ)
 
 open Real.Real realImplementation using (ℝ; _ᵣ; -_)
-open Cplx complexImplementation using (ℂ; fromℝ)
+open Cplx complexImplementation using (ℂ)
 
 open import Matrix
 open import Matrix.Reshape
 open import Matrix.Show using (showShape) renaming (show to showTensor)
 
-open import FFT realImplementation complexImplementation using (FFT; DFT)
+open import FFT complexImplementation using (FFT; DFT)
 
 open import IO using (IO; run; Main; _>>_; _>>=_)
 open import IO.Finite using (putStrLn)
