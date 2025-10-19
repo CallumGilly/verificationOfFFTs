@@ -41,7 +41,7 @@ variable
 -- Predicates to rule out higher order types 
 data Num : Ty → Set where
   C   : Num C
-  -- Arrays are functions but we wont represent them like that in futhark
+  -- Arrays are functions but we wont represent them like that in our C implementation
   arr : Num τ → Num (ix s ⇒ τ)
 
 -- Futhark types (first order types)
@@ -380,6 +380,8 @@ module Tests where
 
   res = show-test fft _
 
+  _ : show-test fft _ ≡ ?
+  _ = ?
 
 
 {-

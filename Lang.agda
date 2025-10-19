@@ -269,7 +269,8 @@ module Show where
     el ← v ix
     elₛ ← to-str (num f) el
     return (printf 
-              "(imap%u %s (\\ %s -> %s))" 
+              "(imap%u %s (\\ %s -> %s))"                  -- FIXME: from a brief scan of the futhark docs, map is only supported up to map5
+                                                           -- Could be that I have missed something however, as thats map not imap
               (dim s) (shape-args s) (ix-join ix " ") elₛ)
 
   to-str (fun nv p) v = do
