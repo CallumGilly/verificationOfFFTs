@@ -1,5 +1,5 @@
 --{-# OPTIONS --backtracking-instance-search #-}
-open import Relation.Binary.PropositionalEquality
+open import Relation.Binary.PropositionalEquality hiding ([_])
 open import Data.Nat
 open import Data.Fin using (Fin; zero; suc; cast; toℕ)
 open import Data.Fin.Properties
@@ -26,27 +26,19 @@ nz-# = nonZeroₛ-s⇒nonZero-s
 infixr 5 _⇒_
 data Ty : Set where
   C   : Ty
-  -- Index:
   ix  : Shape → Ty
-  -- Function representation:
-  _⇒_ : Ty → Ty → Ty -- Need to restrict LHS so left is only first order, instead we let ty be higher order, and use num and fut as predicates
+  _⇒_ : Ty → Ty → Ty
 
--- Shortcut to say ar is a function with ix on the lhs
 ar : Shape → Ty → Ty
 ar s X = ix s ⇒ X
 
 variable
   τ σ δ : Ty
 
--- Predicates to rule out higher order types 
 data Num : Ty → Set where
   C   : Num C
-  -- Arrays are functions but we wont represent them like that in our C implementation
   arr : Num τ → Num (ix s ⇒ τ)
 
--- Futhark types (first order types)
--- Either numerical, or its a function from a numerical type to 
--- LHS cannot be functions
 data Fut : Ty → Set where
   num : Num τ → Fut τ
   fun : Num τ → Fut σ → Fut (τ ⇒ σ)
@@ -164,6 +156,8 @@ module Show where
   open import Data.Nat
   open import Data.String hiding (show)
   open import Data.Product
+  open import Data.Sum
+  open import Data.List using (List; []; _∷_; [_])
   open import Text.Printf
   open import Effect.Monad 
   open import Effect.Monad.State
@@ -181,12 +175,10 @@ module Show where
   Val C = String
   Val (ix s) = Ix s
   Val (τ ⇒ σ) = Val τ → State ℕ (Val σ)
-  
+
   fresh : ℕ → String
   fresh = printf "x_%u"
 
-  -- This is used to get a fresh variable in which we can store the results of an 
-  -- operation
   fresh-ix : String → Ix s
   fresh-ix n = proj₂ (runState (go n) 0)
     where
@@ -233,10 +225,13 @@ module Show where
   omega : ℕ → Ix (s Shape.⊗ p) → Val C
   omega sz (i ⊗ j) = printf "minus_omega(%u,(%s * %s))" 
                              sz (offset i) (offset j)
+
+  
    
+  -- to-val : E Val τ → State ℕ (Val τ ⊎ (String × Val τ))
   to-val : E Val τ → State ℕ (Val τ)
   to-val (` x) = return x
-  to-val (`lam f) = return (to-val ∘ f)
+  to-val (`lam f) = return ((to-val) ∘ f)
   to-val (e `$ e₁) = do
     f ← to-val e
     x ← to-val e₁
@@ -247,51 +242,55 @@ module Show where
   to-val (`swap e)  = do
     a ← to-val e
     return λ {(i ⊗ j) → a (j ⊗ i)}
-  -- Below `n` references the length of the array
-  --       `x` references the name of the new variable (which each element in turn will be placed into)
-  --       `b` contains the operations done inside the loop
-  {-
-  Complex_type res = 0+0i;
-  for (int <ai> = 0; <ai> < <n>; <ai>++) {
-    res += <b>[<ai>];
-  }
-  -}
-  -- C)
   to-val (`sum {n} a) = do
     a ← to-val a
-    c₁ ← get
-    let ai = fresh c₁ -- Array Index
+    c ← get
+    let x = fresh c
     modify suc
-    b ← a (ι ai)
-    c₂ ← get
-    let acc = fresh c₂ -- Accumulator
-    modify suc
-    return $ printf "sum"
-    return $ printf "(() => {Complex_type %s = 0; for (int %s = 0; %s < %u; %s++){%s += %s;} return %s})" acc ai ai n ai acc b acc -- This is absolute bull because anomynous functions are javascript...
-    --return $ printf "sum (imap %u (\\ %s → %s))" n ai b
-  {-
-  to-val (`sum {n} a) = do
-    a ← to-val a
-    c₁ ← get
-    let ai = fresh c₁ -- Array Index
-    modify suc
-    b ← a (ι ai)
-    c₂ ← get
-    let acc = fresh c₂ -- Accumulator
-    modify suc
-    --return $ printf "sum"
-    return $ printf "Complex_type %s = 0; for (int %s = 0; %s < %u; %s++){%s += %s[%s];} %s" acc ai ai n ai acc b ai acc
-    --return $ printf "sum (imap %u (\\ %s → %s))" n ai b
-  -}
+    b ← a (ι x)
+    return $ printf "sum (imap %u (\\ %s → %s))" n x b
   to-val (`ω n e) = omega n <$> to-val e
   to-val (e `* e₁) = do
     l ← to-val e
     r ← to-val e₁
     return $ printf "(%s * %s)" l r
 
+  --to-val′ : E Val τ → List (E Val τ)
 
+--   data loop-context (A : Set) : Set where
+--     loop : (ai : String) → (ubound : String) → (body : loop-context A) → loop-context A
+--     expr : loop-context A
+--     
+-- 
+--   to-loop-val : E Val τ → State ℕ (loop-context (E Val τ))
+--   to-loop-val (` x) = ?
+--   to-loop-val (`lam x) = ?
+--   to-loop-val (x `$ x₁) = ?
+--   to-loop-val (x `⊗ x₁) = ?
+--   to-loop-val (`fst x) = ?
+--   to-loop-val (`snd x) = ?
+--   to-loop-val (`swap x) = ?
+--   to-loop-val (`sum x) = ?
+--   to-loop-val (`ω n x) = ?
+--   to-loop-val (e `* e₁) = do
+--     l ← to-loop-val e
+--     r ← to-loop-val e₁
+--     ?
+-- 
+  --to-loop-str : (return-location : String) → Fut τ → Val τ → State ℕ (Loops String)
 
-  to-str : Fut τ → Val τ → State ℕ String
+  to-str : (return-location : String) → Fut τ → Val τ → State ℕ String
+
+  record loop : Set where
+    field
+      index-var      : String
+      upper-bound    : String
+      result-pointer : String
+      
+
+ -- data expr-or-loop (A : Set) : A → Set where
+ --   expr : expr-or-loop 
+
 
   -- We don't need to return stateful result right now,
   -- but conceptually, we might need free variables fro higher-oreder
@@ -299,49 +298,49 @@ module Show where
   num-var : Num τ → (n : String) → State ℕ (Val τ)
   num-var C n = return n
   num-var (arr p) n = return λ i → num-var p (to-sel i n)
-  
+
+  -- nested-fors : Shape → Indexs → body → result
   nested-fors : (s : Shape) → Ix s → String → String
-  nested-fors (ι dim) (ι var) inside-block = printf "for (int %s = 0; %s < %u; %s++){ %s; }" var var dim var inside-block
-  nested-fors (sₗ ⊗ sᵣ) (varsₗ ⊗ varsᵣ) inside-block = nested-fors sₗ varsₗ (nested-fors sᵣ varsᵣ inside-block)
+  nested-fors (ι N) (ι i) body = printf "for (int %s = 0; %s < %u; %s++) {%s} " i i N i body
+  nested-fors (sₗ ⊗ sᵣ) (iₗ ⊗ iᵣ) body = nested-fors sₗ iₗ (nested-fors sᵣ iᵣ body)
 
-  to-str (num C) v = return v
-  to-str (num (arr {s = s} f)) v = do
+  to-str return-location (num C) v = return $ printf "%s;" v 
+  to-str return-location (num (arr {s = s} f)) v = do
     n ← get
     modify suc
     let ix = fresh-ix (fresh n)
     el ← v ix
-    elₛ ← to-str (num f) el
-    return $ nested-fors s ix elₛ -- This again is wrong, as it has changed the semanticas and my
-
-    {- 
-    for (int <ai_0> = 0; <ai_0> < <d_0>; <ai_0>++) {
-      
-    }
-    -}
-    {-
-    n ← get
-    modify suc
-    let ix = fresh-ix (fresh n)
-    el ← v ix
-    elₛ ← to-str (num f) el
-    return (printf 
-              "(imap%u %s (\\ %s -> %s))" 
-              (dim s) (shape-args s) (ix-join ix " ") elₛ)
-    -}
-
-  to-str (fun nv p) v = do
+    elₛ ← to-str (printf "%s[%s]" return-location $ ix-join ix "][" ) (num f) el
+    return (nested-fors s ix elₛ)
+  to-str return-location (fun nv p) v = do
     n ← get
     modify suc
     let x = (fresh n)
     w ← num-var nv x
     el ← v w
-    elₛ ← to-str p el
-    return (printf "(\\ %s -> %s)" x elₛ) 
- 
-  -- To val smashes together applications and all that, to string then goes and generates the code
-  show : Fut τ → (∀ {V} → E V τ) → String
-  show p e = runState (to-val e >>= to-str p) 0 .proj₂
+    elₛ ← to-str (printf "(*%s)" return-location) p el
+    return $ printf "void fName(argType %s, argType *%s) {%s}" x return-location elₛ 
 
+  -- Its either: An expression
+  -- A 
+  --exprList : List (String ⊎ E V τ)
+  --
+  --toExprList : (∀ {V} → E V τ) → State ℕ (List (String × E V τ))
+  --toExprList x = ?
+ 
+  show : Fut τ → (∀ {V} → E V τ) → String
+  show p e = runState (to-val e >>= to-str "loc1" p) 0 .proj₂
+
+
+
+  data loops : Set where
+    inner : loops
+
+
+  to-loopy : Fut τ → E V τ → State loops ?
+
+  show′ : Fut τ → (∀ {V} → E V τ) → String
+  show′ = ?
 
 module Tests where
   open import Data.Empty
@@ -361,9 +360,6 @@ module Tests where
 
   fft-big : E V _
   fft-big = `fft {s = sh-big} ⦃ ((ι _ ⊗ ι _) ⊗ ι _) ⊗ (ι _ ⊗ ι _) ⦄
-
-  arr-test : E V (ar sh C ⇒ ar sh C) 
-  arr-test = `λ b ⇒ ` b
 
   -- The inner map should normalise away
   test : E V (ar sh C ⇒ ar sh C) 
@@ -424,6 +420,7 @@ module Tests where
   ... | yes p with isFut σ
   ... | no ¬q = no λ { (fun _ q) → ¬q q }
   ... | yes q = yes (fun p q)
+
 
   show-test : (∀ {V} → E V τ) → True (isFut τ) → String
   show-test {τ = τ} e t with isFut τ

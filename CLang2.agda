@@ -26,27 +26,30 @@ nz-# = nonZeroₛ-s⇒nonZero-s
 infixr 5 _⇒_
 data Ty : Set where
   C   : Ty
-  -- Index:
   ix  : Shape → Ty
-  -- Function representation:
-  _⇒_ : Ty → Ty → Ty -- Need to restrict LHS so left is only first order, instead we let ty be higher order, and use num and fut as predicates
+  _⇒_ : Ty → Ty → Ty
 
--- Shortcut to say ar is a function with ix on the lhs
+data CTy : Set where
+  -- Complex number
+  C : CTy
+  -- Index
+  ix : Shape → CTy
+  -- Application 
+  _⇒_ : CTy → CTy → CTy
+  
+CAr : Shape → CTy → CTy
+CAr s X = ix s ⇒ X
+
 ar : Shape → Ty → Ty
 ar s X = ix s ⇒ X
 
 variable
   τ σ δ : Ty
 
--- Predicates to rule out higher order types 
 data Num : Ty → Set where
   C   : Num C
-  -- Arrays are functions but we wont represent them like that in our C implementation
   arr : Num τ → Num (ix s ⇒ τ)
 
--- Futhark types (first order types)
--- Either numerical, or its a function from a numerical type to 
--- LHS cannot be functions
 data Fut : Ty → Set where
   num : Num τ → Fut τ
   fun : Num τ → Fut σ → Fut (τ ⇒ σ)
@@ -64,6 +67,12 @@ data E (V : Ty → Set) : Ty → Set where
   -- Too specialised?
   `ω    : (n : ℕ) → .⦃ NonZero n ⦄ → E V (ix (s ⊗ p)) → E V C
   _`*_  : (a b : E V C) → E V C
+
+-- data MiniC (Context : CTy → Set) : CTy → Set where
+--   var : MiniC Context C
+--   loop : MiniC Context ?
+
+
 
 infix 1 `lam
 syntax `lam (λ x → e) = `λ x ⇒ e
@@ -185,8 +194,6 @@ module Show where
   fresh : ℕ → String
   fresh = printf "x_%u"
 
-  -- This is used to get a fresh variable in which we can store the results of an 
-  -- operation
   fresh-ix : String → Ix s
   fresh-ix n = proj₂ (runState (go n) 0)
     where
@@ -231,9 +238,9 @@ module Show where
   to-sel i a = a ++ ix-join (ix-map (printf "[%s]") i) ""
 
   omega : ℕ → Ix (s Shape.⊗ p) → Val C
-  omega sz (i ⊗ j) = printf "minus_omega(%u,(%s * %s))" 
+  omega sz (i ⊗ j) = printf "minus_omega %u (%s * %s)" 
                              sz (offset i) (offset j)
-   
+
   to-val : E Val τ → State ℕ (Val τ)
   to-val (` x) = return x
   to-val (`lam f) = return (to-val ∘ f)
@@ -247,48 +254,27 @@ module Show where
   to-val (`swap e)  = do
     a ← to-val e
     return λ {(i ⊗ j) → a (j ⊗ i)}
-  -- Below `n` references the length of the array
-  --       `x` references the name of the new variable (which each element in turn will be placed into)
-  --       `b` contains the operations done inside the loop
-  {-
-  Complex_type res = 0+0i;
-  for (int <ai> = 0; <ai> < <n>; <ai>++) {
-    res += <b>[<ai>];
-  }
-  -}
-  -- C)
   to-val (`sum {n} a) = do
     a ← to-val a
-    c₁ ← get
-    let ai = fresh c₁ -- Array Index
+    c ← get
+    let x = fresh c
     modify suc
-    b ← a (ι ai)
-    c₂ ← get
-    let acc = fresh c₂ -- Accumulator
-    modify suc
-    return $ printf "sum"
-    return $ printf "(() => {Complex_type %s = 0; for (int %s = 0; %s < %u; %s++){%s += %s;} return %s})" acc ai ai n ai acc b acc -- This is absolute bull because anomynous functions are javascript...
-    --return $ printf "sum (imap %u (\\ %s → %s))" n ai b
+    b ← a (ι x)
+    return $ printf "sum (remove_imap %u (\\ %s → %s))" n x b
   {-
   to-val (`sum {n} a) = do
     a ← to-val a
-    c₁ ← get
-    let ai = fresh c₁ -- Array Index
+    c ← get
+    let x = fresh c
     modify suc
-    b ← a (ι ai)
-    c₂ ← get
-    let acc = fresh c₂ -- Accumulator
-    modify suc
-    --return $ printf "sum"
-    return $ printf "Complex_type %s = 0; for (int %s = 0; %s < %u; %s++){%s += %s[%s];} %s" acc ai ai n ai acc b ai acc
-    --return $ printf "sum (imap %u (\\ %s → %s))" n ai b
+    b ← a (ι x)
+    return $ printf "sum (remove_imap %u (\\ %s → %s))" n x b
   -}
   to-val (`ω n e) = omega n <$> to-val e
   to-val (e `* e₁) = do
     l ← to-val e
     r ← to-val e₁
     return $ printf "(%s * %s)" l r
-
 
 
   to-str : Fut τ → Val τ → State ℕ String
@@ -299,33 +285,26 @@ module Show where
   num-var : Num τ → (n : String) → State ℕ (Val τ)
   num-var C n = return n
   num-var (arr p) n = return λ i → num-var p (to-sel i n)
-  
-  nested-fors : (s : Shape) → Ix s → String → String
-  nested-fors (ι dim) (ι var) inside-block = printf "for (int %s = 0; %s < %u; %s++){ %s; }" var var dim var inside-block
-  nested-fors (sₗ ⊗ sᵣ) (varsₗ ⊗ varsᵣ) inside-block = nested-fors sₗ varsₗ (nested-fors sᵣ varsᵣ inside-block)
 
   to-str (num C) v = return v
   to-str (num (arr {s = s} f)) v = do
     n ← get
     modify suc
-    let ix = fresh-ix (fresh n)
-    el ← v ix
-    elₛ ← to-str (num f) el
-    return $ nested-fors s ix elₛ -- This again is wrong, as it has changed the semanticas and my
-
-    {- 
-    for (int <ai_0> = 0; <ai_0> < <d_0>; <ai_0>++) {
-      
-    }
-    -}
-    {-
-    n ← get
-    modify suc
-    let ix = fresh-ix (fresh n)
+    let ix = fresh-ix (fresh n) 
     el ← v ix
     elₛ ← to-str (num f) el
     return (printf 
-              "(imap%u %s (\\ %s -> %s))" 
+              "(imap%u %s (\\ %s -> %s))"
+              (dim s) (shape-args s) (ix-join ix " ") elₛ)
+  {-
+    do
+    n ← get
+    modify suc
+    let ix = fresh-ix (fresh n) -- De Broijn index
+    el ← v ix
+    elₛ ← to-str (num f) el
+    return (printf 
+              "(imap%u %s (\\ %s -> %s))"
               (dim s) (shape-args s) (ix-join ix " ") elₛ)
     -}
 
@@ -338,9 +317,9 @@ module Show where
     elₛ ← to-str p el
     return (printf "(\\ %s -> %s)" x elₛ) 
  
-  -- To val smashes together applications and all that, to string then goes and generates the code
   show : Fut τ → (∀ {V} → E V τ) → String
   show p e = runState (to-val e >>= to-str p) 0 .proj₂
+  --show p e = runState (to-val e >>= to-str p) 0 .proj₂
 
 
 module Tests where
@@ -361,9 +340,6 @@ module Tests where
 
   fft-big : E V _
   fft-big = `fft {s = sh-big} ⦃ ((ι _ ⊗ ι _) ⊗ ι _) ⊗ (ι _ ⊗ ι _) ⦄
-
-  arr-test : E V (ar sh C ⇒ ar sh C) 
-  arr-test = `λ b ⇒ ` b
 
   -- The inner map should normalise away
   test : E V (ar sh C ⇒ ar sh C) 
@@ -424,6 +400,16 @@ module Tests where
   ... | yes p with isFut σ
   ... | no ¬q = no λ { (fun _ q) → ¬q q }
   ... | yes q = yes (fun p q)
+
+  -- isCTy : (τ : Ty) → Dec (CTy τ)
+  -- -- A complex number is a valid C type
+  -- isCTy C = yes (num C)
+  -- isCTy (ix x) = no λ { (num ()) }
+  -- isCTy (C ⇒ τ) with isCTy τ
+  -- ... | no  ¬p = ?
+  -- ... | yes  p = ?
+  -- isCTy (ix x ⇒ τ) = ?
+  -- isCTy ((τ₁ ⇒ τ₂) ⇒ τ) = ?
 
   show-test : (∀ {V} → E V τ) → True (isFut τ) → String
   show-test {τ = τ} e t with isFut τ

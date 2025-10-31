@@ -26,27 +26,19 @@ nz-# = nonZeroₛ-s⇒nonZero-s
 infixr 5 _⇒_
 data Ty : Set where
   C   : Ty
-  -- Index:
   ix  : Shape → Ty
-  -- Function representation:
-  _⇒_ : Ty → Ty → Ty -- Need to restrict LHS so left is only first order, instead we let ty be higher order, and use num and fut as predicates
+  _⇒_ : Ty → Ty → Ty
 
--- Shortcut to say ar is a function with ix on the lhs
 ar : Shape → Ty → Ty
 ar s X = ix s ⇒ X
 
 variable
   τ σ δ : Ty
 
--- Predicates to rule out higher order types 
 data Num : Ty → Set where
   C   : Num C
-  -- Arrays are functions but we wont represent them like that in our C implementation
   arr : Num τ → Num (ix s ⇒ τ)
 
--- Futhark types (first order types)
--- Either numerical, or its a function from a numerical type to 
--- LHS cannot be functions
 data Fut : Ty → Set where
   num : Num τ → Fut τ
   fun : Num τ → Fut σ → Fut (τ ⇒ σ)
@@ -164,6 +156,8 @@ module Show where
   open import Data.Nat
   open import Data.String hiding (show)
   open import Data.Product
+  open import Data.List using (List; _∷_; [] )
+  open import Data.Tree.Binary
   open import Text.Printf
   open import Effect.Monad 
   open import Effect.Monad.State
@@ -185,8 +179,6 @@ module Show where
   fresh : ℕ → String
   fresh = printf "x_%u"
 
-  -- This is used to get a fresh variable in which we can store the results of an 
-  -- operation
   fresh-ix : String → Ix s
   fresh-ix n = proj₂ (runState (go n) 0)
     where
@@ -231,8 +223,24 @@ module Show where
   to-sel i a = a ++ ix-join (ix-map (printf "[%s]") i) ""
 
   omega : ℕ → Ix (s Shape.⊗ p) → Val C
-  omega sz (i ⊗ j) = printf "minus_omega(%u,(%s * %s))" 
+  omega sz (i ⊗ j) = printf "minus_omega %u (%s * %s)" 
                              sz (offset i) (offset j)
+
+    
+  to-expr₂ : E Val τ → Tree ? (E Val τ)
+
+  to-expr : E Val τ → List (ℕ × (E Val τ))
+  to-expr (` x)     = ? 
+  to-expr (`lam x)  = ? 
+  to-expr (x `$ x₁) = ?
+  to-expr (x `⊗ x₁) = ? 
+  to-expr (`fst x)  = ? 
+  to-expr (`snd x)  = ? 
+  to-expr (`swap x) = ? 
+  to-expr (`sum x)  = ? 
+  to-expr (`ω n x)  = ? 
+  to-expr (x `* x₁) = ? 
+
    
   to-val : E Val τ → State ℕ (Val τ)
   to-val (` x) = return x
@@ -247,42 +255,13 @@ module Show where
   to-val (`swap e)  = do
     a ← to-val e
     return λ {(i ⊗ j) → a (j ⊗ i)}
-  -- Below `n` references the length of the array
-  --       `x` references the name of the new variable (which each element in turn will be placed into)
-  --       `b` contains the operations done inside the loop
-  {-
-  Complex_type res = 0+0i;
-  for (int <ai> = 0; <ai> < <n>; <ai>++) {
-    res += <b>[<ai>];
-  }
-  -}
-  -- C)
   to-val (`sum {n} a) = do
     a ← to-val a
-    c₁ ← get
-    let ai = fresh c₁ -- Array Index
+    c ← get
+    let x = fresh c
     modify suc
-    b ← a (ι ai)
-    c₂ ← get
-    let acc = fresh c₂ -- Accumulator
-    modify suc
-    return $ printf "sum"
-    return $ printf "(() => {Complex_type %s = 0; for (int %s = 0; %s < %u; %s++){%s += %s;} return %s})" acc ai ai n ai acc b acc -- This is absolute bull because anomynous functions are javascript...
-    --return $ printf "sum (imap %u (\\ %s → %s))" n ai b
-  {-
-  to-val (`sum {n} a) = do
-    a ← to-val a
-    c₁ ← get
-    let ai = fresh c₁ -- Array Index
-    modify suc
-    b ← a (ι ai)
-    c₂ ← get
-    let acc = fresh c₂ -- Accumulator
-    modify suc
-    --return $ printf "sum"
-    return $ printf "Complex_type %s = 0; for (int %s = 0; %s < %u; %s++){%s += %s[%s];} %s" acc ai ai n ai acc b ai acc
-    --return $ printf "sum (imap %u (\\ %s → %s))" n ai b
-  -}
+    b ← a (ι x)
+    return $ printf "sum (imap %u (\\ %s → %s))" n x b
   to-val (`ω n e) = omega n <$> to-val e
   to-val (e `* e₁) = do
     l ← to-val e
@@ -299,10 +278,6 @@ module Show where
   num-var : Num τ → (n : String) → State ℕ (Val τ)
   num-var C n = return n
   num-var (arr p) n = return λ i → num-var p (to-sel i n)
-  
-  nested-fors : (s : Shape) → Ix s → String → String
-  nested-fors (ι dim) (ι var) inside-block = printf "for (int %s = 0; %s < %u; %s++){ %s; }" var var dim var inside-block
-  nested-fors (sₗ ⊗ sᵣ) (varsₗ ⊗ varsᵣ) inside-block = nested-fors sₗ varsₗ (nested-fors sᵣ varsᵣ inside-block)
 
   to-str (num C) v = return v
   to-str (num (arr {s = s} f)) v = do
@@ -311,23 +286,10 @@ module Show where
     let ix = fresh-ix (fresh n)
     el ← v ix
     elₛ ← to-str (num f) el
-    return $ nested-fors s ix elₛ -- This again is wrong, as it has changed the semanticas and my
-
-    {- 
-    for (int <ai_0> = 0; <ai_0> < <d_0>; <ai_0>++) {
-      
-    }
-    -}
-    {-
-    n ← get
-    modify suc
-    let ix = fresh-ix (fresh n)
-    el ← v ix
-    elₛ ← to-str (num f) el
     return (printf 
-              "(imap%u %s (\\ %s -> %s))" 
+              "(imap%u %s (\\ %s -> %s))"                  -- FIXME: from a brief scan of the futhark docs, map is only supported up to map5
+                                                           -- Could be that I have missed something however, as thats map not imap
               (dim s) (shape-args s) (ix-join ix " ") elₛ)
-    -}
 
   to-str (fun nv p) v = do
     n ← get
@@ -337,8 +299,8 @@ module Show where
     el ← v w
     elₛ ← to-str p el
     return (printf "(\\ %s -> %s)" x elₛ) 
+
  
-  -- To val smashes together applications and all that, to string then goes and generates the code
   show : Fut τ → (∀ {V} → E V τ) → String
   show p e = runState (to-val e >>= to-str p) 0 .proj₂
 
@@ -362,8 +324,8 @@ module Tests where
   fft-big : E V _
   fft-big = `fft {s = sh-big} ⦃ ((ι _ ⊗ ι _) ⊗ ι _) ⊗ (ι _ ⊗ ι _) ⦄
 
-  arr-test : E V (ar sh C ⇒ ar sh C) 
-  arr-test = `λ b ⇒ ` b
+  cg-test₁ : E V (C ⇒ C)
+  cg-test₁ = `λ a ⇒ ((`λ x ⇒ ` x) `$ ` a) 
 
   -- The inner map should normalise away
   test : E V (ar sh C ⇒ ar sh C) 
@@ -429,7 +391,9 @@ module Tests where
   show-test {τ = τ} e t with isFut τ
   ... | yes p = show p e
 
-  res = show-test fft _
+  res = show-test cg-test₁ _
+  _ : res ≡ ?
+  _ = ?
 
 
 
@@ -448,7 +412,7 @@ module Tests where
 λ real cplx a i j →
   FFT.sum′ real cplx
   (λ i₁ →
-     (cplx Cplx.*
+     (cplx Cplx.*Those which cannot bne used as arguments
       (cplx Cplx.*
        FFT.sum′ real cplx
        (λ i₂ →

@@ -26,27 +26,19 @@ nz-# = nonZeroₛ-s⇒nonZero-s
 infixr 5 _⇒_
 data Ty : Set where
   C   : Ty
-  -- Index:
   ix  : Shape → Ty
-  -- Function representation:
-  _⇒_ : Ty → Ty → Ty -- Need to restrict LHS so left is only first order, instead we let ty be higher order, and use num and fut as predicates
+  _⇒_ : Ty → Ty → Ty
 
--- Shortcut to say ar is a function with ix on the lhs
 ar : Shape → Ty → Ty
 ar s X = ix s ⇒ X
 
 variable
   τ σ δ : Ty
 
--- Predicates to rule out higher order types 
 data Num : Ty → Set where
   C   : Num C
-  -- Arrays are functions but we wont represent them like that in our C implementation
   arr : Num τ → Num (ix s ⇒ τ)
 
--- Futhark types (first order types)
--- Either numerical, or its a function from a numerical type to 
--- LHS cannot be functions
 data Fut : Ty → Set where
   num : Num τ → Fut τ
   fun : Num τ → Fut σ → Fut (τ ⇒ σ)
@@ -64,6 +56,25 @@ data E (V : Ty → Set) : Ty → Set where
   -- Too specialised?
   `ω    : (n : ℕ) → .⦃ NonZero n ⦄ → E V (ix (s ⊗ p)) → E V C
   _`*_  : (a b : E V C) → E V C
+
+data CTy : Set where
+  CC    : CTy
+  Cix    : Shape → CTy
+  Car    : (s : Shape) → CTy → CTy → CTy
+  Expr  : CTy
+
+variable
+  ψ ω υ : CTy
+
+data CE (V : CTy → Set) : CTy → Set where
+  `       : V CC → CE V CC
+  _`∷_    : CE V Expr → CE V Expr → CE V Expr
+  _`=_    : V CC → CE V ψ → CE V CC
+  `for_<_ : V (Cix (ι n)) → CE V Expr → CE V Expr
+
+  `ω      : (n : ℕ) → .⦃ NonZero n ⦄ → CE V (Cix (s ⊗ p)) → CE V CC
+  _`*_    : (a b : CE V CC) → CE V CC
+
 
 infix 1 `lam
 syntax `lam (λ x → e) = `λ x ⇒ e
@@ -181,12 +192,32 @@ module Show where
   Val C = String
   Val (ix s) = Ix s
   Val (τ ⇒ σ) = Val τ → State ℕ (Val σ)
+
+  CVal : CTy → Set
+  CVal CC      = String
+  CVal (Cix n) = Position n
+  CVal Expr    = String
+
+  ty-to-cty : Ty → CTy
+  ty-to-cty C = CC
+  ty-to-cty (ix n) = Cix n
+  ty-to-cty (x ⇒ x₁) = Expr
+
+  -- to-cval : E Val τ → CE CVal (ty-to-cty τ) 
+  -- to-cval {C} (` x)     = ` x
+  -- to-cval {C} (a `$ a₁) = ?
+  -- to-cval {C} (`sum a)  = ?
+  -- to-cval {C} (`ω n a)  = ?
+  -- to-cval {C} (a `* a₁) = ?
+  -- to-cval {ix x}   a = ?
+  -- to-cval {τ ⇒ τ₁} (` x) = ?
+  -- to-cval {τ ⇒ τ₁} (`lam x) = ?
+  -- to-cval {τ ⇒ τ₁} (a `$ a₁) = ?
+  -- to-cval {.(ix (_ ⊗ _)) ⇒ τ₁} (`swap a) = ?
   
   fresh : ℕ → String
   fresh = printf "x_%u"
 
-  -- This is used to get a fresh variable in which we can store the results of an 
-  -- operation
   fresh-ix : String → Ix s
   fresh-ix n = proj₂ (runState (go n) 0)
     where
@@ -231,9 +262,18 @@ module Show where
   to-sel i a = a ++ ix-join (ix-map (printf "[%s]") i) ""
 
   omega : ℕ → Ix (s Shape.⊗ p) → Val C
-  omega sz (i ⊗ j) = printf "minus_omega(%u,(%s * %s))" 
+  omega sz (i ⊗ j) = printf "minus_omega %u (%s * %s)" 
                              sz (offset i) (offset j)
    
+
+  to-cval : E Val τ → State ℕ (CVal (ty-to-cty τ))
+  to-cval {C} x = ?
+  to-cval {ix x₁} x = ?
+  to-cval {τ ⇒ τ₁} (` x) = ?
+  to-cval {τ ⇒ τ₁} (`lam x) = ?
+  to-cval {τ ⇒ τ₁} (x `$ x₁) = ?
+  to-cval {.(ix (_ ⊗ _)) ⇒ τ₁} (`swap x) = ?
+
   to-val : E Val τ → State ℕ (Val τ)
   to-val (` x) = return x
   to-val (`lam f) = return (to-val ∘ f)
@@ -247,42 +287,13 @@ module Show where
   to-val (`swap e)  = do
     a ← to-val e
     return λ {(i ⊗ j) → a (j ⊗ i)}
-  -- Below `n` references the length of the array
-  --       `x` references the name of the new variable (which each element in turn will be placed into)
-  --       `b` contains the operations done inside the loop
-  {-
-  Complex_type res = 0+0i;
-  for (int <ai> = 0; <ai> < <n>; <ai>++) {
-    res += <b>[<ai>];
-  }
-  -}
-  -- C)
   to-val (`sum {n} a) = do
     a ← to-val a
-    c₁ ← get
-    let ai = fresh c₁ -- Array Index
+    c ← get
+    let x = fresh c
     modify suc
-    b ← a (ι ai)
-    c₂ ← get
-    let acc = fresh c₂ -- Accumulator
-    modify suc
-    return $ printf "sum"
-    return $ printf "(() => {Complex_type %s = 0; for (int %s = 0; %s < %u; %s++){%s += %s;} return %s})" acc ai ai n ai acc b acc -- This is absolute bull because anomynous functions are javascript...
-    --return $ printf "sum (imap %u (\\ %s → %s))" n ai b
-  {-
-  to-val (`sum {n} a) = do
-    a ← to-val a
-    c₁ ← get
-    let ai = fresh c₁ -- Array Index
-    modify suc
-    b ← a (ι ai)
-    c₂ ← get
-    let acc = fresh c₂ -- Accumulator
-    modify suc
-    --return $ printf "sum"
-    return $ printf "Complex_type %s = 0; for (int %s = 0; %s < %u; %s++){%s += %s[%s];} %s" acc ai ai n ai acc b ai acc
-    --return $ printf "sum (imap %u (\\ %s → %s))" n ai b
-  -}
+    b ← a (ι x)
+    return $ printf "sum (imap %u (\\ %s → %s))" n x b
   to-val (`ω n e) = omega n <$> to-val e
   to-val (e `* e₁) = do
     l ← to-val e
@@ -299,10 +310,6 @@ module Show where
   num-var : Num τ → (n : String) → State ℕ (Val τ)
   num-var C n = return n
   num-var (arr p) n = return λ i → num-var p (to-sel i n)
-  
-  nested-fors : (s : Shape) → Ix s → String → String
-  nested-fors (ι dim) (ι var) inside-block = printf "for (int %s = 0; %s < %u; %s++){ %s; }" var var dim var inside-block
-  nested-fors (sₗ ⊗ sᵣ) (varsₗ ⊗ varsᵣ) inside-block = nested-fors sₗ varsₗ (nested-fors sᵣ varsᵣ inside-block)
 
   to-str (num C) v = return v
   to-str (num (arr {s = s} f)) v = do
@@ -311,23 +318,10 @@ module Show where
     let ix = fresh-ix (fresh n)
     el ← v ix
     elₛ ← to-str (num f) el
-    return $ nested-fors s ix elₛ -- This again is wrong, as it has changed the semanticas and my
-
-    {- 
-    for (int <ai_0> = 0; <ai_0> < <d_0>; <ai_0>++) {
-      
-    }
-    -}
-    {-
-    n ← get
-    modify suc
-    let ix = fresh-ix (fresh n)
-    el ← v ix
-    elₛ ← to-str (num f) el
     return (printf 
-              "(imap%u %s (\\ %s -> %s))" 
+              "(imap%u %s (\\ %s -> %s))"                  -- FIXME: from a brief scan of the futhark docs, map is only supported up to map5
+                                                           -- Could be that I have missed something however, as thats map not imap
               (dim s) (shape-args s) (ix-join ix " ") elₛ)
-    -}
 
   to-str (fun nv p) v = do
     n ← get
@@ -338,7 +332,8 @@ module Show where
     elₛ ← to-str p el
     return (printf "(\\ %s -> %s)" x elₛ) 
  
-  -- To val smashes together applications and all that, to string then goes and generates the code
+  blyat : Fut τ → ?
+
   show : Fut τ → (∀ {V} → E V τ) → String
   show p e = runState (to-val e >>= to-str p) 0 .proj₂
 
@@ -361,9 +356,6 @@ module Tests where
 
   fft-big : E V _
   fft-big = `fft {s = sh-big} ⦃ ((ι _ ⊗ ι _) ⊗ ι _) ⊗ (ι _ ⊗ ι _) ⦄
-
-  arr-test : E V (ar sh C ⇒ ar sh C) 
-  arr-test = `λ b ⇒ ` b
 
   -- The inner map should normalise away
   test : E V (ar sh C ⇒ ar sh C) 
@@ -429,7 +421,7 @@ module Tests where
   show-test {τ = τ} e t with isFut τ
   ... | yes p = show p e
 
-  res = show-test fft _
+  res = show-test test₁ _
 
 
 

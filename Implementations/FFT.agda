@@ -237,8 +237,13 @@ show-full-stack arr = do
   show-flat-FFT-result arr
   show-flat-DFT-result arr
 
+open import CLang5
+open ShowC
+open Tests
+
 main : Main
-main = run $ show-full-stack demo-mat₂
+--main = run $ show-full-stack demo-mat₂
+main = run $ putStrLn $ res
 
 --fft≅dft : 
 --    ∀ (arr : Ar s ℂ) 
