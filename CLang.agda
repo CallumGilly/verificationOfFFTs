@@ -26,30 +26,29 @@ nz-# = nonZeroₛ-s⇒nonZero-s
 infixr 5 _⇒_
 data Ty : Set where
   C   : Ty
-  -- Index:
   ix  : Shape → Ty
-  -- Function representation:
-  _⇒_ : Ty → Ty → Ty -- Need to restrict LHS so left is only first order, instead we let ty be higher order, and use num and fut as predicates
+  _⇒_ : Ty → Ty → Ty
 
--- Shortcut to say ar is a function with ix on the lhs
 ar : Shape → Ty → Ty
 ar s X = ix s ⇒ X
 
 variable
   τ σ δ : Ty
 
--- Predicates to rule out higher order types 
 data Num : Ty → Set where
   C   : Num C
-  -- Arrays are functions but we wont represent them like that in our C implementation
   arr : Num τ → Num (ix s ⇒ τ)
 
--- Futhark types (first order types)
--- Either numerical, or its a function from a numerical type to 
--- LHS cannot be functions
 data Fut : Ty → Set where
   num : Num τ → Fut τ
   fun : Num τ → Fut σ → Fut (τ ⇒ σ)
+
+data CTy′ : Ty → Set where
+  num : Num τ → CTy′ τ
+
+data CTy : Ty → Set where
+  num  : Num τ → CTy τ
+  main₁ : Num τ → Num σ → CTy (τ ⇒ σ)
 
 infixl 3 _`$_
 data E (V : Ty → Set) : Ty → Set where
@@ -68,8 +67,23 @@ data E (V : Ty → Set) : Ty → Set where
 infix 1 `lam
 syntax `lam (λ x → e) = `λ x ⇒ e
 
+-- data E′ (V : Ty → Set) : Ty → Set where
+--   `     : V τ → E′ V τ
+--   _`$_  : E′ V (τ ⇒ σ) →  E′ V τ → E′ V σ
+--   _`⊗_  : E′ V (ix s) → E′ V (ix p) → E′ V (ix (s ⊗ p))
+--   `fst  : E′ V (ix (s ⊗ p)) → E′ V (ix s)
+--   `snd  : E′ V (ix (s ⊗ p)) → E′ V (ix p)
+--   `swap : E′ V (ar (s ⊗ p) τ) → E′ V (ar (p ⊗ s) τ)
+--   `sum  : E′ V (ar (ι n) C) → E′ V C
+--   -- Too specialised?
+--   `ω    : (n : ℕ) → .⦃ NonZero n ⦄ → E′ V (ix (s ⊗ p)) → E′ V C
+--   _`*_  : (a b : E′ V C) → E′ V C
+
 variable
   V : Ty → Set
+
+--data First-Order (e : E V τ) : Set where
+  
 
 {-
 instance
@@ -160,6 +174,324 @@ module Interp (real : Real) (cplx : Cplx) where
     ∎ where open ≡-Reasoning
 
 
+module ShowC where
+  open import Data.Nat
+  open import Data.Bool
+  open import Data.String hiding (show)
+  open import Data.Product
+  open import Data.Maybe hiding (_>>=_)
+  open import Text.Printf
+  open import Relation.Nullary
+  open import Effect.Monad 
+  open import Effect.Monad.State
+  open RawMonadState {{...}}
+  open RawMonad {{...}} hiding (_⊗_)
+  instance
+    _ = monad
+    _ = monadState 
+
+  data Ix : Shape → Set where 
+    ι   : String → Ix (ι n)
+    _⊗_ : Ix s → Ix p → Ix (s ⊗ p)
+
+  Val : Ty → Set
+  Val C = String
+  Val (ix s) = Ix s
+  Val (τ ⇒ σ) = Val τ → State ℕ (String × Val σ) -- ADDED 
+  
+  Val′ : Ty → Set
+  Val′ C = String
+  Val′ (ix s) = Ix s
+  Val′ (τ ⇒ σ) = Val′ τ → State (ℕ × String) (Val′ σ)
+
+  fresh : ℕ → String
+  fresh = printf "x_%u"
+
+  fresh-var : State ℕ String
+  fresh-var = do
+    n ← get
+    modify suc
+    return (fresh n)
+
+  fresh-ix : String → Ix s
+  fresh-ix n = proj₂ (runState (go n) 0)
+    where
+      go : String → State ℕ (Ix s)
+      go {ι x} n = do
+        c ← get
+        modify suc
+        return (ι $′ printf "%s_%u" n c)
+      go {s ⊗ p} n = do
+        l ← go {s} n
+        r ← go {p} n
+        return (l ⊗ r)
+  
+  -- translate : E V τ → Maybe (E′ V τ)
+  -- translate (` x)     = just (` x)
+  -- translate (`lam x)  = nothing
+  -- translate (` x `$ x₁) = ?
+  -- translate (`lam x `$ x₁) = ?
+  -- translate (x `$ x₂ `$ x₁) = ?
+  -- translate (`swap x `$ x₁) = ?
+  -- translate (x `⊗ x₁) = ?
+  -- translate (`fst x)  = ?
+  -- translate (`snd x)  = ?
+  -- translate (`swap x) = ?
+  -- translate (`sum x)  = ?
+  -- translate (`ω n x)  = ?
+  -- translate (x `* x₁) = ?
+
+  to-str : Fut τ → Val τ → (res op : String) → State ℕ String
+  
+  offset : Ix s → String
+  offset (ι x) = x
+  offset {s ⊗ p} (i ⊗ j) = printf "((%u * %s) + %s)" (size p) (offset i) (offset j)
+
+  ix-join : Ix s → (d : String) → String
+  ix-join (ι x) d = x
+  ix-join (i ⊗ j) d = ix-join i d ++ d ++ ix-join j d
+  
+
+  ix-map : (String → String) → Ix s → Ix s
+  ix-map f (ι x) = ι (f x)
+  ix-map f (i ⊗ j) = ix-map f i ⊗ ix-map f j
+
+  to-sel : Ix s → String → String
+  to-sel i a = a ++ ix-join (ix-map (printf "[%s]") i) ""
+
+  omega : ℕ → Ix (s Shape.⊗ p) → Val C
+  omega sz (i ⊗ j) = printf "minus_omega(%u,(%s * %s))" 
+                             sz (offset i) (offset j)
+
+  -- We don't need to return stateful result right now,
+  -- but conceptually, we might need free variables fro higher-oreder
+  -- cases if we ever want to support them.
+  num-var : Num τ → (n : String) → State ℕ (Val τ)
+  num-var C n = return n
+  num-var (arr p) n = return λ i → do
+    nvp ← num-var p (to-sel i n)
+    return ("" , nvp)
+
+  -- normalise-helper : E Val τ → Maybe (E Val τ)
+  -- normalise-helper (` x) = ?
+  -- normalise-helper (`lam x) = ?
+  -- normalise-helper (` x `$ x₁) = nothing
+  -- normalise-helper (`lam x `$ x₁) = ?
+  -- normalise-helper (x `$ x₂ `$ x₁) = ?
+  -- normalise-helper (`swap x `$ x₁) = ?
+  -- normalise-helper (x `⊗ x₁) = ?
+  -- normalise-helper (`fst x) = ?
+  -- normalise-helper (`snd x) = ?
+  -- normalise-helper (`swap x) = ?
+  -- normalise-helper (`sum x) = ?
+  -- normalise-helper (`ω n x) = ?
+  -- normalise-helper (x `* x₁) = ?
+
+  -- normalise : E Val τ → Maybe (E Val τ)
+  -- normalise e@(` x)     = normalise-helper e
+  -- normalise e@(`lam {τ} {σ} x) = ?
+  -- normalise e@(x `$ x₁) = normalise-helper e
+  -- normalise e@(x `⊗ x₁) = normalise-helper e
+  -- normalise e@(`fst x)  = normalise-helper e
+  -- normalise e@(`snd x)  = normalise-helper e
+  -- normalise e@(`swap x) = normalise-helper e
+  -- normalise e@(`sum x)  = normalise-helper e
+  -- normalise e@(`ω n x)  = normalise-helper e
+  -- normalise e@(x `* x₁) = normalise-helper e
+
+  -- predicate : E V τ → Set
+  -- predicate (` x)     = ?
+  -- predicate (`lam x)  = ?
+  -- predicate (x `$ x₁) = ?
+  -- predicate (x `⊗ x₁) = ?
+  -- predicate (`fst x)  = ?
+  -- predicate (`snd x)  = ?
+  -- predicate (`swap x) = ?
+  -- predicate (`sum x)  = ?
+  -- predicate (`ω n x)  = ?
+  -- predicate (x `* x₁) = ?
+
+  -- to-val′ : E Val′ τ → {- (res op : String)  → -} State (ℕ × String) (Val′ τ)
+  -- to-val′ (` x)     = return x
+  -- to-val′ (`lam f)  = return 
+  --   λ v → do
+  --     val ← to-val′ $ f v
+  --     return val
+  -- to-val′ (x `$ x₁) = ?
+  -- to-val′ (x `⊗ x₁) = ?
+  -- to-val′ (`fst x)  = ?
+  -- to-val′ (`snd x)  = ?
+  -- to-val′ (`swap x) = ?
+  -- to-val′ (`sum x)  = ?
+  -- to-val′ (`ω n x)  = ?
+  -- to-val′ (x `* x₁) = ?
+
+  to-val : E Val τ → {- (res op : String)  → -} State ℕ (String × Val τ)
+  to-val (` x)     = return ( "" , x)
+  {-
+  to-val (`lam {σ = C} f)      = return 
+    ( "" , 
+      λ { v →  
+        do
+          deps , val ← to-val $ f v
+          return $ val ++ deps
+          -- How do I get this deps into the correct place above...
+      }
+    )
+  to-val (`lam {σ = ix x} f)   = return
+    ( "" , 
+      λ { v →  
+        do
+          deps , val ← to-val $ f v
+          return val
+      }
+    )
+  to-val (`lam {σ = σ ⇒ σ₁} f) = return
+    ( "" , 
+      λ { v →  
+        do
+          deps , val ← to-val $ f v
+          return val
+      }
+    )
+    --do
+    --  return ("\\\\TODO: MAKE LAM WORK\n" , 
+    --    λ { v → do
+    --      d , tmp ← to-val $ f v
+    --      return tmp
+    --    })
+  -}
+  to-val (`lam x) = do
+    let f t = to-val (x t)
+    return ("" , f )
+  to-val (e `$ e₁) = do
+    (d , f) ← to-val e
+    (p , x) ← to-val e₁
+    pre , q ← f x
+    return ( d ++ p ++ pre , q ) -- Consider order here
+  to-val (l `⊗ r) = do
+    (ld , lx) ← to-val l
+    (rd , rx) ← to-val r
+    return (ld ++ rd , lx ⊗ rx)
+  to-val (`fst e)  = do
+    d , (i ⊗ _) ← to-val e
+    return ( d , i )
+  to-val (`snd e)  = do
+    d , (_ ⊗ j) ← to-val e
+    return ( d , j )
+  to-val (`swap e) = do
+    d , a ← to-val e
+    return ( d , λ{(j ⊗ i) → a (i ⊗ j)})
+  to-val (`sum e) = do
+    fresh-res ← fresh-var 
+    def , array-summed ← to-val e
+    s ← to-str (num (arr C)) array-summed fresh-res "+="
+    return (def ++ (printf "%s = 0;\n" fresh-res) ++ s , fresh-res)
+  to-val (`ω n e)  = do
+    (d , k) ← to-val e
+    return ( d , omega n k )
+  to-val (l `* r) = do
+    ld , lx ← to-val l
+    rd , rx ← to-val r
+    return (ld ++ rd , printf "(%s * %s)" lx rx)
+
+  ty-to-cType : Ty → (String → String)
+  ty-to-cType C = printf "float complex %s"
+  ty-to-cType (ix x) = printf "float complex *%s"
+  ty-to-cType (x ⇒ x₁) = printf "float complex %s" -- TODO: Make this not this because this is wrong but is quick, dirty and passes a LGTM
+
+  {- Working, but badly
+  loop-nest : Fut τ → (res op : String) → (Ix s → State ℕ (String × Val τ)) → State ℕ String
+  loop-nest {s = ι n} fut res op f = do
+    m ← get
+    modify suc
+    let ix = fresh m
+    dep , r ← f (ι ix)
+    r-str ← to-str fut r res op
+    return $ printf "for (%s = 0; %s < %u; %s++) {\n%s%s\n}" ix ix n ix dep r-str
+  loop-nest {s = s ⊗ p} fut res op f = do
+    loop-nest {s = s} (num C) "" "" λ ixs → do -- This being num C is what causes the issues I've been having
+      resu ← (loop-nest {s = p} fut res op λ ixp → f (ixs ⊗ ixp))
+      return $ "" , resu
+  -}
+
+  for-template : String → ℕ → String → String
+  for-template i n expr = printf "for (%s = 0; %s < %u; %s++) {\n%s\n}" i i n i expr
+
+  -- outer-loop : Fut τ → (Ix s → State ℕ (String × Val τ)) → State ℕ (String → String)
+  -- outer-loop {s = s} fut body = ?
+
+  better-loopnest : (s : Shape) → Ix s → (String → String)
+  better-loopnest (ι n    ) (ι i    ) = for-template i n
+  better-loopnest (sₗ ⊗ sᵣ) (iₗ ⊗ iᵣ) = better-loopnest sₗ iₗ ∘ better-loopnest sᵣ iᵣ
+
+  generateIx : (s : Shape) → State ℕ (Ix s)
+  generateIx (ι n)   =
+    do
+      m ← get 
+      modify suc
+      let ix = fresh m
+      return (ι ix)
+  generateIx (s ⊗ p) =
+    do
+      iₗ ← generateIx s
+      iᵣ ← generateIx p
+      return (iₗ ⊗ iᵣ)
+
+  loop-nest : Fut τ → (res op : String) → (Ix s → State ℕ (String × Val τ)) → State ℕ String
+  loop-nest {s = s} fut res op body =
+    do 
+      i ← generateIx s
+      body-pre , body-val ← body i
+      body-ass ← to-str fut body-val (to-sel i res) op
+      return $ better-loopnest s i (body-pre ++ body-ass)
+
+  {-
+  loop-nest : Fut τ → (res op : String) → (Ix s → State ℕ (String × Val τ)) → State ℕ String
+  loop-nest {s = ι n  } fut res op body =
+    do
+      m ← get 
+      modify suc
+      let ixₗ = fresh m
+      pre , val ← body (ι ixₗ)
+      val-as-str ← to-str fut val res op
+      return $ for-template ixₗ n (pre ++ ?)
+  loop-nest {s = ι n ⊗ p} fut res op body = 
+    do
+      m ← get 
+      modify suc
+      let ixₗ = fresh m
+      let new-body = λ ixᵣ → body (ι ixₗ ⊗ ixᵣ)
+      right-loop ← loop-nest {s = p} fut res op new-body
+      return $ for-template ixₗ n right-loop
+  loop-nest {s = (sₗ ⊗ sᵣ) ⊗ p} fut res op body =
+    do
+      outer ← loop-nest {s = sₗ ⊗ sᵣ} ? ? ? λ iₗ → ?
+      inner ← loop-nest {s = p } ? res op λ{iᵣ → body (? ⊗ iᵣ) }
+      ?
+  -}
+
+  to-str (num C) v res op = return $ printf "%s %s %s" res op v
+  to-str (num (arr x)) v res op = loop-nest (num x) res op v
+  to-str (fun {τ} {σ} nv p) v res op = do
+    n ← get
+    modify suc
+    let x = (fresh n) --τ
+    w ← num-var nv x  --val τ
+    d , el ← v w          --val σ  -- TODO MAKE SURE THIS d DOESNT GET LOST
+    elₛ ← to-str {σ} p el res op --to-str p el
+    let function-type = ty-to-cType τ
+    return $ function-type $ printf "function_name(%s) {\n%s\n}" (ty-to-cType σ x) elₛ
+
+  show : Fut τ → (∀ {V} → E V τ) → String
+  show p e = runState ( 
+      do 
+          (deps , val) ← to-val e
+          result ← to-str p val "RES" "="
+          return $ deps ++ result
+    ) 0 .proj₂
+  --show p e = runState (to-val e >>= to-str ? p "tmp" "-=") 0 .proj₂
+
 module Show where
   open import Data.Nat
   open import Data.String hiding (show)
@@ -185,8 +517,6 @@ module Show where
   fresh : ℕ → String
   fresh = printf "x_%u"
 
-  -- This is used to get a fresh variable in which we can store the results of an 
-  -- operation
   fresh-ix : String → Ix s
   fresh-ix n = proj₂ (runState (go n) 0)
     where
@@ -231,7 +561,7 @@ module Show where
   to-sel i a = a ++ ix-join (ix-map (printf "[%s]") i) ""
 
   omega : ℕ → Ix (s Shape.⊗ p) → Val C
-  omega sz (i ⊗ j) = printf "minus_omega(%u,(%s * %s))" 
+  omega sz (i ⊗ j) = printf "minus_omega %u (%s * %s)" 
                              sz (offset i) (offset j)
    
   to-val : E Val τ → State ℕ (Val τ)
@@ -247,42 +577,13 @@ module Show where
   to-val (`swap e)  = do
     a ← to-val e
     return λ {(i ⊗ j) → a (j ⊗ i)}
-  -- Below `n` references the length of the array
-  --       `x` references the name of the new variable (which each element in turn will be placed into)
-  --       `b` contains the operations done inside the loop
-  {-
-  Complex_type res = 0+0i;
-  for (int <ai> = 0; <ai> < <n>; <ai>++) {
-    res += <b>[<ai>];
-  }
-  -}
-  -- C)
   to-val (`sum {n} a) = do
     a ← to-val a
-    c₁ ← get
-    let ai = fresh c₁ -- Array Index
+    c ← get
+    let x = fresh c
     modify suc
-    b ← a (ι ai)
-    c₂ ← get
-    let acc = fresh c₂ -- Accumulator
-    modify suc
-    return $ printf "sum"
-    return $ printf "(() => {Complex_type %s = 0; for (int %s = 0; %s < %u; %s++){%s += %s;} return %s})" acc ai ai n ai acc b acc -- This is absolute bull because anomynous functions are javascript...
-    --return $ printf "sum (imap %u (\\ %s → %s))" n ai b
-  {-
-  to-val (`sum {n} a) = do
-    a ← to-val a
-    c₁ ← get
-    let ai = fresh c₁ -- Array Index
-    modify suc
-    b ← a (ι ai)
-    c₂ ← get
-    let acc = fresh c₂ -- Accumulator
-    modify suc
-    --return $ printf "sum"
-    return $ printf "Complex_type %s = 0; for (int %s = 0; %s < %u; %s++){%s += %s[%s];} %s" acc ai ai n ai acc b ai acc
-    --return $ printf "sum (imap %u (\\ %s → %s))" n ai b
-  -}
+    b ← a (ι x)
+    return $ printf "sum (imap %u (\\ %s → %s))" n x b
   to-val (`ω n e) = omega n <$> to-val e
   to-val (e `* e₁) = do
     l ← to-val e
@@ -299,10 +600,6 @@ module Show where
   num-var : Num τ → (n : String) → State ℕ (Val τ)
   num-var C n = return n
   num-var (arr p) n = return λ i → num-var p (to-sel i n)
-  
-  nested-fors : (s : Shape) → Ix s → String → String
-  nested-fors (ι dim) (ι var) inside-block = printf "for (int %s = 0; %s < %u; %s++){ %s; }" var var dim var inside-block
-  nested-fors (sₗ ⊗ sᵣ) (varsₗ ⊗ varsᵣ) inside-block = nested-fors sₗ varsₗ (nested-fors sᵣ varsᵣ inside-block)
 
   to-str (num C) v = return v
   to-str (num (arr {s = s} f)) v = do
@@ -311,34 +608,19 @@ module Show where
     let ix = fresh-ix (fresh n)
     el ← v ix
     elₛ ← to-str (num f) el
-    return $ nested-fors s ix elₛ -- This again is wrong, as it has changed the semanticas and my
-
-    {- 
-    for (int <ai_0> = 0; <ai_0> < <d_0>; <ai_0>++) {
-      
-    }
-    -}
-    {-
-    n ← get
-    modify suc
-    let ix = fresh-ix (fresh n)
-    el ← v ix
-    elₛ ← to-str (num f) el
     return (printf 
               "(imap%u %s (\\ %s -> %s))" 
               (dim s) (shape-args s) (ix-join ix " ") elₛ)
-    -}
-
+                    --- Val τ -> Val σ
   to-str (fun nv p) v = do
     n ← get
     modify suc
-    let x = (fresh n)
-    w ← num-var nv x
-    el ← v w
+    let x = (fresh n) --τ
+    w ← num-var nv x  --val τ
+    el ← v w          --val σ 
     elₛ ← to-str p el
     return (printf "(\\ %s -> %s)" x elₛ) 
  
-  -- To val smashes together applications and all that, to string then goes and generates the code
   show : Fut τ → (∀ {V} → E V τ) → String
   show p e = runState (to-val e >>= to-str p) 0 .proj₂
 
@@ -348,7 +630,7 @@ module Tests where
   open import Relation.Nullary
   open import Data.String hiding (show)
 
-  open Show
+  open ShowC
 
   sh : Shape
   sh = (ι 5 ⊗ ι 6) ⊗ ι 7
@@ -361,9 +643,6 @@ module Tests where
 
   fft-big : E V _
   fft-big = `fft {s = sh-big} ⦃ ((ι _ ⊗ ι _) ⊗ ι _) ⊗ (ι _ ⊗ ι _) ⦄
-
-  arr-test : E V (ar sh C ⇒ ar sh C) 
-  arr-test = `λ b ⇒ ` b
 
   -- The inner map should normalise away
   test : E V (ar sh C ⇒ ar sh C) 
@@ -497,3 +776,4 @@ module Tests where
 
 
 -}
+
