@@ -414,81 +414,15 @@ module Tests where
 
   res = show-test fft-big _
 
-open ShowC
-open Tests
+module Print where
+  open ShowC
+  open Tests
 
-open import IO using (IO; run; Main; _>>_; _>>=_)
-open import IO.Finite using (putStrLn)
-open import Data.Unit.Polymorphic.Base using (⊤)
-open import Agda.Builtin.String
+  open import IO using (IO; run; Main; _>>_; _>>=_)
+  open import IO.Finite using (putStrLn)
+  open import Data.Unit.Polymorphic.Base using (⊤)
+  open import Agda.Builtin.String
 
-main : Main
---main = run $ show-full-stack demo-mat₂
-main = run $ putStrLn $ res
-
-
-{-
--- Output of the `show fft`:
-(\ x_1 -> 
-      (imap2 6 5 (\ x_2_0 x_2_1 -> 
-          sum (imap 6 (\ x_3 → 
-              ((sum (imap 5 (\ x_7 → (x_1[x_2_1][x_2_0] 
-                                     * minus_omega 5 (x_2_1 * x_7))))
-                * minus_omega 30 (x_2_1 * x_2_0))
-               * minus_omega 6 (x_2_0 * x_3))
-            )))))
--}
-{-
-λ real cplx a i j →
-  FFT.sum′ real cplx
-  (λ i₁ →
-     (cplx Cplx.*
-      (cplx Cplx.*
-       FFT.sum′ real cplx
-       (λ i₂ →
-          (cplx Cplx.* a (i₂ ⊗ i₁))
-          (Cplx.-ω cplx 5 (FFT.iota real cplx i₂ * FFT.iota real cplx j))))
-      (Cplx.-ω cplx 30 (FFT.iota real cplx i₁ * FFT.iota real cplx j)))
-     (Cplx.-ω cplx 6 (FFT.iota real cplx i₁ * FFT.iota real cplx i)))
--}
-{-
-(\ x_0 -> 
- (imap2 6 5 (\ x_1_0 x_1_1 -> 
-  sum (imap 6 (\ x_2 → 
-    ((sum (imap 5 (\ x_3 → 
-       (x_0[x_3][x_2] 
-        * minus_omega 5 (x_3 * x_1_1))))
-      * minus_omega 30 (x_2 * x_1_1))
-    * minus_omega 6 (x_2 * x_1_0)))))))
--}
-
-{-
-5,6,7 example
-
-(\ x_0 -> 
- (imap3 7 6 5 (\ x_1_0 x_1_1 x_1_2 -> 
-               sum (imap 7 (\ x_2 → 
-                            ((sum (imap 6 (\ x_3 → 
-                                           ((sum (imap 5 (\ x_4 →
-                                                          (x_0[x_4][x_3][x_2] * minus_omega 5 (x_4 * x_1_2))))
-                                             * minus_omega 210 (((7 * x_3) + x_2) * x_1_2))
-                                            * minus_omega 6 (x_3 * x_1_1))))
-                              * minus_omega 42 (x_2 * x_1_1))
-                             * minus_omega 7 (x_2 * x_1_0)))))))
-
-
-
-(\ x_0 -> 
- (imap3 7 6 5 (\ x_1_0 x_1_1 x_1_2 -> 
-               sum (imap 7 (\ x_2 → 
-                            ((sum (imap 6 (\ x_3 →
-                                           ((sum (imap 5 (\ x_4 →
-                                                          (x_0[x_4][x_3][x_2] * minus_omega 5 (x_4 * x_1_2))))
-                                             * minus_omega 30 (x_3 * x_1_2))
-                                            * minus_omega 6 (x_3 * x_1_1))))
-                              * minus_omega 210 (x_2 * ((5 * x_1_1) + x_1_2)))
-                             * minus_omega 7 (x_2 * x_1_0)))))))
-
-
--}
+  main : Main
+  main = run $ putStrLn $ res
 
