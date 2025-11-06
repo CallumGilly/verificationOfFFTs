@@ -256,7 +256,7 @@ module ShowC where
     fresh-res ← fresh-var 
     def , array-summed ← to-val e
     s ← to-str (num (arr C)) array-summed fresh-res +=
-    return (def ++ (printf "%s = 0;\n" fresh-res) ++ s , fresh-res)
+    return (def ++ (printf "complex float %s = 0;\n" fresh-res) ++ s , fresh-res)
   to-val (`ω n e)  = do
     (d , k) ← to-val e
     return ( d , omega n k )
@@ -275,7 +275,7 @@ module ShowC where
   -}
 
   for-template : String → ℕ → String → String
-  for-template i n expr = printf "for (%s = 0; %s < %u; %s++) {\n%s\n}" i i n i expr
+  for-template i n expr = printf "for (int %s = 0; %s < %u; %s++) {\n%s\n}" i i n i expr
 
   generateIx : (s : Shape) → State ℕ (Ix s)
   generateIx (ι n)   =
@@ -308,18 +308,41 @@ module ShowC where
       body-ass ← to-str fut body-val (to-sel i res) ≔
       return $ loop-nest-helper s i (body-pre ++ body-ass)
 
+  shape-to-arg : String → Shape → String
+  shape-to-arg res (ι _)   = printf "(*%s)" res
+  shape-to-arg res (s ⊗ p) = shape-to-arg res s ++ helper p
+    where
+      helper : Shape → String
+      helper (ι n)   = printf "[%u]" n
+      helper (s ⊗ p) = helper s ++ helper p
 
   to-str (num C) v res op = return $ printf "%s %s %s;" res (op-str op) v
   to-str (num (arr x)) v res op = loop-nest (num x) res op v
-  -- The below is currently far too hardcoded for my liking, it should work for all instances of the FFT, but other than thatm I really can't confirm
-  to-str (fun {τ} {σ} nv p) v res op = do
-    n ← get
-    modify suc
-    let x = (fresh n) --τ
-    w ← num-var nv x  --val τ
-    d , el ← v w          --val σ  
-    elₛ ← to-str {σ} p el res op --to-str p el
-    return $ printf "void function_name(complex float *%s, complex float *%s) {\n%s\n}" x res (d ++ elₛ)
+  -- We currently only want to deal with functions which accept and array, and 
+  -- return an array, for now therefore we can throw an error instead of producing
+  -- code for all other inputs
+  to-str (fun {C           }   {σ           } _ _) _ _ _ = return $ printf "ERROR - Unhandled Function type 1"
+  to-str (fun {ix _ ⇒ ix _ }   {σ           } _ _) _ _ _ = return $ printf "ERROR - Unhandled Function type 2"
+  to-str (fun {ix _ ⇒ _ ⇒ _}   {σ           } _ _) _ _ _ = return $ printf "ERROR - Unhandled Function type 3"
+  to-str (fun {ix _ ⇒ C    }   {C           } _ _) _ _ _ = return $ printf "ERROR - Unhandled Function type 4"
+  to-str (fun {ix _ ⇒ C    }   {ix _        } _ _) _ _ _ = return $ printf "ERROR - Unhandled Function type 5"
+  to-str (fun {ix _ ⇒ C    }   {C ⇒ _       } _ _) _ _ _ = return $ printf "ERROR - Unhandled Function type 6"
+  to-str (fun {ix _ ⇒ C    }   {(_ ⇒ _) ⇒ _ } _ _) _ _ _ = return $ printf "ERROR - Unhandled Function type 7"
+  to-str (fun {ix _ ⇒ C    }   {ix _ ⇒ ix _ } _ _) _ _ _ = return $ printf "ERROR - Unhandled Function type 8"
+  to-str (fun {ix _ ⇒ C    }   {ix _ ⇒ _ ⇒ _} _ _) _ _ _ = return $ printf "ERROR - Unhandled Function type 9"
+  to-str (fun {ix s ⇒ C    } σ@{ix s₁ ⇒ C} inp out) val res op =
+    do
+      n ← get
+      modify suc
+      let arg-name = (fresh n)
+      arg ← num-var inp arg-name
+      str-pre , β-val ← val arg
+      str-val ← to-str {σ} out β-val res op
+      return $ printf "void %s(complex float %s, complex float %s) {\n%s\n}" 
+        res 
+        (shape-to-arg arg-name s) 
+        (shape-to-arg res s₁) 
+        (str-pre ++ str-val)
 
   show : Fut τ → (∀ {V} → E V τ) → String → String
   show p e res = runState ( 
@@ -342,11 +365,17 @@ module Tests where
   sh-big : Shape
   sh-big = ((ι 5 ⊗ ι 7) ⊗ ι 8) ⊗ (ι 9 ⊗ ι 10)
 
+  sh-mini : Shape
+  sh-mini = ι 2 ⊗ (ι 3 ⊗ ι 3)
+
   fft : E V _
   fft = `fft {s = sh} ⦃ (ι _ ⊗ ι _) ⊗ ι _ ⦄
 
   fft-big : E V _
   fft-big = `fft {s = sh-big} ⦃ ((ι _ ⊗ ι _) ⊗ ι _) ⊗ (ι _ ⊗ ι _) ⦄
+  
+  fft-mini : E V _
+  fft-mini = `fft {s = sh-mini} ⦃ ι _ ⊗ (ι _ ⊗ ι _) ⦄
 
   -- The inner map should normalise away
   test : E V (ar sh C ⇒ ar sh C) 
@@ -410,9 +439,9 @@ module Tests where
 
   show-test : (∀ {V} → E V τ) → True (isFut τ) → String
   show-test {τ = τ} e t with isFut τ
-  ... | yes p = show p e "X"
+  ... | yes p = show p e "fft"
 
-  res = show-test fft-big _
+  res = show-test fft-mini _
 
 module Print where
   open ShowC
@@ -421,8 +450,10 @@ module Print where
   open import IO using (IO; run; Main; _>>_; _>>=_)
   open import IO.Finite using (putStrLn)
   open import Data.Unit.Polymorphic.Base using (⊤)
-  open import Agda.Builtin.String
+  open import Data.String hiding (show)
 
   main : Main
-  main = run $ putStrLn $ res
+  main = run $ putStrLn $  "#include <complex.h>\n" 
+                        ++ "#include \"../src/minus-omega.h\"\n"
+                        ++ res
 
