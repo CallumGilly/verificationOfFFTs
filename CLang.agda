@@ -297,19 +297,70 @@ module ShowC where
       sel-res += _ = res
       sel-res ≔  i = to-sel i res
 
-  shape-to-arg : String → Shape → String
-  shape-to-arg res (ι _)   = printf "(*%s)" res
-  shape-to-arg res (s ⊗ p) = shape-to-arg res s ++ helper p
-    where
-      helper : Shape → String
-      helper (ι n)   = printf "[%u]" n
-      helper (s ⊗ p) = helper s ++ helper p
+  shape-helper : Shape → String
+  shape-helper (ι n)   = printf "[%u]" n
+  shape-helper (s ⊗ p) = shape-helper s ++ shape-helper p
+
+  shape-to-arg : Shape → String → String
+  shape-to-arg (ι _)   res = printf "(*%s)" res
+  shape-to-arg (s ⊗ p) res = shape-to-arg s res ++ shape-helper p
+
+  outer-ty-to-arg : Num τ → String → String
+  outer-ty-to-arg C inner = printf "%s" inner 
+  outer-ty-to-arg (arr {C} C) inner = printf ""
+  outer-ty-to-arg (arr {(ix _ ⇒ _)} (arr x)) inner = printf ""
+  
+  ty-to-arg : Fut τ → String → String
+  ty-to-arg {C} (num x) res = printf "complex float (*%s)" res
+  ty-to-arg {ix s ⇒ C} (num (arr C)) res = shape-to-arg s res
+  ty-to-arg {ix s ⇒ (ix p ⇒ τ)} (num (arr (arr x))) res = ty-to-arg {ix p ⇒ τ} (num (arr x)) res ++ shape-helper s
+  -- The below case is the one I have been struggling to work out how to deal with...
+  ty-to-arg {τ ⇒ σ} (fun x fut) res = ?
+  --outer-ty-to-arg {τ} x $ ty-to-arg {σ} fut res
+
+  --ty-to-arg {C} (num C) res = printf "complex float %s" res
+  --ty-to-arg {ix x} (num ()) res
+  --ty-to-arg {C ⇒ C} (fun C (num C)) res = printf "TODO: Work out what to do with a function from complex to complex"
+  --ty-to-arg {ix s ⇒ C} (num (arr C)) res = ty-to-arg {C} (num C) $ shape-to-arg s res -- Somewhat redundant call as we know which pattern will match each time
+  --ty-to-arg {((ix s) ⇒ τ₁) ⇒ C} (fun (arr x) (num C)) res = (ty-to-arg {τ₁ ⇒ C} (fun x (num C)) res) ++ shape-helper s
+  --ty-to-arg {.(ix _) ⇒ ix x} (num (arr ())) res
+  --ty-to-arg {τ ⇒ ix x} (fun x₁ (num ())) res
+  --ty-to-arg {(ix s) ⇒ (ix p) ⇒ τ} (num (arr (arr x))) res = ty-to-arg {(ix p) ⇒ τ} (num (arr x)) res ++ shape-helper s
+  --ty-to-arg {C ⇒ τ₁ ⇒ τ₂} (fun x fut) res = printf "TODO: Work out what to do with a function from complex to ?"
+  --ty-to-arg {(.(ix _) ⇒ τ₃) ⇒ τ₁ ⇒ τ₂} (fun (arr x) fut) res = ?
+
+  --ty-to-arg {C} (num C)  res = printf "complex float (*%s)" res
+  --ty-to-arg {ix s} (num ()) res
+  --ty-to-arg {τ ⇒ C} fut res = ?
+  --ty-to-arg {.(ix _) ⇒ ix x} (num (arr ())) res
+  --ty-to-arg {τ ⇒ ix x} (fun x₁ (num ())) res
+  --ty-to-arg {.(ix _) ⇒ .(ix _) ⇒ C} (num (arr (arr C))) res = ?
+  --ty-to-arg {τ ⇒ τ₁ ⇒ C} (fun x fut) res = ?
+  --ty-to-arg {.(ix _) ⇒ .(ix _) ⇒ ix x} (num (arr (arr ()))) res
+  --ty-to-arg {τ ⇒ .(ix _) ⇒ ix x} (fun x₁ (num (arr ()))) res
+  --ty-to-arg {τ ⇒ τ₁ ⇒ ix x} (fun x₁ (fun x₂ (num ()))) res
+  --ty-to-arg {τ ⇒ τ₁ ⇒ τ₂ ⇒ τ₃} fut res = ?
+
 
   to-str (num C) v res op = return $ printf "%s %s %s;" res (op-str op) v
   to-str (num (arr x)) v res op = loop-nest (num x) res op v
   -- We currently only want to deal with functions which accept and array, and 
   -- return an array, for now therefore we can throw an error instead of producing
   -- code for all other inputs
+  to-str (fun {τ} {σ} inp out) val res op =
+    do
+      n ← get
+      modify suc
+      let arg-name = (fresh n)
+      arg ← num-var inp arg-name
+      str-pre , β-val ← val arg
+      str-val ← to-str {σ} out β-val res op
+      return $ printf "void %s(%s, %s) {\n%s\n}" 
+        res 
+        (ty-to-arg (num inp) arg-name)
+        (ty-to-arg out res)
+        (str-pre ++ str-val)
+  {-
   to-str (fun {C           }   {σ           } _ _) _ _ _ = return $ printf "ERROR - Unhandled Function type 1"
   to-str (fun {ix _ ⇒ ix _ }   {σ           } _ _) _ _ _ = return $ printf "ERROR - Unhandled Function type 2"
   to-str (fun {ix _ ⇒ _ ⇒ _}   {σ           } _ _) _ _ _ = return $ printf "ERROR - Unhandled Function type 3"
@@ -332,6 +383,7 @@ module ShowC where
         (shape-to-arg arg-name s) 
         (shape-to-arg res s₁) 
         (str-pre ++ str-val)
+  -}
 
   show : Fut τ → (∀ {V} → E V τ) → String → String
   show p e res = runState ( 
