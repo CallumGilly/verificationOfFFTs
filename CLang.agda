@@ -265,17 +265,8 @@ module ShowC where
     rd , rx ← to-val r
     return (ld ++ rd , printf "(%s * %s)" lx rx)
 
-  {- This doesn't currently work
-  ty-to-cType : Ty → (String → String)
-  ty-to-cType C = printf "float complex %s"
-  ty-to-cType (ix x) = printf "float complex *%s"
-  ty-to-cType (x ⇒ x₁) = printf "(%s to %s) %s" (ty-to-cType x "a") (ty-to-cType x₁ "b")
-
-  --printf "float complex %s" -- TODO: Make this not this because this is wrong but is quick, dirty and passes a LGTM
-  -}
-
   for-template : String → ℕ → String → String
-  for-template i n expr = printf "for (int %s = 0; %s < %u; %s++) {\n%s\n}" i i n i expr
+  for-template i n expr = printf "for (size_t %s = 0; %s < %u; %s++) {\n%s\n}" i i n i expr
 
   generateIx : (s : Shape) → State ℕ (Ix s)
   generateIx (ι n)   =
@@ -452,6 +443,7 @@ module Print where
 
   main : Main
   main = run $ putStrLn $  "#include <complex.h>\n" 
+                        ++ "#include <stddef.h>\n"
                         ++ "#include \"../src/minus-omega.h\"\n"
                         ++ res
 
