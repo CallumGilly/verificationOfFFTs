@@ -25,11 +25,16 @@ void main (void) {
   fft(*input, *fftOutput);
   dft(*input, *dftOutput);
 
+  float realError = 0;
+  float imagError = 0;
 
   for (size_t ai = 0; ai < size; ai++) {
+    realError += fabs(creal((*fftOutput)[ai]) - creal((*dftOutput)[ai]));
+    imagError += fabs(cimag((*fftOutput)[ai]) - cimag((*dftOutput)[ai]));
     printf("output[%u] - Real error: %.60f\n", ai, fabs(creal((*fftOutput)[ai]) - creal((*dftOutput)[ai])));
     printf("output[%u] - Imag error: %.60f\n", ai, fabs(cimag((*fftOutput)[ai]) - cimag((*dftOutput)[ai])));
   }
+  printf("\n\n\nAverage Real Error = %.60f\nAverage Imag Error = %.60f\n", (realError / (float) size), (imagError / (float) size));
 
   // for (size_t ai = 0; ai < size - 1; ai++) {
   //     printf("%.2f+%.2fi, ", creal((*input)[ai]), cimag((*input)[ai]));
