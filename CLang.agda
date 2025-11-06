@@ -295,18 +295,16 @@ module ShowC where
   loop-nest-helper (sₗ ⊗ sᵣ) (iₗ ⊗ iᵣ) = loop-nest-helper sₗ iₗ ∘ loop-nest-helper sᵣ iᵣ
 
   loop-nest : Fut τ → (res : String) → Op → (Ix s → State ℕ (String × Val τ)) → State ℕ String
-  loop-nest {s = s} fut res += body =
+  loop-nest {s = s} fut res op body =
     do 
       i ← generateIx s
       body-pre , body-val ← body i
-      body-ass ← to-str fut body-val (res) +=
+      body-ass ← to-str fut body-val (sel-res op i) +=
       return $ loop-nest-helper s i (body-pre ++ body-ass)
-  loop-nest {s = s} fut res ≔  body =
-    do 
-      i ← generateIx s
-      body-pre , body-val ← body i
-      body-ass ← to-str fut body-val (to-sel i res) ≔
-      return $ loop-nest-helper s i (body-pre ++ body-ass)
+    where
+      sel-res : Op → Ix s → String
+      sel-res += _ = res
+      sel-res ≔  i = to-sel i res
 
   shape-to-arg : String → Shape → String
   shape-to-arg res (ι _)   = printf "(*%s)" res
