@@ -379,6 +379,7 @@ module Tests where
   open import Data.Empty
   open import Relation.Nullary
   open import Data.String hiding (show)
+  open import Agda.Builtin.Unit using (tt)
 
   open ShowC
 
@@ -391,14 +392,20 @@ module Tests where
   sh-mini : Shape
   sh-mini = ι 2 ⊗ (ι 3 ⊗ ι 3)
 
-  fft : E V _
-  fft = `fft {s = sh} ⦃ (ι _ ⊗ ι _) ⊗ ι _ ⦄
+  -- fft : E V _
+  -- fft = `fft {s = sh} ⦃ (ι _ ⊗ ι _) ⊗ ι _ ⦄
 
   fft-big : E V _
   fft-big = `fft {s = sh-big} ⦃ ((ι _ ⊗ ι _) ⊗ ι _) ⊗ (ι _ ⊗ ι _) ⦄
   
   fft-mini : E V _
   fft-mini = `fft {s = sh-mini} ⦃ ι _ ⊗ (ι _ ⊗ ι _) ⦄
+
+  fft : (s : Shape) → ⦃ NonZeroₛ s ⦄ → E V _
+  fft s = `fft {s = s}
+
+  dft : (n : ℕ) → ⦃ NonZero n ⦄ → E V _
+  dft n = `dft {n}
 
   -- The inner map should normalise away
   test : E V (ar sh C ⇒ ar sh C) 
@@ -460,11 +467,25 @@ module Tests where
   ... | no ¬q = no λ { (fun _ q) → ¬q q }
   ... | yes q = yes (fun p q)
 
-  show-test : (∀ {V} → E V τ) → True (isFut τ) → String
-  show-test {τ = τ} e t with isFut τ
-  ... | yes p = show p e "fft"
+  show-test : String → (∀ {V} → E V τ) → True (isFut τ) → String
+  show-test {τ = τ} name e t with isFut τ
+  ... | yes p = show p e name
 
-  res = show-test fft-mini _
+  preamble : String
+  preamble = "#include <complex.h>\n" 
+           ++ "#include <stddef.h>\n"
+           ++ "#include \"../src/minus-omega.h\"\n"
+
+  gen-fft : (s : Shape) → ⦃ _ : NonZeroₛ s ⦄ → String
+  gen-fft s = preamble ++ show-test "fft" (fft s) _
+
+  gen-dft : (n : ℕ) → ⦃ _ : NonZero n ⦄ → String
+  gen-dft n = preamble ++ show-test "dft" (dft n) _ 
+
+  res : String
+  res = show-test "test" fft-mini _
+
+open Tests using (gen-fft; gen-dft) public
 
 module Print where
   open ShowC

@@ -1,1 +1,1 @@
-agda --compile CLang.agda 1> /dev/null && ./CLang | clang-format
+agda --compile CGenerator.agda 1> /dev/null && ./CGenerator && clang-format -i generated/dft.c generated/fft.c
