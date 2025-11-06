@@ -305,42 +305,24 @@ module ShowC where
   shape-to-arg (ι _)   res = printf "(*%s)" res
   shape-to-arg (s ⊗ p) res = shape-to-arg s res ++ shape-helper p
 
-  outer-ty-to-arg : Num τ → String → String
-  outer-ty-to-arg C inner = printf "%s" inner 
-  outer-ty-to-arg (arr {C} C) inner = printf ""
-  outer-ty-to-arg (arr {(ix _ ⇒ _)} (arr x)) inner = printf ""
+  num-type : Num τ → String
+  num-type C = "complex float "
+  num-type {ix s ⇒ τ} (arr x) = num-type {τ} x ++ (shape-helper s)
   
+  final-type : Fut τ → String
+  final-type (num x) = num-type x
+  final-type (fun x fut) = final-type fut
+  
+  parameter-list-app : Fut τ → String → String
+  parameter-list-app (num x)    pre = pre
+  parameter-list-app (fun x next) pre = parameter-list-app next (printf "%s , %s" pre (num-type x))
+
   ty-to-arg : Fut τ → String → String
   ty-to-arg {C} (num x) res = printf "complex float (*%s)" res
-  ty-to-arg {ix s ⇒ C} (num (arr C)) res = shape-to-arg s res
+  ty-to-arg {ix s ⇒ C} (num (arr C)) res = "complex float " ++ shape-to-arg s res
   ty-to-arg {ix s ⇒ (ix p ⇒ τ)} (num (arr (arr x))) res = ty-to-arg {ix p ⇒ τ} (num (arr x)) res ++ shape-helper s
   -- The below case is the one I have been struggling to work out how to deal with...
-  ty-to-arg {τ ⇒ σ} (fun x fut) res = ?
-  --outer-ty-to-arg {τ} x $ ty-to-arg {σ} fut res
-
-  --ty-to-arg {C} (num C) res = printf "complex float %s" res
-  --ty-to-arg {ix x} (num ()) res
-  --ty-to-arg {C ⇒ C} (fun C (num C)) res = printf "TODO: Work out what to do with a function from complex to complex"
-  --ty-to-arg {ix s ⇒ C} (num (arr C)) res = ty-to-arg {C} (num C) $ shape-to-arg s res -- Somewhat redundant call as we know which pattern will match each time
-  --ty-to-arg {((ix s) ⇒ τ₁) ⇒ C} (fun (arr x) (num C)) res = (ty-to-arg {τ₁ ⇒ C} (fun x (num C)) res) ++ shape-helper s
-  --ty-to-arg {.(ix _) ⇒ ix x} (num (arr ())) res
-  --ty-to-arg {τ ⇒ ix x} (fun x₁ (num ())) res
-  --ty-to-arg {(ix s) ⇒ (ix p) ⇒ τ} (num (arr (arr x))) res = ty-to-arg {(ix p) ⇒ τ} (num (arr x)) res ++ shape-helper s
-  --ty-to-arg {C ⇒ τ₁ ⇒ τ₂} (fun x fut) res = printf "TODO: Work out what to do with a function from complex to ?"
-  --ty-to-arg {(.(ix _) ⇒ τ₃) ⇒ τ₁ ⇒ τ₂} (fun (arr x) fut) res = ?
-
-  --ty-to-arg {C} (num C)  res = printf "complex float (*%s)" res
-  --ty-to-arg {ix s} (num ()) res
-  --ty-to-arg {τ ⇒ C} fut res = ?
-  --ty-to-arg {.(ix _) ⇒ ix x} (num (arr ())) res
-  --ty-to-arg {τ ⇒ ix x} (fun x₁ (num ())) res
-  --ty-to-arg {.(ix _) ⇒ .(ix _) ⇒ C} (num (arr (arr C))) res = ?
-  --ty-to-arg {τ ⇒ τ₁ ⇒ C} (fun x fut) res = ?
-  --ty-to-arg {.(ix _) ⇒ .(ix _) ⇒ ix x} (num (arr (arr ()))) res
-  --ty-to-arg {τ ⇒ .(ix _) ⇒ ix x} (fun x₁ (num (arr ()))) res
-  --ty-to-arg {τ ⇒ τ₁ ⇒ ix x} (fun x₁ (fun x₂ (num ()))) res
-  --ty-to-arg {τ ⇒ τ₁ ⇒ τ₂ ⇒ τ₃} fut res = ?
-
+  ty-to-arg {τ ⇒ σ} (fun x fut) res = printf "%s (*%s) (%s)" (final-type fut) res (parameter-list-app fut (num-type x))
 
   to-str (num C) v res op = return $ printf "%s %s %s;" res (op-str op) v
   to-str (num (arr x)) v res op = loop-nest (num x) res op v
