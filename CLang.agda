@@ -203,7 +203,7 @@ module ShowC where
   offset {s ⊗ p} (i ⊗ j) = printf "((%u * %s) + %s)" (size p) (offset i) (offset j)
 
   to-sel : Ix s → String → String
-  to-sel i a = a ++ ix-join (ix-map (printf "[%s]") i) ""
+  to-sel i a = printf "(*%s)%s" a $ ix-join (ix-map (printf "[%s]") i) ""
     where
       ix-join : Ix s → (d : String) → String
       ix-join (ι x) d = x
@@ -302,7 +302,7 @@ module ShowC where
   shape-helper (s ⊗ p) = shape-helper s ++ shape-helper p
 
   shape-to-arg : Shape → String → String
-  shape-to-arg (ι _)   res = printf "(*%s)" res
+  shape-to-arg (ι n)   res = printf "(*%s)[%u]" res n
   shape-to-arg (s ⊗ p) res = shape-to-arg s res ++ shape-helper p
 
   num-type : Num τ → String
