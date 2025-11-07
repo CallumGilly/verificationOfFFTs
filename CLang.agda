@@ -342,30 +342,6 @@ module ShowC where
         (ty-to-arg (num inp) arg-name)
         (ty-to-arg out res)
         (str-pre ++ str-val)
-  {-
-  to-str (fun {C           }   {σ           } _ _) _ _ _ = return $ printf "ERROR - Unhandled Function type 1"
-  to-str (fun {ix _ ⇒ ix _ }   {σ           } _ _) _ _ _ = return $ printf "ERROR - Unhandled Function type 2"
-  to-str (fun {ix _ ⇒ _ ⇒ _}   {σ           } _ _) _ _ _ = return $ printf "ERROR - Unhandled Function type 3"
-  to-str (fun {ix _ ⇒ C    }   {C           } _ _) _ _ _ = return $ printf "ERROR - Unhandled Function type 4"
-  to-str (fun {ix _ ⇒ C    }   {ix _        } _ _) _ _ _ = return $ printf "ERROR - Unhandled Function type 5"
-  to-str (fun {ix _ ⇒ C    }   {C ⇒ _       } _ _) _ _ _ = return $ printf "ERROR - Unhandled Function type 6"
-  to-str (fun {ix _ ⇒ C    }   {(_ ⇒ _) ⇒ _ } _ _) _ _ _ = return $ printf "ERROR - Unhandled Function type 7"
-  to-str (fun {ix _ ⇒ C    }   {ix _ ⇒ ix _ } _ _) _ _ _ = return $ printf "ERROR - Unhandled Function type 8"
-  to-str (fun {ix _ ⇒ C    }   {ix _ ⇒ _ ⇒ _} _ _) _ _ _ = return $ printf "ERROR - Unhandled Function type 9"
-  to-str (fun {ix s ⇒ C    } σ@{ix s₁ ⇒ C} inp out) val res op =
-    do
-      n ← get
-      modify suc
-      let arg-name = (fresh n)
-      arg ← num-var inp arg-name
-      str-pre , β-val ← val arg
-      str-val ← to-str {σ} out β-val res op
-      return $ printf "void %s(complex float %s, complex float %s) {\n%s\n}" 
-        res 
-        (shape-to-arg arg-name s) 
-        (shape-to-arg res s₁) 
-        (str-pre ++ str-val)
-  -}
 
   show : Fut τ → (∀ {V} → E V τ) → String → String
   show p e res = runState ( 
