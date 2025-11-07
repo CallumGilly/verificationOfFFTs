@@ -4,7 +4,8 @@
 
 #include <complex.h>
 #include <math.h>
+#include <stddef.h>
 
-complex float minus_omega(int n, int k);
+complex float minus_omega(size_t n, size_t k);
 
 #endif
