@@ -161,7 +161,6 @@ module ShowC where
   open import Data.Bool
   open import Data.String hiding (show)
   open import Data.Product
-  open import Data.Maybe hiding (_>>=_)
   open import Text.Printf
   open import Relation.Nullary
   open import Effect.Monad 
@@ -227,7 +226,7 @@ module ShowC where
     nvp ← num-var p (to-sel i n)
     return ("" , nvp)
 
-  to-str : Fut τ → Val τ → (res : String) → Op → State ℕ (Maybe String × String)
+  to-str : Fut τ → Val τ → (res : String) → Op → State ℕ (String × String)
 
   to-val : E Val τ → {- (res op : String)  → -} State ℕ (String × Val τ)
   to-val (` x)     = return ( "" , x)
@@ -285,13 +284,13 @@ module ShowC where
   loop-nest-helper (ι n    ) (ι i    ) = for-template i n
   loop-nest-helper (sₗ ⊗ sᵣ) (iₗ ⊗ iᵣ) = loop-nest-helper sₗ iₗ ∘ loop-nest-helper sᵣ iᵣ
 
-  loop-nest : Fut τ → (res : String) → Op → (Ix s → State ℕ (String × Val τ)) → State ℕ (Maybe String × String)
+  loop-nest : Fut τ → (res : String) → Op → (Ix s → State ℕ (String × Val τ)) → State ℕ (String × String)
   loop-nest {s = s} fut res op body =
     do 
       i ← generateIx s
       body-pre , body-val ← body i
       body-ass ← to-str fut body-val (sel-res op i) +=
-      return $ nothing , loop-nest-helper s i (body-pre ++ (proj₂ body-ass))
+      return $ "" , loop-nest-helper s i (body-pre ++ (proj₂ body-ass))
     where
       sel-res : Op → Ix s → String
       sel-res += _ = res
@@ -324,7 +323,7 @@ module ShowC where
   -- The below case is the one I have been struggling to work out how to deal with...
   ty-to-arg {τ ⇒ σ} (fun x fut) res = printf "%s (*%s) (%s)" (final-type fut) res (parameter-list-app fut (num-type x))
 
-  to-str (num C) v res op = return $ nothing , printf "%s %s %s;" res (op-str op) v
+  to-str (num C) v res op = return $ "" , printf "%s %s %s;" res (op-str op) v
   to-str (num (arr x)) v res op = loop-nest (num x) res op v
   -- We currently only want to deal with functions which accept and array, and 
   -- return an array, for now therefore we can throw an error instead of producing
@@ -338,7 +337,7 @@ module ShowC where
       str-pre , β-val ← val arg
       str-val ← to-str {σ} out β-val res op
       return $ 
-          (just $ printf "void %s(%s, %s);\n" 
+          (printf "void %s(%s, %s);\n" 
             res 
             (ty-to-arg (num inp) arg-name)
             (ty-to-arg out res))
@@ -354,7 +353,7 @@ module ShowC where
       do 
           (deps , val) ← to-val e
           result ← to-str p val res ≔
-          return $ deps ++ (fromMaybe "" (proj₁ result)) , deps ++ proj₂ result
+          return $ deps ++ (proj₁ result) , deps ++ proj₂ result
     ) 0 .proj₂
 
 module Tests where

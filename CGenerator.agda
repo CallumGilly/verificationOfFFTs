@@ -13,7 +13,7 @@ module CGenerator where
   open import Function using (_$_)
 
   sh : Shape
-  sh = (ι 4 ⊗ ι 4) ⊗ (ι 3 ⊗ ι 4)
+  sh = (ι 2 ⊗ ι 3) ⊗ ι 4
 
   main : Main
   main = run do
