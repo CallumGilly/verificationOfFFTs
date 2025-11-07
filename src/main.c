@@ -26,8 +26,8 @@ int main (void) {
     (*input)[ai] = (float)rand()/(float)((float)RAND_MAX/(400.0f)) + ((float)rand()/(float)((float)RAND_MAX/(400.0f)) * I);
   }
 
-  fft(*input, *fftOutput);
-  dft(*input, *dftOutput);
+  fft((complex float (*)[4][4][3][4])input, (complex float (*)[4][3][4][4])fftOutput);
+  dft((complex float (*)[size])input, (complex float (*)[size])dftOutput);
 
   double realError = 0;
   double imagError = 0;
