@@ -1,5 +1,8 @@
 #define size 192
 
+#include "../generated/dft.h"
+#include "../generated/fft.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <complex.h>

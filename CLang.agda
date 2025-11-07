@@ -227,7 +227,7 @@ module ShowC where
     nvp ← num-var p (to-sel i n)
     return ("" , nvp)
 
-  to-str : Fut τ → Val τ → (res : String) → Op → State ℕ String
+  to-str : Fut τ → Val τ → (res : String) → Op → State ℕ (Maybe String × String)
 
   to-val : E Val τ → {- (res op : String)  → -} State ℕ (String × Val τ)
   to-val (` x)     = return ( "" , x)
@@ -256,7 +256,7 @@ module ShowC where
     fresh-res ← fresh-var 
     def , array-summed ← to-val e
     s ← to-str (num (arr C)) array-summed fresh-res +=
-    return (def ++ (printf "complex float %s = 0;\n" fresh-res) ++ s , fresh-res)
+    return (def ++ (printf "complex float %s = 0;\n" fresh-res) ++ (proj₂ s) , fresh-res)
   to-val (`ω n e)  = do
     (d , k) ← to-val e
     return ( d , omega n k )
@@ -285,13 +285,13 @@ module ShowC where
   loop-nest-helper (ι n    ) (ι i    ) = for-template i n
   loop-nest-helper (sₗ ⊗ sᵣ) (iₗ ⊗ iᵣ) = loop-nest-helper sₗ iₗ ∘ loop-nest-helper sᵣ iᵣ
 
-  loop-nest : Fut τ → (res : String) → Op → (Ix s → State ℕ (String × Val τ)) → State ℕ String
+  loop-nest : Fut τ → (res : String) → Op → (Ix s → State ℕ (String × Val τ)) → State ℕ (Maybe String × String)
   loop-nest {s = s} fut res op body =
     do 
       i ← generateIx s
       body-pre , body-val ← body i
       body-ass ← to-str fut body-val (sel-res op i) +=
-      return $ loop-nest-helper s i (body-pre ++ body-ass)
+      return $ nothing , loop-nest-helper s i (body-pre ++ (proj₂ body-ass))
     where
       sel-res : Op → Ix s → String
       sel-res += _ = res
@@ -324,7 +324,7 @@ module ShowC where
   -- The below case is the one I have been struggling to work out how to deal with...
   ty-to-arg {τ ⇒ σ} (fun x fut) res = printf "%s (*%s) (%s)" (final-type fut) res (parameter-list-app fut (num-type x))
 
-  to-str (num C) v res op = return $ printf "%s %s %s;" res (op-str op) v
+  to-str (num C) v res op = return $ nothing , printf "%s %s %s;" res (op-str op) v
   to-str (num (arr x)) v res op = loop-nest (num x) res op v
   -- We currently only want to deal with functions which accept and array, and 
   -- return an array, for now therefore we can throw an error instead of producing
@@ -337,18 +337,24 @@ module ShowC where
       arg ← num-var inp arg-name
       str-pre , β-val ← val arg
       str-val ← to-str {σ} out β-val res op
-      return $ printf "void %s(%s, %s) {\n%s\n}" 
-        res 
-        (ty-to-arg (num inp) arg-name)
-        (ty-to-arg out res)
-        (str-pre ++ str-val)
+      return $ 
+          (just $ printf "void %s(%s, %s);\n" 
+            res 
+            (ty-to-arg (num inp) arg-name)
+            (ty-to-arg out res))
+        , 
+          printf "void %s(%s, %s) {\n%s\n}" 
+            res 
+            (ty-to-arg (num inp) arg-name)
+            (ty-to-arg out res)
+            (str-pre ++ proj₂ str-val)
 
-  show : Fut τ → (∀ {V} → E V τ) → String → String
+  show : Fut τ → (∀ {V} → E V τ) → String → String × String
   show p e res = runState ( 
       do 
           (deps , val) ← to-val e
           result ← to-str p val res ≔
-          return $ deps ++ result
+          return $ deps ++ (fromMaybe "" (proj₁ result)) , deps ++ proj₂ result
     ) 0 .proj₂
 
 module Tests where
@@ -356,6 +362,7 @@ module Tests where
   open import Relation.Nullary
   open import Data.String hiding (show)
   open import Agda.Builtin.Unit using (tt)
+  open import Data.Product
 
   open ShowC
 
@@ -443,7 +450,7 @@ module Tests where
   ... | no ¬q = no λ { (fun _ q) → ¬q q }
   ... | yes q = yes (fun p q)
 
-  show-test : String → (∀ {V} → E V τ) → True (isFut τ) → String
+  show-test : String → (∀ {V} → E V τ) → True (isFut τ) → String × String
   show-test {τ = τ} name e t with isFut τ
   ... | yes p = show p e name
 
@@ -452,13 +459,15 @@ module Tests where
            ++ "#include <stddef.h>\n"
            ++ "#include \"../src/minus-omega.h\"\n"
 
-  gen-fft : (s : Shape) → ⦃ _ : NonZeroₛ s ⦄ → String
-  gen-fft s = preamble ++ show-test "fft" (fft s) _
+  gen-fft : (s : Shape) → ⦃ _ : NonZeroₛ s ⦄ → String × String
+  gen-fft s with show-test "fft" (fft s) _
+  ... | head , body = preamble ++ head , preamble ++ body
 
-  gen-dft : (n : ℕ) → ⦃ _ : NonZero n ⦄ → String
-  gen-dft n = preamble ++ show-test "dft" (dft n) _ 
+  gen-dft : (n : ℕ) → ⦃ _ : NonZero n ⦄ → String × String
+  gen-dft n with show-test "dft" (dft n) _ 
+  ... | head , body = preamble ++ head , preamble ++ body
 
-  res : String
+  res : String × String
   res = show-test "test" fft-mini _
 
 open Tests using (gen-fft; gen-dft) public
@@ -471,10 +480,11 @@ module Print where
   open import IO.Finite using (putStrLn)
   open import Data.Unit.Polymorphic.Base using (⊤)
   open import Data.String hiding (show)
+  open import Data.Product
 
   main : Main
   main = run $ putStrLn $  "#include <complex.h>\n" 
                         ++ "#include <stddef.h>\n"
                         ++ "#include \"../src/minus-omega.h\"\n"
-                        ++ res
+                        ++ proj₂ res
 
