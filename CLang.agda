@@ -383,8 +383,10 @@ module ShowC where
   rshp-ix eq x₁ = x₁
   rshp-ix (x ∙ x₂) x₁ = (rshp-ix x₂ (rshp-ix x x₁))
   rshp-ix (x ⊕ x₂) (x₁ ⊗ x₃) = (rshp-ix x x₁) ⊗ (rshp-ix x₂ x₃)
-  rshp-ix (split {m}) (ι x ⊗ ι x₁) = ι (printf "((%s * %u) * %s)" x m x₁)
-  rshp-ix flat (ι x) = ι (printf "TODO: Flatten") ⊗ ι ("TODO2: Flatten")
+  rshp-ix (split {m}) (ι x ⊗ ι x₁) = ι (printf "((%s * %u) + %s)" x m x₁)
+  rshp-ix (flat {m} {n}) (ι x) = ι (printf "%s / %u" x n) ⊗ ι (printf "%s %% %u" x n) -- TODO: Check this
+    --ι (printf "TODO: Flatten %s" ?) ⊗ ι ("TODO2: Flatten")
+    --Goal Type : Ix (ι m ⊗ ι n)
   rshp-ix Reshape.swap (x₁ ⊗ x₂) = x₂ ⊗ x₁
 
   convVar : (τ-n : Num τ) → (rel : τ ~ σ) → Var τ τ-n → Var σ (~-num rel τ-n)
@@ -445,26 +447,54 @@ module ShowC where
   sel-to-str ptr (left ixp sel) ixs = to-sel ixp (sel-to-str ptr sel ixs)
   sel-to-str ptr (right ixs sel) ixp = sel-to-str (to-sel ixs ptr) sel ixp
 
+  do-dft : (n : ℕ) → String → String → Sel (ι n) s → State ℕ (String)
+  do-dft n inp-ptr out-ptr out-sel = do
+    mem-out ← fresh-var
+    let setup-out = printf "complex* %s = calloc(0, (sizeof %s));" mem-out inp-ptr
+
+    let do-dft = printf "dft(*%s, *%s);" inp-ptr mem-out
+
+    j ← generateIx (ι n)
+    let cp-out = loop-nest-helper (ι n) j $ printf "%s = %s;" (sel-to-str out-ptr out-sel j) (to-sel j mem-out)
+
+    return $ setup-out ++ do-dft ++ cp-out
+
   to-vali : Inp τ σ → AR τ → State ℕ (String × AR σ)
-  to-vali (dft {n} nz-n) (arr ptr se) = do
+  to-vali (dft {n} nz-n) (arr ptr sel-id) = do
+    op ← do-dft n ptr ptr sel-id
+    return $ op , arr ptr sel-id
+  to-vali (dft {n} nz-n) (arr ptr (left x se)) = do
     mem-inp ← fresh-var
     let setup-inp = printf "complexType* %s = calloc(0, (%u * sizeof(complexType)));" mem-inp n
 
     i ← generateIx (ι n)
-    let cp-inp = loop-nest-helper (ι n) i $ printf "%s = %s;" (to-sel i mem-inp) (sel-to-str ptr se i)
+    let cp-inp = loop-nest-helper (ι n) i $ printf "%s = %s;" (to-sel i mem-inp) (sel-to-str ptr (left x se) i)
 
-    mem-out ← fresh-var
-    let setup-out = printf "complexType* %s = calloc(0, (%u * sizeof(complexType)));" mem-out n
+    op ← do-dft n mem-inp ptr (right x se)
+    return $ (setup-inp ++ cp-inp ++ op) , arr ptr se
+  to-vali (dft {n} nz-n) (arr ptr (right x se)) = do
+    op ← do-dft n (to-sel x ptr) ptr (left x se)
+    return $ op , arr ptr se
+    
 
-    let do-dft = printf "dft(*%s, *%s);" mem-inp mem-out
+    --mem-inp ← fresh-var
+    --let setup-inp = printf "complexType* %s = calloc(0, (%u * sizeof(complexType)));" mem-inp n
 
-    j ← generateIx (ι n)
-    let cp-out = loop-nest-helper (ι n) j $ printf "%s = %s;" (sel-to-str ptr se j) (to-sel j mem-inp)
+    --i ← generateIx (ι n)
+    --let cp-inp = loop-nest-helper (ι n) i $ printf "%s = %s;" (to-sel i mem-inp) (sel-to-str ptr se i)
 
-    let free-inp = printf "free(%s);" mem-inp
-    let free-out = printf "free(%s);" mem-out
+    --mem-out ← fresh-var
+    --let setup-out = printf "complexType* %s = calloc(0, (%u * sizeof(complexType)));" mem-out n
 
-    return $ (setup-inp ++ setup-out ++ cp-inp ++ do-dft ++ cp-out ++ free-inp ++ free-out) , arr ptr se
+    --let do-dft = printf "dft(*%s, *%s);" mem-inp mem-out
+
+    --j ← generateIx (ι n)
+    --let cp-out = loop-nest-helper (ι n) j $ printf "%s = %s;" (sel-to-str ptr se j) (to-sel j mem-inp)
+
+    --let free-inp = printf "free(%s);" mem-inp
+    --let free-out = printf "free(%s);" mem-out
+
+    --return $ (setup-inp ++ setup-out ++ cp-inp ++ do-dft ++ cp-out ++ free-inp ++ free-out) , arr ptr se
     {-
     working-mem ← fresh-var
     let setup-tmp = printf "complexType* %s = calloc(0, (%u * sizeof(complexType)));" working-mem n
@@ -500,19 +530,20 @@ module ShowC where
     e₁ , ARδ ← to-vali inp₁ arτ
     e₂ , ARσ ← to-vali inp₂ ARδ
     return $ (e₁ ++ e₂) , ARσ
-  to-vali (copy {s = s} {p} rshp) (arr ptr se) = return $ "\n// TODO : COPY\n" , arr ptr sel-id
-  --do
-    --working-mem ← fresh-var
-    --let setup-tmp     = printf "complexType* %s = malloc(sizeof %s);" working-mem ptr
-    --
-    --i ← generateIx s
-    --let copy-to-tmp   = loop-nest-helper s i $ printf "%s = %s;" (sel-to-str working-mem se i) (sel-to-str ptr se i)
+  to-vali (copy {s = s} {p = p} rshp) (arr ptr se) = do
+    working-mem ← fresh-var
+    let setup-tmp     = printf "complexType* %s = malloc(sizeof %s);" working-mem ptr
+    
+    i ← generateIx s
+    let copy-to-tmp   = loop-nest-helper s i $ printf "%s = %s;" (sel-to-str working-mem se i) (sel-to-str ptr se i)
 
-    --j ← generateIx p
-    --let copy-from-tmp = loop-nest-helper s i $ printf "%s = %s" ("Something") (sel-to-str working-mem se (rshp-ix rshp j))
+    j ← generateIx p
+    let copy-from-tmp = loop-nest-helper p j $ printf "%s = %s;\n// TODO: This will breakdown when se is not empty" 
+                          (to-sel j ptr) 
+                          (sel-to-str working-mem se (rshp-ix rshp j))
 
-    --let free-tmp      = ""
-    --return $ (setup-tmp ++ copy-to-tmp ++ copy-from-tmp ++ free-tmp) , arr working-mem sel-id
+    let free-tmp      = ""
+    return $ (setup-tmp ++ copy-to-tmp ++ copy-from-tmp ++ free-tmp) , arr working-mem sel-id
   
   --to-vali : (inp : Inp τ σ) → {τ-n : Num τ} →{- Fut τ → Fut σ → -} (mem : (String)) → State ℕ (String × (String))
   --to-vali (dft {n} nz)     mem = return $ "\n//TODO: DFT\n" , mem
