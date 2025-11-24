@@ -48,6 +48,23 @@ module FFT (cplx : Cplx) where
   DFT′ : ∀ {N : ℕ} → ⦃ nonZero-N : NonZero N ⦄ → Ar (ι N) ℂ → Ar (ι N) ℂ
   DFT′ {N} ⦃ nonZero-N ⦄ xs j = sum (λ k → xs k * -ω N ⦃ nonZero-N ⦄ (iota k *ₙ iota j))
 
+  FFT-mixed-swap : ∀ {s : Shape} → ⦃ nonZero-s : NonZeroₛ s ⦄ → Ar s ℂ → Ar (recursive-transpose s) ℂ
+  FFT-mixed-swap {ι N} ⦃ ι nonZero-N ⦄ arr = DFT′ ⦃ nonZero-N ⦄ arr
+  FFT-mixed-swap {r₁ ⊗ r₂} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ arr = 
+      let 
+          innerDFTapplied       = reshape swap (mapLeft FFT-mixed-swap (reshape swap arr))
+          twiddleFactorsApplied = reshape swap (zipWith _*_   (reshape swap innerDFTapplied) twiddles)
+          outerDFTapplied       = reshape swap (mapLeft FFT-mixed-swap twiddleFactorsApplied)
+      in  outerDFTapplied
+      where
+        instance
+          _ : NonZeroₛ r₁
+          _ = nonZero-r₁
+          _ : NonZeroₛ r₂
+          _ = nonZero-r₂
+          _ : NonZeroₛ (r₂ ⊗ (recursive-transpose r₁))
+          _ = nonZero-r₂ ⊗ (nonZeroₛ-s⇒nonZeroₛ-sᵗ nonZero-r₁)
+
   FFT′ : ∀ {s : Shape} → ⦃ nonZero-s : NonZeroₛ s ⦄ → Ar s ℂ → Ar (recursive-transpose s) ℂ
   FFT′ {ι N} ⦃ ι nonZero-N ⦄ arr = DFT′ ⦃ nonZero-N ⦄ arr
   FFT′ {r₁ ⊗ r₂} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ arr = 

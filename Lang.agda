@@ -369,7 +369,9 @@ module Tests where
   show-test {τ = τ} e t with isFut τ
   ... | yes p = show p e
 
-  res = show-test test₁ _
+  res = show-test fft _
+  _ : res ≡ ?
+  _ = ?
 
 
 
