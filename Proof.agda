@@ -47,7 +47,7 @@ sum-cong = S.sum-cong _+_ 0ℂ +-isCommutativeMonoid
 open import Matrix.Reshape using (reshape; Reshape; flat; ♭; ♯; recursive-transpose; recursive-transposeᵣ; _∙_; rev; _⊕_; swap; eq; split; _⟨_⟩; reindex; rev-eq; flatten-reindex; |s|≡|sᵗ|; reindex-reindex; recursive-transpose-inv)
 open import Function.Base using (_$_; id; _∘_; flip; _∘₂_)
 
-open import FFT cplx using (DFT; FFT; DFT′; FFT′; offset-prod; iota; twiddles)
+open import FFT cplx using (DFT; FFT; DFT′; FFT′; FFT′′; offset-prod; iota; twiddles)
 
 private
   variable
@@ -138,6 +138,11 @@ FFT′-cong {r₁ ⊗ r₂} {xs} {ys} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ prf 
           refl
         ) 
       }) j₁
+
+postulate
+  FFT′′-cong : ∀ {s : Shape} {xs ys : Ar s ℂ} → ⦃ nonZeroₛ-s : NonZeroₛ s ⦄ → xs ≅ ys → FFT′′ xs ≅ FFT′′ ys
+--FFT′′-cong {ι N} ⦃ ι nonZero-N ⦄ = DFT′-cong ⦃ nonZero-N ⦄
+--FFT′′-cong {r₁ ⊗ r₂} {xs} {ys} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ prf (j₀ ⊗ j₁) = ?
 
 -------------------------
 --- Properties of Sum ---

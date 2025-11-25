@@ -14,13 +14,15 @@ module FFT (cplx : Cplx) where
 
   open import Data.Fin.Base using (Fin; toℕ) renaming (zero to fzero; suc to fsuc)
   open import Data.Nat.Base using (ℕ; zero; suc; NonZero) renaming (_+_ to _+ₙ_; _*_ to _*ₙ_)
-  open import Data.Nat.Properties using (nonZero?)
+  open import Data.Nat.Properties using (nonZero?; *-comm)
   open import Relation.Nullary
 
-  open import Matrix using (Ar; Shape; Position; ι; _⊗_; zipWith; mapLeft; length)
+  open import Matrix using (Ar; Shape; Position; ι; _⊗_; zipWith; mapLeft; length; nest; unnest; map)
   open import Matrix.Sum _+_ 0ℂ +-isCommutativeMonoid using (sum)
-  open import Matrix.Reshape using (recursive-transpose; reshape; swap; _⟨_⟩; ♯; recursive-transposeᵣ)
+  open import Matrix.Reshape using (recursive-transpose; reshape; swap; _⟨_⟩; ♯; recursive-transposeᵣ; _∙_; reindex; ♭)
   open import Matrix.NonZero using (NonZeroₛ; ι; _⊗_; nonZeroₛ-s⇒nonZero-s; nonZeroDec; nonZeroₛ-s⇒nonZeroₛ-sᵗ)
+
+  open import Function
 
   private
     variable
@@ -64,6 +66,34 @@ module FFT (cplx : Cplx) where
           _ = nonZero-r₂
           _ : NonZeroₛ (r₂ ⊗ (recursive-transpose r₁))
           _ = nonZero-r₂ ⊗ (nonZeroₛ-s⇒nonZeroₛ-sᵗ nonZero-r₁)
+
+  {-
+  `ffti : NonZeroₛ s → Inp (ar s C) (ar s C)
+  `ffti (ι nz)      = dft nz
+  `ffti (_⊗_ {p = p} nzs nzp) = 
+    part-col (`ffti nzs) eq
+    >>> twid ⦃ nzs ⊗ nzp ⦄
+    >>> part-row (`ffti nzp) eq 
+    >>> copy (♯ ∙ reindex (*-comm (size p) _) ∙ ♭ ∙ swap) -- TODO: check whether this is correct
+  -}
+  FFT′′ : ∀ {s : Shape} → ⦃ nonZero-s : NonZeroₛ s ⦄ → Ar s ℂ → Ar s ℂ
+  FFT′′ {ι N} ⦃ ι nonZero-N ⦄ arr = DFT′ ⦃ nonZero-N ⦄ arr
+  FFT′′ {r₁ ⊗ r₂} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ arr =
+    let 
+      innerDFTApplied = reshape swap $ unnest $ map FFT′′ $ nest $ reshape swap $ arr
+      twiddlesApplied = zipWith _*_ innerDFTApplied twiddles
+      outerDFTApplied = unnest $ map FFT′′ $ nest $ twiddlesApplied
+    in reshape (♯ ∙ reindex (*-comm (length r₂) _) ∙ ♭ ∙ swap) outerDFTApplied
+    where
+      instance
+        _ : NonZeroₛ r₁
+        _ = nonZero-r₁
+        _ : NonZeroₛ r₂
+        _ = nonZero-r₂
+        _ : NonZeroₛ (r₂ ⊗ (recursive-transpose r₁))
+        _ = nonZero-r₂ ⊗ (nonZeroₛ-s⇒nonZeroₛ-sᵗ nonZero-r₁)
+        _ : NonZeroₛ (r₁ ⊗ r₂)
+        _ = nonZero-r₁ ⊗ nonZero-r₂
 
   FFT′ : ∀ {s : Shape} → ⦃ nonZero-s : NonZeroₛ s ⦄ → Ar s ℂ → Ar (recursive-transpose s) ℂ
   FFT′ {ι N} ⦃ ι nonZero-N ⦄ arr = DFT′ ⦃ nonZero-N ⦄ arr

@@ -1,5 +1,6 @@
 --{-# OPTIONS --backtracking-instance-search #-}
 {-# OPTIONS --guardedness #-}
+
 open import Relation.Binary.PropositionalEquality
 open import Data.Nat
 open import Data.Nat.Properties using (*-comm)
@@ -82,8 +83,8 @@ data Copy : Shape → Shape → Set where
 
 infixl 2 _>>>_
 data Inp : Ty → Ty → Set where
-  dft  :  NonZero n → Inp (ar (ι n) C) (ar (ι n) C)
-  twid : Inp (ar s C) (ar s C) 
+  dft  : NonZero n → Inp (ar (ι n) C) (ar (ι n) C)
+  twid : ⦃ NonZeroₛ (s ⊗ p) ⦄ → Inp (ar (s ⊗ p) C) (ar (s ⊗ p) C) 
   
   part-col : Inp (ar s τ) (ar q τ) → Copy s q → Inp (ar (s ⊗ p) τ) (ar (q ⊗ p) τ)
   part-row : Inp (ar p τ) (ar q τ) → Copy p q → Inp (ar (s ⊗ p) τ) (ar (s ⊗ q) τ)
@@ -146,7 +147,7 @@ instance
 `ffti (ι nz)      = dft nz
 `ffti (_⊗_ {p = p} nzs nzp) = 
   part-col (`ffti nzs) eq
-  >>> twid
+  >>> twid ⦃ nzs ⊗ nzp ⦄
   >>> part-row (`ffti nzp) eq 
   >>> copy (♯ ∙ reindex (*-comm (size p) _) ∙ ♭ ∙ swap) -- TODO: check whether this is correct
 
@@ -156,7 +157,7 @@ module Interp (real : Real) (cplx : Cplx) where
   
   open import Matrix.Equality
   open import Matrix.Reshape
-  open import FFT cplx
+  open import FFT cplx using (twiddles; offset-prod; FFT′; FFT′′)
   open import Proof cplx
 
   Sem : Ty → Set
@@ -185,6 +186,24 @@ module Interp (real : Real) (cplx : Cplx) where
   interp (`sum e) = sum (interp e)
   interp (`ω n e) = -ω n (offset-prod (interp e))
   interp (e `* e₁) = interp e *𝕔 interp e₁
+
+  interp-inp : Inp τ σ → Sem τ → Sem σ
+  interp-inp (dft nz) ar = λ p → interp (`dft ⦃ nz ⦄ `$ (` ar) `$ (` p))
+  interp-inp (twid {s} {p} ⦃ nz-s⊗p ⦄ ) ar = zipWith _*𝕔_ ar (twiddles ⦃ nz-s⊗p ⦄)
+  interp-inp (part-col inp eq) = reshape swap ∘ unnest ∘ map (interp-inp inp) ∘ nest ∘ reshape swap 
+  interp-inp (part-row inp eq) =                unnest ∘ map (interp-inp inp) ∘ nest
+  interp-inp (inp₁ >>> inp₂) = interp-inp inp₂ ∘ interp-inp inp₁
+  interp-inp (copy rshp) = reshape rshp
+
+  --inpfft-ok :  ⦃ nz-s : NonZeroₛ s ⦄ → ∀ a → FFT′′ {s} a ≅ interp-inp (`ffti nz-s) a
+  --inpfft-ok {ι N} ⦃ ι nz-N ⦄ a i = refl
+  --inpfft-ok {r₁ ⊗ r₂} ⦃ nz-r₁ ⊗ nz-r₂ ⦄ a (i ⊗ j) =
+  --  begin
+  --    _ ≡⟨ ? ⟩
+  --    --_ ≡⟨ FFT′′-cong ⦃ ? ⦄ (λ k → cong₂ _*𝕔_ (inpfft-ok ⦃ ? ⦄ _ j) refl) i ⟩
+  --    _
+  --  ∎ where open ≡-Reasoning
+
   -- interp (`view x e) = interp-T x $ interp e
   -- interp (`transform x e) = interp-T x $ interp e
   -- interp (a `>>= a₁) = interp a₁ $ interp a
@@ -404,11 +423,11 @@ module ShowC where
   to-vali (dft {n} nz-n) (arr ptr (right x se)) = do
     op ← do-dft n (to-sel x ptr) ptr (left x se)
     return $ op , arr ptr se
-  to-vali (twid {s}) (arr {s = p} ptr sel) =
+  to-vali (twid {s} {p}) (arr ptr sel) =
     do
-      i ← generateIx s
+      i ← generateIx (s ⊗ p)
       let memSel = sel-to-str ptr sel i
-      return $ (loop-nest-helper s i (printf "%s *= minus_omega(%u , %s);\n" memSel (size s) (offset i))) , arr ptr sel
+      return $ (loop-nest-helper (s ⊗ p) i (printf "%s *= minus_omega(%u , %s);\n" memSel (size s * size p) (offset i))) , arr ptr sel
   to-vali (part-col {p = p} e eq) (arr ptr se) = do
     i ← generateIx p
     expr , _ ← (to-vali e (arr ptr (sub-left  se i)))
