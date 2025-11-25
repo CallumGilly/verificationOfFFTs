@@ -395,7 +395,9 @@ module ShowC where
 
   rshp-sel-to-str : Reshape s p → (ptr : String) → Sel s q → Ix p → String
   rshp-sel-to-str rshp ptr  sel-id         ixp = to-sel ixp ptr
-  rshp-sel-to-str rshp ptr (left ixq sel)  ixp = to-sel′ ixq (rshp-sel-to-str rshp ptr sel ixp)
+  rshp-sel-to-str rshp ptr (left ixq sel)  ixp = to-sel′ ixq (rshp-sel-to-str rshp ptr sel ixp) 
+    -- the above is WRONG - Ends up outputting `(*inp[x_8])[x_10][x_0]` instead of `(*inp)[x_8][x_10][x_0]`, 
+    -- may be fixed by better sel AS just sent
   rshp-sel-to-str rshp ptr (right ixs sel) ixp = rshp-sel-to-str rshp (to-sel′ ixs ptr) sel ixp
 
   sel-to-str : String → Sel s p → Ix s → String
@@ -420,7 +422,7 @@ module ShowC where
     return $ op , arr ptr sel-id
   to-vali (dft {n} nz-n) (arr ptr (left x se)) = do
     mem-inp ← fresh-var
-    let setup-inp = printf "complexType* %s = calloc(0, (%u * sizeof(complexType)));" mem-inp n
+    let setup-inp = printf "complex float* %s = calloc(0, (%u * sizeof(complex float)));" mem-inp n
 
     i ← generateIx (ι n)
     let cp-inp = loop-nest-helper (ι n) i $ printf "%s = %s;" (to-sel i mem-inp) (sel-to-str ptr (left x se) i)
