@@ -341,44 +341,6 @@ module ShowC where
   Var C C = String
   Var (ix s ⇒ τ) (arr n) = Ix s → Var τ n
 
---`dft : ⦃ NonZero n ⦄ → E V (ar (ι n) C ⇒ ar (ι n) C)
---`dft {n = n} = `λ a ⇒ `λ j ⇒ `sum (`λ k ⇒ (` a `$ ` k) `* `ω n (` k `⊗ ` j))
-
-  toNum : Inp τ σ → Num τ → Num σ
-  toNum (e₁ >>> e₂)         n  = toNum e₂ (toNum e₁ n)
-  toNum (dft _)        (arr n) = arr n
-  toNum twid           (arr n) = arr n
-  toNum (part-col _ _) (arr n) = arr n
-  toNum (part-row _ _) (arr n) = arr n
-  toNum (copy _)       (arr n) = arr n
-
-
-  --to-vali : (inp : Inp τ σ) → {- Fut τ → Fut σ → -} (mem : String) → State ℕ (String × Val σ)
-  --to-vali : (inp : Inp τ σ) → {τ-n : Num τ} {σ-n : Num σ} →{- Fut τ → Fut σ → -} (mem : Var τ τ-n) → State ℕ (String × Var σ σ-n)
-  -- mem-To-EVal : {τ-n : Num τ} → Var τ τ-n → E Val τ
-  -- mem-To-EVal x = ?
-
-  ~-refl : (τ-n : Num τ) → τ ~ τ
-  ~-refl {C}      _   = sca
-  ~-refl {ix x} ()
-  ~-refl {.(ix _) ⇒ τ₁} (arr τ-n) = arr eq (~-refl τ-n)
-
-  ~-trans : τ ~ σ → σ ~ δ → τ ~ δ
-  ~-trans sca sca = sca
-  ~-trans (arr rshp₁ r₁) (arr rshp₂ r₂) = arr (rshp₂ ∙ rshp₁) (~-trans r₁ r₂)
-
-  ~-num : τ ~ σ → Num τ → Num σ
-  ~-num {σ = C} rel C = C
-  ~-num {σ = ix p ⇒ σ} (arr x₁ rel) (arr τ-n) = arr (~-num rel τ-n)
-
-  inp→τ~σ : Inp τ σ → (τ-n : Num τ) →  τ ~ σ
-  inp→τ~σ (dft x) _ = arr eq sca
-  inp→τ~σ twid _ = arr eq sca
-  inp→τ~σ (part-col {τ = τ} x eq) (arr τ-n) = arr eq (~-refl τ-n)
-  inp→τ~σ (part-row x eq) (arr τ-n) = arr eq (~-refl τ-n)
-  inp→τ~σ (e₁ >>> e₂) τ-n = ~-trans (inp→τ~σ e₁ τ-n) (inp→τ~σ e₂ (toNum e₁ τ-n)) 
-  inp→τ~σ (copy x) (arr τ-n) = arr x (~-refl τ-n)
-
   rshp-ix : Reshape s p → Ix p → Ix s
   rshp-ix eq x₁ = x₁
   rshp-ix (x ∙ x₂) x₁ = (rshp-ix x₂ (rshp-ix x x₁))
@@ -388,28 +350,6 @@ module ShowC where
     --ι (printf "TODO: Flatten %s" ?) ⊗ ι ("TODO2: Flatten")
     --Goal Type : Ix (ι m ⊗ ι n)
   rshp-ix Reshape.swap (x₁ ⊗ x₂) = x₂ ⊗ x₁
-
-  convVar : (τ-n : Num τ) → (rel : τ ~ σ) → Var τ τ-n → Var σ (~-num rel τ-n)
-  convVar C sca var = var
-  convVar (arr τ-n) (arr x rel) var i = convVar τ-n rel $ var $ rshp-ix x i
-
-  --tmp {σ = C} C rel = refl
-  --tmp {σ = ix p ⇒ σ} (arr τ-n) (arr x rel) = ?
-
-  data Mem : Set where
-    eMem  : (adr : String) → Mem
-    aMem  : (s : Shape) → Mem → Ix s → Mem
-
-  -- (*mem)[x_0][x_1]
-  _ : Mem
-  _ = aMem (ι 4) (aMem (ι 6) (eMem "mem") (ι {6} "x_0")) (ι {4} "x_1") -- OR
-  _ : Mem
-  _ = aMem (ι 6 ⊗ ι 4) (eMem "mem") ((ι {6} "x_0") ⊗ (ι {4} "x_1"))
-  -- (*mem)[x_0][.]
-  --_ : Mem
-  --_ = aMem (ι 6 ⊗ ι 4) (eMem "mem") (ι {4} ? )
-  -- (*mem)[.][x_1]
-  -- (*mem)
 
   data Sel : (s : Shape) → (p : Shape) → Set where
     sel-id :        Sel s s
@@ -430,17 +370,6 @@ module ShowC where
     cst : String → AR C
     arr : String → Sel p s → AR (ar p C)
 
-
-    --memo : (adr : String) → Sel s p → Memory
-
-  --mkIx : String → Ix s
-  
-  --test₃ : Memory → Set
-  --test₃ (memo adr (ok     x)) = ?
-  --test₃ (memo adr (not-ok x)) = ?
-  --test₃ (memo adr (end-id  )) = ?
-
-  --AR-to-STR\q
 
   sel-to-str : String → Sel s p → Ix s → String
   sel-to-str ptr sel-id ixs = to-sel ixs ptr
@@ -475,44 +404,6 @@ module ShowC where
   to-vali (dft {n} nz-n) (arr ptr (right x se)) = do
     op ← do-dft n (to-sel x ptr) ptr (left x se)
     return $ op , arr ptr se
-    
-
-    --mem-inp ← fresh-var
-    --let setup-inp = printf "complexType* %s = calloc(0, (%u * sizeof(complexType)));" mem-inp n
-
-    --i ← generateIx (ι n)
-    --let cp-inp = loop-nest-helper (ι n) i $ printf "%s = %s;" (to-sel i mem-inp) (sel-to-str ptr se i)
-
-    --mem-out ← fresh-var
-    --let setup-out = printf "complexType* %s = calloc(0, (%u * sizeof(complexType)));" mem-out n
-
-    --let do-dft = printf "dft(*%s, *%s);" mem-inp mem-out
-
-    --j ← generateIx (ι n)
-    --let cp-out = loop-nest-helper (ι n) j $ printf "%s = %s;" (sel-to-str ptr se j) (to-sel j mem-inp)
-
-    --let free-inp = printf "free(%s);" mem-inp
-    --let free-out = printf "free(%s);" mem-out
-
-    --return $ (setup-inp ++ setup-out ++ cp-inp ++ do-dft ++ cp-out ++ free-inp ++ free-out) , arr ptr se
-    {-
-    working-mem ← fresh-var
-    let setup-tmp = printf "complexType* %s = calloc(0, (%u * sizeof(complexType)));" working-mem n
-    i ← generateIx (ι n)
-    let loop = loop-nest-helper (ι n) i 
-                ( printf 
-                  "%s += %s * minus_omega(%u, (%s * %s));" 
-                  (to-sel i working-mem) 
-                  (sel-to-str ptr se i) 
-                  n 
-                  (offset i)
-                  "todo"
-                )
-    j ← generateIx (ι n)
-    let copy-mem = loop-nest-helper (ι n) j (printf "%s = %s;\n" (sel-to-str ptr se j) (to-sel j working-mem))
-    let free-mem = printf "free(%s);" working-mem
-    return $ (setup-tmp ++ loop ++ copy-mem ++ free-mem) , arr ptr se
-    -}
   to-vali (twid {s}) (arr {s = p} ptr sel) =
     do
       i ← generateIx s
