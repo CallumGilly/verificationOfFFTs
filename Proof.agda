@@ -139,10 +139,32 @@ FFT′-cong {r₁ ⊗ r₂} {xs} {ys} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ prf 
         ) 
       }) j₁
 
-postulate
-  FFT′′-cong : ∀ {s : Shape} {xs ys : Ar s ℂ} → ⦃ nonZeroₛ-s : NonZeroₛ s ⦄ → xs ≅ ys → FFT′′ xs ≅ FFT′′ ys
---FFT′′-cong {ι N} ⦃ ι nonZero-N ⦄ = DFT′-cong ⦃ nonZero-N ⦄
---FFT′′-cong {r₁ ⊗ r₂} {xs} {ys} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ prf (j₀ ⊗ j₁) = ?
+reshape-cong : ∀ {s p : Shape} {xs ys : Ar s ℂ} → (r : Reshape s p) → xs ≅ ys → reshape r xs ≅ reshape r ys
+reshape-cong r x i = x ( i ⟨ r ⟩ ) 
+  
+
+{-
+--postulate
+FFT′′-cong : ∀ {s : Shape} {xs ys : Ar s ℂ} → ⦃ nonZeroₛ-s : NonZeroₛ s ⦄ → xs ≅ ys → FFT′′ xs ≅ FFT′′ ys
+FFT′′-cong {ι N} ⦃ ι nonZero-N ⦄ = DFT′-cong ⦃ nonZero-N ⦄
+FFT′′-cong {r₁ ⊗ r₂} {xs} {ys} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ prf (j₀ ⊗ j₁) =
+  let instance
+    _ : NonZeroₛ r₁
+    _ = nonZero-r₁
+    _ : NonZeroₛ r₂
+    _ = nonZero-r₂
+    _ : NonZeroₛ (r₁ ⊗ r₂)
+    _ = nonZero-r₁ ⊗ nonZero-r₂
+  in begin 
+    FFT′′ xs (j₀ ⊗ j₁)
+  --≡⟨ ? ⟩ 
+  ≡⟨ (reshape-cong (♯ ∙ reindex (*ₙ-comm (length r₂) (length r₁)) ∙ (flat ∙ ♭ ⊕ ♭) ∙ swap) (FFT′′-cong {?} ⦃ ? ⦄ ?)) (j₀ ⊗ j₁) ⟩ 
+  --≡⟨ cong (λ f → reshape (♯ ∙ reindex (*ₙ-comm (length r₂) (length r₁)) ∙ (flat ∙ ♭ ⊕ ♭) ∙ swap) f (j₀ ⊗ j₁)) ? ⟩
+    ?
+  ≡⟨ ? ⟩
+    FFT′′ ys (j₀ ⊗ j₁)
+  ∎
+  -}
 
 -------------------------
 --- Properties of Sum ---

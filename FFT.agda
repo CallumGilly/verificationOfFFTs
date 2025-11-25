@@ -80,9 +80,9 @@ module FFT (cplx : Cplx) where
   FFT′′ {ι N} ⦃ ι nonZero-N ⦄ arr = DFT′ ⦃ nonZero-N ⦄ arr
   FFT′′ {r₁ ⊗ r₂} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ arr =
     let 
-      innerDFTApplied = reshape swap $ unnest $ map FFT′′ $ nest $ reshape swap $ arr
+      innerDFTApplied = reshape swap $ mapLeft FFT′′ $ reshape swap $ arr
       twiddlesApplied = zipWith _*_ innerDFTApplied twiddles
-      outerDFTApplied = unnest $ map FFT′′ $ nest $ twiddlesApplied
+      outerDFTApplied = mapLeft FFT′′ $ twiddlesApplied
     in reshape (♯ ∙ reindex (*-comm (length r₂) _) ∙ ♭ ∙ swap) outerDFTApplied
     where
       instance

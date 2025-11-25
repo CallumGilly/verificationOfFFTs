@@ -284,8 +284,8 @@ module ShowC where
   offset (ι x) = x
   offset {s ⊗ p} (i ⊗ j) = printf "((%u * %s) + %s)" (size p) (offset i) (offset j)
 
-  to-sel : Ix s → String → String
-  to-sel i a = printf "(*%s)%s" a $ ix-join (ix-map (printf "[%s]") i) ""
+  to-sel′ : Ix s → String → String
+  to-sel′ i a = printf "%s%s" a $ ix-join (ix-map (printf "[%s]") i) ""
     where
       ix-join : Ix s → (d : String) → String
       ix-join (ι x) d = x
@@ -294,6 +294,9 @@ module ShowC where
       ix-map : (String → String) → Ix s → Ix s
       ix-map f (ι x) = ι (f x)
       ix-map f (i ⊗ j) = ix-map f i ⊗ ix-map f j
+
+  to-sel : Ix s → String → String
+  to-sel i a = to-sel′ i (printf "(*%s)" a)
 
 
   omega : ℕ → Ix (s Shape.⊗ p) → Val C
@@ -364,8 +367,8 @@ module ShowC where
   rshp-ix eq x₁ = x₁
   rshp-ix (x ∙ x₂) x₁ = (rshp-ix x₂ (rshp-ix x x₁))
   rshp-ix (x ⊕ x₂) (x₁ ⊗ x₃) = (rshp-ix x x₁) ⊗ (rshp-ix x₂ x₃)
-  rshp-ix (split {m}) (ι x ⊗ ι x₁) = ι (printf "((%s * %u) + %s)" x m x₁)
-  rshp-ix (flat {m} {n}) (ι x) = ι (printf "%s / %u" x n) ⊗ ι (printf "%s %% %u" x n) -- TODO: Check this
+  rshp-ix (split {m} {n}) (ι x ⊗ ι x₁) = ι (printf "((%s * %u) + %s)" x n x₁)
+  rshp-ix (flat {m} {n}) (ι x) = ι (printf "(%s / %u)" x n) ⊗ ι (printf "(%s %% %u)" x n) -- TODO: Check this
     --ι (printf "TODO: Flatten %s" ?) ⊗ ι ("TODO2: Flatten")
     --Goal Type : Ix (ι m ⊗ ι n)
   rshp-ix Reshape.swap (x₁ ⊗ x₂) = x₂ ⊗ x₁
@@ -390,10 +393,14 @@ module ShowC where
     arr : String → Sel p s → AR (ar p C)
 
 
+  rshp-sel-to-str : Reshape s p → (ptr : String) → Sel s q → Ix p → String
+  rshp-sel-to-str rshp ptr  sel-id         ixp = to-sel ixp ptr
+  rshp-sel-to-str rshp ptr (left ixq sel)  ixp = to-sel′ ixq (rshp-sel-to-str rshp ptr sel ixp)
+  rshp-sel-to-str rshp ptr (right ixs sel) ixp = rshp-sel-to-str rshp (to-sel′ ixs ptr) sel ixp
+
   sel-to-str : String → Sel s p → Ix s → String
-  sel-to-str ptr sel-id ixs = to-sel ixs ptr
-  sel-to-str ptr (left ixp sel) ixs = to-sel ixp (sel-to-str ptr sel ixs)
-  sel-to-str ptr (right ixs sel) ixp = sel-to-str (to-sel ixs ptr) sel ixp
+  sel-to-str = rshp-sel-to-str eq
+
 
   do-dft : (n : ℕ) → String → String → Sel (ι n) s → State ℕ (String)
   do-dft n inp-ptr out-ptr out-sel = do
@@ -448,13 +455,82 @@ module ShowC where
     let copy-to-tmp   = loop-nest-helper s i $ printf "%s = %s;" (sel-to-str working-mem se i) (sel-to-str ptr se i)
 
     j ← generateIx p
-    let copy-from-tmp = loop-nest-helper p j $ printf "%s = %s;\n// TODO: This will breakdown when se is not empty" 
-                          (to-sel j ptr) 
+    let copy-from-tmp = loop-nest-helper p j $ printf "%s = %s;" 
+                          --(to-sel j ptr) 
+                          (rshp-sel-to-str rshp ptr se j) 
                           (sel-to-str working-mem se (rshp-ix rshp j))
 
     let free-tmp      = ""
     return $ (setup-tmp ++ copy-to-tmp ++ copy-from-tmp ++ free-tmp) , arr working-mem sel-id
+  {-
+  to-vali (copy {s = s} {p = p} rshp) (arr ptr sel-id) = do
+    working-mem ← fresh-var
+    let setup-tmp     = printf "complexType* %s = malloc(sizeof %s);" working-mem ptr
+
+    i ← generateIx s
+    let copy-to-tmp   = loop-nest-helper s i $ printf "%s = %s;" (sel-to-str working-mem sel-id i) (sel-to-str ptr sel-id i)
+
+    j ← generateIx p
+    let copy-from-tmp = loop-nest-helper p j $ printf "%s = %s;\n// TODO: This will breakdown when se is not empty" 
+                        (sel-to-str ptr sel-id j)
+                        (sel-to-str working-mem sel-id (rshp-ix rshp j))
+    let free-tmp      = ""
+    return $ (setup-tmp ++ copy-to-tmp ++ copy-from-tmp ++ free-tmp) , arr working-mem sel-id
+  to-vali (copy {s = s} {p = p} rshp) (arr ptr (left  x se)) = do
+    working-mem ← fresh-var
+    let setup-tmp     = printf "complexType* %s = malloc(sizeof %s);" working-mem ptr -- WRONG
+
+    i ← generateIx s
+    let copy-to-tmp   = loop-nest-helper s i $ printf "%s = %s;" (sel-to-str working-mem (left x se) i) (sel-to-str ptr (left x se) i)
+
+    j ← generateIx p
+    let copy-from-tmp = loop-nest-helper p j $ printf "%s = %s;\n// TODO: This will breakdown when se is not empty" 
+                        --(sel-to-str ptr ? j)
+                        (rshp-sel-to-str ptr (left x se) j rshp)
+                        (sel-to-str working-mem se (rshp-ix rshp j))
+    let free-tmp      = ""
+    return $ (setup-tmp ++ copy-to-tmp ++ copy-from-tmp ++ free-tmp) , arr working-mem ?
+  to-vali (copy {s = s} {p = p} rshp) (arr ptr (right x se)) = return $ "TODO" , arr ptr sel-id
+  -}
   
+
+  {-
+  private variable  
+    q₁ q₂ : Shape
+
+  
+  rshp-sel : Reshape s p → Sel s q₁ → Sel p q₂
+  rshp-sel rshp sel-id        = ?
+  rshp-sel rshp (left  i sel) = ?
+  rshp-sel rshp (right i sel) = ? -- right i (rshp-sel rshp sel)
+  -}
+
+  {-
+  rshp-sel : Reshape s p → Sel s q → Sel p q
+  rshp-sel rshp sel-id        = ?
+  rshp-sel rshp (left  i sel) = left  i (rshp-sel rshp sel)
+  rshp-sel rshp (right i sel) = right i (rshp-sel rshp sel)
+  -}
+
+  {-
+  to-vali (copy {s = s} {p = p} rshp) (arr ptr se) = do
+    working-mem ← fresh-var
+    let setup-tmp     = printf "complexType* %s = malloc(sizeof %s);" working-mem ptr
+    
+    i ← generateIx s
+    let copy-to-tmp   = loop-nest-helper s i $ printf "%s = %s;" (sel-to-str working-mem se i) (sel-to-str ptr se i)
+
+    j ← generateIx p
+    let copy-from-tmp = loop-nest-helper p j $ printf "%s = %s;\n// TODO: This will breakdown when se is not empty" 
+                          --(to-sel j ptr) 
+                          (sel-to-str ptr ? j) 
+                          (sel-to-str working-mem se (rshp-ix rshp j))
+
+    let free-tmp      = ""
+    return $ (setup-tmp ++ copy-to-tmp ++ copy-from-tmp ++ free-tmp) , arr working-mem sel-id
+  -}
+
+
   --to-vali : (inp : Inp τ σ) → {τ-n : Num τ} →{- Fut τ → Fut σ → -} (mem : (String)) → State ℕ (String × (String))
   --to-vali (dft {n} nz)     mem = return $ "\n//TODO: DFT\n" , mem
   --to-vali (twid {s})  mem = do 
