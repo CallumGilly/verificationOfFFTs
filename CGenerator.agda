@@ -18,9 +18,9 @@ module CGenerator where
   main : Main
   main = run do
     let (fft-head , fft-body) = (gen-fft sh ⦃ (ι _ ⊗ ι _) ⊗ (ι _ ) ⦄)
-    let (dft-head , dft-body) = (gen-dft (size sh) ⦃ _ ⦄)
+    --let (dft-head , dft-body) = (gen-dft (size sh) ⦃ _ ⦄)
     writeFile "./generated/fft.h" fft-head
-    writeFile "./generated/dft.h" dft-head
+    --writeFile "./generated/dft.h" dft-head
     writeFile "./generated/fft.c" fft-body
-    writeFile "./generated/dft.c" dft-body
+    --writeFile "./generated/dft.c" dft-body
 

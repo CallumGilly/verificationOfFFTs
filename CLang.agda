@@ -242,26 +242,6 @@ module ShowC where
   Val (ix s) = Ix s
   Val (τ ⇒ σ) = Val τ → State ℕ (String × Val σ) -- ADDED 
 
-  -- Make aboev string to string
-
-  ~-Num : τ ~ σ → Num τ → Num σ
-  ~-Num sca C = C
-  ~-Num (arr _ prf) (arr num-τ) = arr (~-Num prf num-τ)
-
-  ~-Fut : τ ~ σ → Fut τ → Fut σ
-  ~-Fut sca fut = fut
-  ~-Fut (arr _ prf) (num (arr num-τ)) = num (arr (~-Num prf num-τ))
-
-  {-
-  inpFut : Inp Val τ σ → Fut τ → Fut σ
-  inpFut (copy prf x₁) fut-τ = ~-Fut prf fut-τ
-  inpFut (view x inp x₁) fut-τ = ?
-  inpFut (mapi inp) fut-τ = ?
-  inpFut (zipw x x₁) fut-τ = ?
-  inpFut (inp >>> inp₁) fut-τ = ?
-  -}
-
-
   data Op : Set where
     += : Op
     ≔  : Op
@@ -312,8 +292,8 @@ module ShowC where
     nvp ← num-var p (to-sel i n)
     return ("" , nvp)
 
-  to-str : Fut τ → Val τ → (res : String) → Op → State ℕ (String × String)
-  to-val : E Val τ → {- (res op : String)  → -} State ℕ (String × Val τ)
+  --to-str : Fut τ → Val τ → (res : String) → Op → State ℕ (String × String)
+  --to-val : E Val τ → {- (res op : String)  → -} State ℕ (String × Val τ)
 
   for-template : String → ℕ → String → String
   for-template i n expr = printf "for (size_t %s = 0; %s < %u; %s++) {\n%s\n}" i i n i expr
@@ -335,17 +315,17 @@ module ShowC where
   loop-nest-helper (ι n    ) (ι i    ) = for-template i n
   loop-nest-helper (sₗ ⊗ sᵣ) (iₗ ⊗ iᵣ) = loop-nest-helper sₗ iₗ ∘ loop-nest-helper sᵣ iᵣ
 
-  loop-nest : Fut τ → (res : String) → Op → (Ix s → State ℕ (String × Val τ)) → State ℕ (String × String)
-  loop-nest {s = s} fut res op body =
-    do 
-      i ← generateIx s
-      body-pre , body-val ← body i
-      body-ass ← to-str fut body-val (sel-res op i) +=
-      return $ "" , loop-nest-helper s i (body-pre ++ (proj₂ body-ass))
-    where
-      sel-res : Op → Ix s → String
-      sel-res += _ = res
-      sel-res ≔  i = to-sel i res
+  --loop-nest : Fut τ → (res : String) → Op → (Ix s → State ℕ (String × Val τ)) → State ℕ (String × String)
+  --loop-nest {s = s} fut res op body =
+  --  do 
+  --    i ← generateIx s
+  --    body-pre , body-val ← body i
+  --    body-ass ← to-str fut body-val (sel-res op i) +=
+  --    return $ "" , loop-nest-helper s i (body-pre ++ (proj₂ body-ass))
+  --  where
+  --    sel-res : Op → Ix s → String
+  --    sel-res += _ = res
+  --    sel-res ≔  i = to-sel i res
 
   shape-helper : Shape → String
   shape-helper (ι n)   = printf "[%u]" n
@@ -447,56 +427,17 @@ module ShowC where
   --sizeof-sel     ptr (left x se)    = ?
   --sizeof-sel     ptr (right x se)   = ?
 
-
-  do-dft : (n : ℕ) → String → String → Sel (ι n) s → State ℕ (String)
-  do-dft n inp-ptr out-ptr out-sel = do
-    mem-out ← fresh-var
-    let setup-out = printf "complex float %s = calloc(0, (sizeof (*%s)));" (shape-to-arg (ι n) mem-out) inp-ptr
-
-    let do-dft = printf "dft(%u, *%s, *%s);" n inp-ptr mem-out
-
-    j ← generateIx (ι n)
-    let cp-out = loop-nest-helper (ι n) j $ printf "%s = %s;" (sel-to-str out-ptr out-sel j) (to-sel j mem-out)
-
-    return $ setup-out ++ do-dft ++ cp-out
-
   to-vali : Inp τ σ → AR τ → State ℕ (String × AR σ)
-  to-vali (dft {n} nz-n) (arr ptr idh) = do
-    op ← do-dft n ptr ptr idh
-    return $ op , arr ptr idh
-  to-vali (dft {n} nz-n) (arr ptr (view  se rshp)) = do
-    return $ "\n//TODO: DFT on view\n" , arr ptr (view se rshp)
-  to-vali (dft {n} nz-n) (arr ptr (chain se₁ se₂)) =
-    return $ "\n//TODO: DFT on chain\n" , arr ptr (chain se₁ se₂)
-  to-vali (dft {n} nz-n) (arr ptr (left x se)) = do
-    mem-inp ← fresh-var
-    let setup-inp = printf "complex float %s = calloc(0, (%u * sizeof(complex float)));" (shape-to-arg (ι n) mem-inp) n
-
-    i ← generateIx (ι n)
-    let cp-inp = loop-nest-helper (ι n) i $ printf "%s = %s;" (to-sel i mem-inp) (sel-to-str ptr (left x se) i)
-
-    op ← do-dft n mem-inp ptr (right x se)
-    return $ (setup-inp ++ cp-inp ++ op) , arr ptr se
-  to-vali (dft {n} nz-n) (arr ptr (right x se)) = do
-    op ← do-dft n ("&" ++ to-sel x ptr) ptr (left x se)
-    return $ op , arr ptr se
-  {- DFT splits on sel
-  to-vali (dft {n} nz-n) (arr ptr sel-id) = do
-    op ← do-dft n ptr ptr sel-id
-    return $ op , arr ptr sel-id
-  to-vali (dft {n} nz-n) (arr ptr (left x se)) = do
-    mem-inp ← fresh-var
-    let setup-inp = printf "complex float* %s = calloc(0, (%u * sizeof(complex float)));" mem-inp n
-
-    i ← generateIx (ι n)
-    let cp-inp = loop-nest-helper (ι n) i $ printf "%s = %s;" (to-sel i mem-inp) (sel-to-str ptr (left x se) i)
-
-    op ← do-dft n mem-inp ptr (right x se)
-    return $ (setup-inp ++ cp-inp ++ op) , arr ptr se
-  to-vali (dft {n} nz-n) (arr ptr (right x se)) = do
-    op ← do-dft n (to-sel x ptr) ptr (left x se)
-    return $ op , arr ptr se
-  -}
+  to-vali (dft {n} nz-n) (arr ptr sel) = do
+    j ← generateIx (ι n)
+    return $ (printf "//TODO, ptr=`%s` Ix j=`%s` sel-to-str=`%s`\n" ptr (to-sel j "") (sel-to-str ptr sel j)) , arr ptr sel
+    {-
+      Assign memory in which to store the output, this should be the size of the "hole"
+      Assign some temp memory in which the input can be stored
+      Copy the input into the temp memory
+      Do the DFT
+      Copy the output into the hole
+    -}
   to-vali (twid {s} {p}) (arr ptr sel) =
     do
       i ← generateIx (s ⊗ p)
@@ -529,106 +470,24 @@ module ShowC where
 
     let free-tmp      = ""
     return $ (setup-tmp ++ copy-to-tmp ++ copy-from-tmp ++ free-tmp) , arr ptr (view se (rev rshp)) --sel-id
-  {-
-  to-vali (copy {s = s} {p = p} rshp) (arr ptr sel-id) = do
-    working-mem ← fresh-var
-    let setup-tmp     = printf "complexType* %s = malloc(sizeof %s);" working-mem ptr
 
-    i ← generateIx s
-    let copy-to-tmp   = loop-nest-helper s i $ printf "%s = %s;" (sel-to-str working-mem sel-id i) (sel-to-str ptr sel-id i)
 
-    j ← generateIx p
-    let copy-from-tmp = loop-nest-helper p j $ printf "%s = %s;\n// TODO: This will breakdown when se is not empty" 
-                        (sel-to-str ptr sel-id j)
-                        (sel-to-str working-mem sel-id (rshp-ix rshp j))
-    let free-tmp      = ""
-    return $ (setup-tmp ++ copy-to-tmp ++ copy-from-tmp ++ free-tmp) , arr working-mem sel-id
-  to-vali (copy {s = s} {p = p} rshp) (arr ptr (left  x se)) = do
-    working-mem ← fresh-var
-    let setup-tmp     = printf "complexType* %s = malloc(sizeof %s);" working-mem ptr -- WRONG
 
-    i ← generateIx s
-    let copy-to-tmp   = loop-nest-helper s i $ printf "%s = %s;" (sel-to-str working-mem (left x se) i) (sel-to-str ptr (left x se) i)
 
-    j ← generateIx p
-    let copy-from-tmp = loop-nest-helper p j $ printf "%s = %s;\n// TODO: This will breakdown when se is not empty" 
-                        --(sel-to-str ptr ? j)
-                        (rshp-sel-to-str ptr (left x se) j rshp)
-                        (sel-to-str working-mem se (rshp-ix rshp j))
-    let free-tmp      = ""
-    return $ (setup-tmp ++ copy-to-tmp ++ copy-from-tmp ++ free-tmp) , arr working-mem ?
-  to-vali (copy {s = s} {p = p} rshp) (arr ptr (right x se)) = return $ "TODO" , arr ptr sel-id
-  -}
-  
+
+
+
+
+
+
+
+
+
+
+
+
 
   {-
-  private variable  
-    q₁ q₂ : Shape
-
-  
-  rshp-sel : Reshape s p → Sel′ s q₁ → Sel′ p q₂
-  rshp-sel rshp sel-id        = ?
-  rshp-sel rshp (left  i sel) = ?
-  rshp-sel rshp (right i sel) = ? -- right i (rshp-sel rshp sel)
-  -}
-
-  {-
-  rshp-sel : Reshape s p → Sel′ s q → Sel′ p q
-  rshp-sel rshp sel-id        = ?
-  rshp-sel rshp (left  i sel) = left  i (rshp-sel rshp sel)
-  rshp-sel rshp (right i sel) = right i (rshp-sel rshp sel)
-  -}
-
-  {-
-  to-vali (copy {s = s} {p = p} rshp) (arr ptr se) = do
-    working-mem ← fresh-var
-    let setup-tmp     = printf "complexType* %s = malloc(sizeof %s);" working-mem ptr
-    
-    i ← generateIx s
-    let copy-to-tmp   = loop-nest-helper s i $ printf "%s = %s;" (sel-to-str working-mem se i) (sel-to-str ptr se i)
-
-    j ← generateIx p
-    let copy-from-tmp = loop-nest-helper p j $ printf "%s = %s;\n// TODO: This will breakdown when se is not empty" 
-                          --(to-sel j ptr) 
-                          (sel-to-str ptr ? j) 
-                          (sel-to-str working-mem se (rshp-ix rshp j))
-
-    let free-tmp      = ""
-    return $ (setup-tmp ++ copy-to-tmp ++ copy-from-tmp ++ free-tmp) , arr working-mem sel-id
-  -}
-
-
-  --to-vali : (inp : Inp τ σ) → {τ-n : Num τ} →{- Fut τ → Fut σ → -} (mem : (String)) → State ℕ (String × (String))
-  --to-vali (dft {n} nz)     mem = return $ "\n//TODO: DFT\n" , mem
-  --to-vali (twid {s})  mem = do 
-  --  i ← generateIx s
-  --  let memSel = (to-sel i mem)
-  --  let loop = loop-nest-helper s i 
-  --  return $ loop (printf "%s *= minus_omega(%u , %s); //TODO: CHECK THIS IS CORRECT TWIDDLE USE\n" memSel (size s) (offset i)) 
-  --          , mem 
-  --to-vali (part-col {s} inp eq) {arr τ-n} mem = return $ "\n//TODO: PART-COL\n" , mem
-  --to-vali (part-row {s} inp eq) {arr τ-n} mem = do
-  --  i ← generateIx s
-  --  inner , _ ← to-vali inp {arr τ-n} (to-sel i mem)
-  --  return $ loop-nest-helper s i inner , mem
-  --to-vali {τ} {σ} (_>>>_ inp₁ inp₂) {τ-n} mem =
-  --  do
-  --    inp₁-pre , inp₁-var ← to-vali inp₁ {τ-n} mem
-  --    inp₂-pre , inp₂-var ← to-vali inp₂ {toNum inp₁ τ-n} inp₁-var
-  --    return $ inp₁-pre ++ inp₂-pre , inp₂-var
-  --to-vali (copy {s} {p} rshp) {τ-n} mem = do
-  --  tmp_var ← fresh-var
-  --  orig-i ← generateIx s
-  --  let orig-i′ = (rshp-ix (rev rshp) orig-i)
-  --  rshp-i ← generateIx p
-  --  let rshp-i′ = (rshp-ix (rshp) rshp-i)
-  --  return $  (  (printf "%s = malloc(sizeof %s);\n" tmp_var mem)
-  --            ++ (loop-nest-helper s orig-i (printf "%s = %s;" (to-sel orig-i tmp_var) (to-sel orig-i′ mem    )))
-  --            ++ (loop-nest-helper p rshp-i (printf "%s = %s;" (to-sel rshp-i mem    ) (to-sel rshp-i tmp_var)))
-  --            ++ (printf "free(%s);" tmp_var)
-  --            ) , mem
-
-
   to-val (` x)     = return ( "" , x)
   to-val (`lam x) = do
     let f t = to-val (x t)
@@ -654,6 +513,7 @@ module ShowC where
     ld , lx ← to-val l
     rd , rx ← to-val r
     return (ld ++ rd , printf "(%s * %s)" lx rx)
+  -}
   --to-val (`view x a)      = do
   --  ?
   --to-val (`transform x a) = ?
@@ -685,30 +545,30 @@ module ShowC where
   -- The below case is the one I have been struggling to work out how to deal with...
   ty-to-arg {τ ⇒ σ} (fun x fut) res = printf "%s (*%s) (%s)" (final-type fut) res (parameter-list-app fut (num-type x))
 
-  to-str (num C) v res op = return $ "" , printf "%s %s %s;" res (op-str op) v
-  to-str (num (arr x)) v res op = loop-nest (num x) res op v
-  -- We currently only want to deal with functions which accept and array, and 
-  -- return an array, for now therefore we can throw an error instead of producing
-  -- code for all other inputs
-  to-str (fun {τ} {σ} inp out) val res op =
-    do
-      n ← get
-      modify suc
-      let arg-name = (fresh n)
-      arg ← num-var inp arg-name
-      str-pre , β-val ← val arg
-      str-val ← to-str {σ} out β-val res op
-      return $ 
-          (printf "void %s(%s, %s);\n" 
-            res 
-            (ty-to-arg (num inp) arg-name)
-            (ty-to-arg out res))
-        , 
-          printf "void %s(%s, %s) {\n%s\n}" 
-            res 
-            (ty-to-arg (num inp) arg-name)
-            (ty-to-arg out res)
-            (str-pre ++ proj₂ str-val)
+  --to-str (num C) v res op = return $ "" , printf "%s %s %s;" res (op-str op) v
+  --to-str (num (arr x)) v res op = loop-nest (num x) res op v
+  ---- We currently only want to deal with functions which accept and array, and 
+  ---- return an array, for now therefore we can throw an error instead of producing
+  ---- code for all other inputs
+  --to-str (fun {τ} {σ} inp out) val res op =
+  --  do
+  --    n ← get
+  --    modify suc
+  --    let arg-name = (fresh n)
+  --    arg ← num-var inp arg-name
+  --    str-pre , β-val ← val arg
+  --    str-val ← to-str {σ} out β-val res op
+  --    return $ 
+  --        (printf "void %s(%s, %s);\n" 
+  --          res 
+  --          (ty-to-arg (num inp) arg-name)
+  --          (ty-to-arg out res))
+  --      , 
+  --        printf "void %s(%s, %s) {\n%s\n}" 
+  --          res 
+  --          (ty-to-arg (num inp) arg-name)
+  --          (ty-to-arg out res)
+  --          (str-pre ++ proj₂ str-val)
 
   AR-name : AR τ → String
   AR-name (cst name  ) = name
@@ -722,13 +582,13 @@ module ShowC where
         return $ (printf "void %s(%s) { %s }" fName arg val) , (printf "void %s(%s);" fName arg)
     ) 0 .proj₂
 
-  show : Fut τ → (∀ {V} → E V τ) → String → String × String
-  show p e res = runState ( 
-      do 
-          (deps , val) ← to-val e
-          result ← to-str p val res ≔
-          return $ deps ++ (proj₁ result) , deps ++ proj₂ result
-    ) 0 .proj₂
+  --show : Fut τ → (∀ {V} → E V τ) → String → String × String
+  --show p e res = runState ( 
+  --    do 
+  --        (deps , val) ← to-val e
+  --        result ← to-str p val res ≔
+  --        return $ deps ++ (proj₁ result) , deps ++ proj₂ result
+  --  ) 0 .proj₂
 
 module Tests where
   open import Data.Empty
@@ -825,9 +685,9 @@ module Tests where
   ... | no ¬q = no λ { (fun _ q) → ¬q q }
   ... | yes q = yes (fun p q)
 
-  show-test : String → (∀ {V} → E V τ) → True (isFut τ) → String × String
-  show-test {τ = τ} name e t with isFut τ
-  ... | yes p = show p e name
+  --show-test : String → (∀ {V} → E V τ) → True (isFut τ) → String × String
+  --show-test {τ = τ} name e t with isFut τ
+  --... | yes p = show p e name
 
   --show-test′ : String → Inp τ σ → String
   --show-test′ {τ} name inp = show′ ? inp
@@ -866,14 +726,14 @@ module Tests where
   --_ : gen-fft (ι 3 ⊗ ι 3) ⦃ ι (record { nonZero = tt }) ⊗ ι (record { nonZero = tt }) ⦄ ≡ ?
   --_ = ?
 
-  gen-dft : (n : ℕ) → ⦃ _ : NonZero n ⦄ → String × String
-  gen-dft n with show-test "dft" (Edft n) _ 
-  ... | head , body = preamble ++ head , preamble ++ body
+  -- gen-dft : (n : ℕ) → ⦃ _ : NonZero n ⦄ → String × String
+  -- gen-dft n with show-test "dft" (Edft n) _ 
+  -- ... | head , body = preamble ++ head , preamble ++ body
 
   --res : String × String
   --res = show-test "test" fft-mini _
 
-open Tests using (gen-fft; gen-dft) public
+open Tests using (gen-fft) public
 
 module Print where
   open ShowC
