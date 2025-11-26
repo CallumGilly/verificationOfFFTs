@@ -372,44 +372,88 @@ module ShowC where
     --ι (printf "TODO: Flatten %s" ?) ⊗ ι ("TODO2: Flatten")
     --Goal Type : Ix (ι m ⊗ ι n)
   rshp-ix Reshape.swap (x₁ ⊗ x₂) = x₂ ⊗ x₁
-
-  data Sel : (s : Shape) → (p : Shape) → Set where
-    sel-id :        Sel s s
-    left   : Ix p → Sel q s → Sel q (s ⊗ p)
-    right  : Ix s → Sel q p → Sel q (s ⊗ p)
+  
+  data Sel : Shape → Shape → Set where
+    idh   : Sel s s
+    view  : Sel s p → Reshape q s → Sel q p
+    chain : Sel s p → Sel p q → Sel s q
+    left  : Ix p → Sel q s → Sel q (s ⊗ p)
+    right : Ix s → Sel q p → Sel q (s ⊗ p)
 
   sub-right : Sel (s ⊗ p) q → Ix s → Sel p q
-  sub-right sel-id i = right i sel-id
-  sub-right (left j h) i = left j (sub-right h i)
-  sub-right (right j h) i = right j (sub-right h i)
+  sub-right idh          i = right i idh
+  sub-right (view  se r) i = chain  (right i idh) (view se r)
+  sub-right (chain a  b) i = chain   (sub-right a i) b
+  sub-right (left  j  h) i = left  j (sub-right h i)
+  sub-right (right j  h) i = right j (sub-right h i)
 
   sub-left : Sel (s ⊗ p) q → Ix p → Sel s q
-  sub-left sel-id i = left i sel-id
-  sub-left (left j h) i = left j (sub-left h i)
-  sub-left (right j h) i = right j (sub-left h i)
+  sub-left idh          i = left  i idh
+  sub-left (view  se r) i = chain   (left i idh) (view se r)
+  sub-left (chain a  b) i = chain   (sub-left a i) b
+  sub-left (left  j  h) i = left  j (sub-left h i)
+  sub-left (right j  h) i = right j (sub-left h i)
 
   data AR : Ty → Set where
     cst : String → AR C
     arr : String → Sel p s → AR (ar p C)
 
+  reix : Ix s → Reshape s p → Ix p
+  reix ixs rshp = rshp-ix (rev rshp) ixs 
+
+  ix-up : Sel s p → Ix s → Ix p
+  ix-up idh i = i
+  ix-up (view se x)    i = ix-up se (reix i x)
+  ix-up (chain se se₁) i = ix-up se₁ (ix-up se i)
+  ix-up (left x se)    i = ix-up se i ⊗ x
+  ix-up (right x se)   i = x ⊗ ix-up se i
+
 
   rshp-sel-to-str : Reshape s p → (ptr : String) → Sel s q → Ix p → String
-  rshp-sel-to-str rshp ptr  sel-id         ixp = to-sel ixp ptr
-  rshp-sel-to-str rshp ptr (left ixq sel)  ixp = to-sel′ ixq (rshp-sel-to-str rshp ptr sel ixp) 
-    -- the above is WRONG - Ends up outputting `(*inp[x_8])[x_10][x_0]` instead of `(*inp)[x_8][x_10][x_0]`, 
-    -- may be fixed by better sel AS just sent
-  rshp-sel-to-str rshp ptr (right ixs sel) ixp = rshp-sel-to-str rshp (to-sel′ ixs ptr) sel ixp
+  rshp-sel-to-str rshp ptr idh            ixp = to-sel ixp ptr
+  rshp-sel-to-str rshp ptr (view se x)    ixp = "\n//TODO View\n"
+  rshp-sel-to-str rshp ptr (chain se se₁) ixp = "\n//TODO Chain\n"
+  rshp-sel-to-str rshp ptr (left ixq se)    ixp = to-sel′ ixq (rshp-sel-to-str rshp ptr se ixp) 
+  rshp-sel-to-str rshp ptr (right ixs se)   ixp = rshp-sel-to-str rshp (to-sel′ ixs ptr) se ixp
+  --rshp-sel-to-str rshp ptr  sel-id         ixp = to-sel ixp ptr
+  --rshp-sel-to-str rshp ptr (left ixq sel)  ixp = to-sel′ ixq (rshp-sel-to-str rshp ptr sel ixp) 
+  --  -- the above is WRONG - Ends up outputting `(*inp[x_8])[x_10][x_0]` instead of `(*inp)[x_8][x_10][x_0]`, 
+  --  -- may be fixed by better sel AS just sent
+  --rshp-sel-to-str rshp ptr (right ixs sel) ixp = rshp-sel-to-str rshp (to-sel′ ixs ptr) sel ixp
 
   sel-to-str : String → Sel s p → Ix s → String
-  sel-to-str = rshp-sel-to-str eq
+  sel-to-str ptr sel ixs = to-sel (ix-up sel ixs) ptr
+  ---- (*ptr)[ixs₁]...[ixsₙ]
+  --sel-to-str ptr idh               ixs = to-sel ixs ptr
+  --sel-to-str ptr (view sel rshp)   ixs = ?
+  --sel-to-str ptr (chain sel₁ sel₂) ixs = ?
+  ---- <sel-to-str>[ixq₁]...[ixqₙ] 
+  --sel-to-str ptr (left  ixq sel)   ixs = to-sel′ ixq (sel-to-str ptr sel ixs)
+  ---- (*ptr)[ixp₁]...[ixpₙ]<sel-to-str>
+  --sel-to-str ptr (right ixp sel)   ixs = sel-to-str (to-sel′ ixp ptr) sel ixs
+
+
+  --rshp-sel-to-str eq
+
+
+  sizeof-τ : Num τ → String
+  sizeof-τ (C) = "sizeof(complex float)"
+  sizeof-τ (arr {s = s} x) = printf "(%s * %u)" (sizeof-τ (x)) (size s)
+    
+  --sizeof-sel : (ptr : String) → Sel s p → String
+  --sizeof-sel {s} ptr idh            = ?
+  --sizeof-sel     ptr (view se x)    = ?
+  --sizeof-sel     ptr (chain se se₁) = ?
+  --sizeof-sel     ptr (left x se)    = ?
+  --sizeof-sel     ptr (right x se)   = ?
 
 
   do-dft : (n : ℕ) → String → String → Sel (ι n) s → State ℕ (String)
   do-dft n inp-ptr out-ptr out-sel = do
     mem-out ← fresh-var
-    let setup-out = printf "complex* %s = calloc(0, (sizeof %s));" mem-out inp-ptr
+    let setup-out = printf "complex float %s = calloc(0, (sizeof (*%s)));" (shape-to-arg (ι n) mem-out) inp-ptr
 
-    let do-dft = printf "dft(*%s, *%s);" inp-ptr mem-out
+    let do-dft = printf "dft(%u, *%s, *%s);" n inp-ptr mem-out
 
     j ← generateIx (ι n)
     let cp-out = loop-nest-helper (ι n) j $ printf "%s = %s;" (sel-to-str out-ptr out-sel j) (to-sel j mem-out)
@@ -417,6 +461,26 @@ module ShowC where
     return $ setup-out ++ do-dft ++ cp-out
 
   to-vali : Inp τ σ → AR τ → State ℕ (String × AR σ)
+  to-vali (dft {n} nz-n) (arr ptr idh) = do
+    op ← do-dft n ptr ptr idh
+    return $ op , arr ptr idh
+  to-vali (dft {n} nz-n) (arr ptr (view  se rshp)) = do
+    return $ "\n//TODO: DFT on view\n" , arr ptr (view se rshp)
+  to-vali (dft {n} nz-n) (arr ptr (chain se₁ se₂)) =
+    return $ "\n//TODO: DFT on chain\n" , arr ptr (chain se₁ se₂)
+  to-vali (dft {n} nz-n) (arr ptr (left x se)) = do
+    mem-inp ← fresh-var
+    let setup-inp = printf "complex float %s = calloc(0, (%u * sizeof(complex float)));" (shape-to-arg (ι n) mem-inp) n
+
+    i ← generateIx (ι n)
+    let cp-inp = loop-nest-helper (ι n) i $ printf "%s = %s;" (to-sel i mem-inp) (sel-to-str ptr (left x se) i)
+
+    op ← do-dft n mem-inp ptr (right x se)
+    return $ (setup-inp ++ cp-inp ++ op) , arr ptr se
+  to-vali (dft {n} nz-n) (arr ptr (right x se)) = do
+    op ← do-dft n ("&" ++ to-sel x ptr) ptr (left x se)
+    return $ op , arr ptr se
+  {- DFT splits on sel
   to-vali (dft {n} nz-n) (arr ptr sel-id) = do
     op ← do-dft n ptr ptr sel-id
     return $ op , arr ptr sel-id
@@ -432,6 +496,7 @@ module ShowC where
   to-vali (dft {n} nz-n) (arr ptr (right x se)) = do
     op ← do-dft n (to-sel x ptr) ptr (left x se)
     return $ op , arr ptr se
+  -}
   to-vali (twid {s} {p}) (arr ptr sel) =
     do
       i ← generateIx (s ⊗ p)
@@ -449,9 +514,9 @@ module ShowC where
     e₁ , ARδ ← to-vali inp₁ arτ
     e₂ , ARσ ← to-vali inp₂ ARδ
     return $ (e₁ ++ e₂) , ARσ
-  to-vali (copy {s = s} {p = p} rshp) (arr ptr se) = do
+  to-vali (copy {s = s} {p = p} rshp) (arr {s = q} ptr se) = do
     working-mem ← fresh-var
-    let setup-tmp     = printf "complexType* %s = malloc(sizeof %s);" working-mem ptr
+    let setup-tmp     = printf "complex float %s = malloc(sizeof %s);" (shape-to-arg (q) working-mem) ptr
     
     i ← generateIx s
     let copy-to-tmp   = loop-nest-helper s i $ printf "%s = %s;" (sel-to-str working-mem se i) (sel-to-str ptr se i)
@@ -460,10 +525,10 @@ module ShowC where
     let copy-from-tmp = loop-nest-helper p j $ printf "%s = %s;" 
                           --(to-sel j ptr) 
                           (rshp-sel-to-str rshp ptr se j) 
-                          (sel-to-str working-mem se (rshp-ix rshp j))
+                          (sel-to-str working-mem (view se (rev rshp)) j)
 
     let free-tmp      = ""
-    return $ (setup-tmp ++ copy-to-tmp ++ copy-from-tmp ++ free-tmp) , arr working-mem sel-id
+    return $ (setup-tmp ++ copy-to-tmp ++ copy-from-tmp ++ free-tmp) , arr ptr (view se (rev rshp)) --sel-id
   {-
   to-vali (copy {s = s} {p = p} rshp) (arr ptr sel-id) = do
     working-mem ← fresh-var
@@ -501,14 +566,14 @@ module ShowC where
     q₁ q₂ : Shape
 
   
-  rshp-sel : Reshape s p → Sel s q₁ → Sel p q₂
+  rshp-sel : Reshape s p → Sel′ s q₁ → Sel′ p q₂
   rshp-sel rshp sel-id        = ?
   rshp-sel rshp (left  i sel) = ?
   rshp-sel rshp (right i sel) = ? -- right i (rshp-sel rshp sel)
   -}
 
   {-
-  rshp-sel : Reshape s p → Sel s q → Sel p q
+  rshp-sel : Reshape s p → Sel′ s q → Sel′ p q
   rshp-sel rshp sel-id        = ?
   rshp-sel rshp (left  i sel) = left  i (rshp-sel rshp sel)
   rshp-sel rshp (right i sel) = right i (rshp-sel rshp sel)
@@ -645,11 +710,16 @@ module ShowC where
             (ty-to-arg out res)
             (str-pre ++ proj₂ str-val)
 
-  show′ : (AR τ) → (Inp τ σ) → String
-  show′ ARτ e = runState (
+  AR-name : AR τ → String
+  AR-name (cst name  ) = name
+  AR-name (arr name _) = name
+
+  show′ : Fut τ → (AR τ) → (Inp τ σ) → String → String × String
+  show′ fut ARτ e fName = runState (
       do
+        let arg = ty-to-arg fut $ AR-name ARτ
         val , mem ← to-vali e ARτ
-        return $ val
+        return $ (printf "void %s(%s) { %s }" fName arg val) , (printf "void %s(%s);" fName arg)
     ) 0 .proj₂
 
   show : Fut τ → (∀ {V} → E V τ) → String → String × String
@@ -692,8 +762,8 @@ module Tests where
   fft : (s : Shape) → ⦃ _ : NonZeroₛ s ⦄ → Inp _ _
   fft s ⦃ nz ⦄ = `ffti nz
 
-  --dft : (n : ℕ) → ⦃ NonZero n ⦄ → E V _
-  --dft n = `dft {n}
+  Edft : (n : ℕ) → ⦃ NonZero n ⦄ → E V _
+  Edft n = `dft {n}
 
   -- The inner map should normalise away
   test : E V (ar sh C ⇒ ar sh C) 
@@ -774,6 +844,7 @@ module Tests where
   preamble : String
   preamble = "#include <complex.h>\n" 
            ++ "#include <stddef.h>\n"
+           ++ "#include <stdlib.h>\n"
            ++ "#include \"../src/minus-omega.h\"\n"
 
   --gen-fft : (s : Shape) → ⦃ _ : NonZeroₛ s ⦄ → String × String
@@ -784,25 +855,25 @@ module Tests where
   -- _ = ?
 
   gen-fft : (s : Shape) → ⦃ _ : NonZeroₛ s ⦄ → String × String
-  gen-fft s with show′ (arr "inp" (sel-id)) (fft s)
-  ... | body = preamble , (preamble ++ body)
+  gen-fft s with show′ (num (arr C)) (arr "inp" idh) (fft s) "fft"
+  ... | body , header = (preamble ++ "#include \"../src/dft.h\"\n" ++ header) , (preamble ++ "#include \"../src/dft.h\"\n" ++ body)
 
 
-  --preamble , preamble ++ (show′ ? (fft s) "fft")
+  --preamble , preamble ++ (showgenerated′ ? (fft s) "fft")
   --with show-test′ "fft" (fft s) 
   --... | body = preamble , preamble ++ body
 
   --_ : gen-fft (ι 3 ⊗ ι 3) ⦃ ι (record { nonZero = tt }) ⊗ ι (record { nonZero = tt }) ⦄ ≡ ?
   --_ = ?
 
-  --gen-dft : (n : ℕ) → ⦃ _ : NonZero n ⦄ → String × String
-  --gen-dft n with show-test "dft" (dft n) _ 
-  --... | head , body = preamble ++ head , preamble ++ body
+  gen-dft : (n : ℕ) → ⦃ _ : NonZero n ⦄ → String × String
+  gen-dft n with show-test "dft" (Edft n) _ 
+  ... | head , body = preamble ++ head , preamble ++ body
 
   --res : String × String
   --res = show-test "test" fft-mini _
 
-open Tests using (gen-fft) public
+open Tests using (gen-fft; gen-dft) public
 
 module Print where
   open ShowC

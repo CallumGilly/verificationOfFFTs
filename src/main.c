@@ -1,6 +1,6 @@
-#define size 192
+#define size 48
 
-#include "../generated/dft.h"
+//#include "../generated/dft.h"
 #include "../generated/fft.h"
 
 #include <stdio.h>
@@ -10,7 +10,6 @@
 #include <math.h>
 
 int main (void) {
-
   //sh = (ι 4 ⊗ ι 4) ⊗ (ι 3 ⊗ ι 4)
   complex float(*input)[size] = malloc(sizeof(*input));
   memset(input, 0, sizeof(*input));
@@ -26,19 +25,20 @@ int main (void) {
     (*input)[ai] = (float)rand()/(float)((float)RAND_MAX/(400.0f)) + ((float)rand()/(float)((float)RAND_MAX/(400.0f)) * I);
   }
 
-  fft((complex float (*)[4][4][3][4])input, (complex float (*)[4][3][4][4])fftOutput);
-  dft((complex float (*)[size])input, (complex float (*)[size])dftOutput);
+  dft(size, (complex float (*)[size])input, (complex float (*)[size])dftOutput);
+  fft((complex float (*)[4][4][3][4])input);
 
   double realError = 0;
   double imagError = 0;
 
   for (size_t ai = 0; ai < size; ai++) {
-    realError += fabs(creal((*fftOutput)[ai]) - creal((*dftOutput)[ai]));
-    imagError += fabs(cimag((*fftOutput)[ai]) - cimag((*dftOutput)[ai]));
-    printf("output[%lu] - Real error: %.60f\n", ai, fabs(creal((*fftOutput)[ai]) - creal((*dftOutput)[ai])));
-    printf("output[%lu] - Imag error: %.60f\n", ai, fabs(cimag((*fftOutput)[ai]) - cimag((*dftOutput)[ai])));
+    realError += fabs(creal((*input)[ai]) - creal((*dftOutput)[ai]));
+    imagError += fabs(cimag((*input)[ai]) - cimag((*dftOutput)[ai]));
+    printf("output[%lu] - Real error: %.60f\n", ai, fabs(creal((*input)[ai]) - creal((*dftOutput)[ai])));
+    printf("output[%lu] - Imag error: %.60f\n", ai, fabs(cimag((*input)[ai]) - cimag((*dftOutput)[ai])));
   }
   printf("\n\n\nAverage Real Error = %.60f\nAverage Imag Error = %.60f\n", (realError / (float) size), (imagError / (float) size));
+
 
   // for (size_t ai = 0; ai < size - 1; ai++) {
   //     printf("%.2f+%.2fi, ", creal((*input)[ai]), cimag((*input)[ai]));
