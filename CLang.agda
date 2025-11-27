@@ -265,7 +265,7 @@ module ShowC where
 
   offset-prod : Ix s → String
   offset-prod (ι x) = x
-  offset-prod {s ⊗ p} (i ⊗ j) = printf "(%s * %s)" (offset i) (offset j)
+  offset-prod {s ⊗ p} (i ⊗ j) = printf "(%s * %s)" (offset-prod i) (offset-prod j)
 
   to-sel′ : Ix s → String → String
   to-sel′ i a = printf "%s%s" a $ ix-join (ix-map (printf "[%s]") i) ""
