@@ -33,23 +33,26 @@ void testTranspose() {
   //void transposeTest(complex float (*inp)[4][2][3][3]);
   transposeTest((complex float (*)[3][5])input);
 
-  //for (size_t ai = 0; ai < tsize; ai++) {
-  //  printf("At Pos: %zu, Got: %.0f\n", ai, creal((*input)[ai]));
+  printf("Should get 0, 5, 10, 1, 6, 11...\n");
+  for (size_t ai = 0; ai < tsize; ai++) {
+    printf("At Pos: %zu, Got: %.0f\n", ai, creal((*input)[ai]));
+  }
+
+  //printf("\nWith casting to (complex float (*)[3]):\n");
+  //for (size_t i = 0; i < 5; i++) {
+  //  for (size_t j = 0; j < 3; j++) {
+  //    printf("At Pos: (%zu, %zu), Got: %.0f\n", i, j, creal(((complex float (*)[3])input)[i][j]));
+  //  }
   //}
 
-  printf("\nWith casting to (complex float (*)[3]):\n");
-  for (size_t i = 0; i < 5; i++) {
-    for (size_t j = 0; j < 3; j++) {
-      printf("At Pos: (%zu, %zu), Got: %.0f\n", i, j, creal(((complex float (*)[3])input)[i][j]));
-    }
-  }
-  
-  printf("\nWith casting to (complex float (*)[5]):\n");
-  for (size_t i = 0; i < 5; i++) {
-    for (size_t j = 0; j < 3; j++) {
-      printf("At Pos: (%zu, %zu), Got: %.0f\n", i, j, creal(((complex float (*)[5])input)[i][j]));
-    }
-  }
+  //// ((complex float (*)[3])input)[i][j]) or to ((complex float (*)[5])input)[i][j])
+
+  //printf("\nWith casting to (complex float (*)[5]):\n");
+  //for (size_t i = 0; i < 5; i++) {
+  //  for (size_t j = 0; j < 3; j++) {
+  //    printf("At Pos: (%zu, %zu), Got: %.0f\n", i, j, creal(((complex float (*)[5])input)[i][j]));
+  //  }
+  //}
 }
 
 void testDFTFFT() {

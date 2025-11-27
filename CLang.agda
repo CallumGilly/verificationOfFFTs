@@ -158,6 +158,7 @@ instance
 -- This is no longer transpose test, but too late to change the name
 --`transpose-test₁ : Inp (ar s C) (ar (s) C)
 --`transpose-test₁ {s} = copy (♯ ∙ ♭)
+-- recursive-transposeᵣ and on ♯ ∙ ♭
 
 module Interp (real : Real) (cplx : Cplx) where
   open Cplx cplx renaming (_+_ to _+𝕔_; _*_ to _*𝕔_)
@@ -447,7 +448,7 @@ module ShowC where
     working-mem , copy-out ← create-hole-copy ptr se
 
     i ← generateIx p
-    let copy-in = loop-nest p i $ printf "%s = %s;" (rshp-sel-to-str rshp ptr se i) (to-sel (rshp-ix rshp i) working-mem)
+    let copy-in = loop-nest p i $ printf "%s = %s;" (?) (to-sel (rshp-ix rshp i) working-mem)
 
     return $ copy-out ++ copy-in , arr ptr idh
 
