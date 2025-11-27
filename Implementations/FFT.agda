@@ -266,27 +266,30 @@ demo-mat₃ = reshape ( eq ∙ split) demo-mat₁-vec
       ι-cons (fromℝ $ - 31  ᵣ) $
       ι-cons (fromℝ $   61  ᵣ) nil
 
-show-arr             : Ar s ℂ → IO {a} ⊤
-show-flat-arr        : Ar s ℂ → IO {a} ⊤
-show-flat-FFT-result : Ar s ℂ → IO {a} ⊤
-show-flat-DFT-result : Ar s ℂ → IO {a} ⊤
+show-arr                  : Ar s ℂ → IO {a} ⊤
+show-flat-arr             : Ar s ℂ → IO {a} ⊤
+show-flat-Inp-FFT-result  : Ar s ℂ → IO {a} ⊤
+show-flat-Orig-FFT-result : Ar s ℂ → IO {a} ⊤
+show-flat-DFT-result      : Ar s ℂ → IO {a} ⊤
 
 show-arr             xs = putStrLn $ "Tensor:     " ++ (showTensor showℂ $ xs)
 show-flat-arr        xs = putStrLn $ "Flat Tensor:" ++ (showTensor showℂ $ reshape flatten-reindex xs)
-show-flat-FFT-result {s} xs with nonZeroDec s
+show-flat-Inp-FFT-result {s} xs with nonZeroDec s
 ... | no ¬a = putStrLn "ERROR"
-... | yes a = putStrLn $ "FFT Result: " ++ (showTensor showℂ $ reshape (rev ♯) ((interp-inp (`ffti a)) xs))
+... | yes a = putStrLn $ "Inp FFT Result: " ++ (showTensor showℂ $ reshape (rev ♯) ((interp-inp (`ffti a)) xs))
+show-flat-Orig-FFT-result {s} xs = putStrLn $ "Orig FFT Result: " ++ (showTensor showℂ $ reshape (rev ♯) (FFT xs))
 show-flat-DFT-result xs = putStrLn $ "DFT Result: " ++ (showTensor showℂ $ (DFT (reshape flatten-reindex xs)))
 
 show-full-stack : Ar s ℂ → IO {a} ⊤
 show-full-stack xs = do
   show-arr             xs
   show-flat-arr        xs
-  show-flat-FFT-result xs
+  show-flat-Inp-FFT-result xs
+  show-flat-Orig-FFT-result xs
   show-flat-DFT-result xs
 
 main : Main
-main = run $ show-full-stack demo-mat₃
+main = run $ show-full-stack demo-mat₂
 
 --fft≅dft : 
 --    ∀ (arr : Ar s ℂ) 
