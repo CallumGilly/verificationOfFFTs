@@ -263,6 +263,10 @@ module ShowC where
   offset (ι x) = x
   offset {s ⊗ p} (i ⊗ j) = printf "((%u * %s) + %s)" (size p) (offset i) (offset j)
 
+  offset-prod : Ix s → String
+  offset-prod (ι x) = x
+  offset-prod {s ⊗ p} (i ⊗ j) = printf "(%s * %s)" (offset i) (offset j)
+
   to-sel′ : Ix s → String → String
   to-sel′ i a = printf "%s%s" a $ ix-join (ix-map (printf "[%s]") i) ""
     where
@@ -418,7 +422,7 @@ module ShowC where
     do
       i ← generateIx (s ⊗ p)
       let memSel = sel-to-str ptr sel i
-      return $ (loop-nest (s ⊗ p) i (printf "%s *= minus_omega(%u , %s);\n" memSel (size s * size p) (offset i))) , arr ptr sel
+      return $ (loop-nest (s ⊗ p) i (printf "%s = %s * minus_omega(%u , %s);\n" memSel memSel (size s * size p) (offset-prod i))) , arr ptr sel
   to-vali (part-col {p = p} e eq) (arr ptr se) = do
     i ← generateIx p
     expr , _ ← (to-vali e (arr ptr (sub-left  se i)))
