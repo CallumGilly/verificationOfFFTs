@@ -1,7 +1,9 @@
 #define size 144
+#define tsize 15
 
 //#include "../generated/dft.h"
 #include "../generated/fft.h"
+#include "../generated/transTest.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,7 +11,48 @@
 #include <string.h>
 #include <math.h>
 
+void testTranspose();
+void testDFTFFT();
+
 int main (void) {
+  //testDFTFFT();
+  testTranspose();
+
+  return 1;
+}
+
+
+void testTranspose() {
+  complex float(*input)[tsize] = malloc(sizeof(*input));
+  memset(input, 0, sizeof(*input));
+
+  for (size_t ai = 0; ai < tsize; ai++) {
+    (*input)[ai] = (float) ai;
+  }
+
+  //void transposeTest(complex float (*inp)[4][2][3][3]);
+  transposeTest((complex float (*)[3][5])input);
+
+  //for (size_t ai = 0; ai < tsize; ai++) {
+  //  printf("At Pos: %zu, Got: %.0f\n", ai, creal((*input)[ai]));
+  //}
+
+  printf("\nWith casting to (complex float (*)[3]):\n");
+  for (size_t i = 0; i < 5; i++) {
+    for (size_t j = 0; j < 3; j++) {
+      printf("At Pos: (%zu, %zu), Got: %.0f\n", i, j, creal(((complex float (*)[3])input)[i][j]));
+    }
+  }
+  
+  printf("\nWith casting to (complex float (*)[5]):\n");
+  for (size_t i = 0; i < 5; i++) {
+    for (size_t j = 0; j < 3; j++) {
+      printf("At Pos: (%zu, %zu), Got: %.0f\n", i, j, creal(((complex float (*)[5])input)[i][j]));
+    }
+  }
+}
+
+void testDFTFFT() {
   //sh = (ι 4 ⊗ ι 4) ⊗ (ι 3 ⊗ ι 3)
   complex float(*input)[size] = malloc(sizeof(*input));
   memset(input, 0, sizeof(*input));
@@ -25,8 +68,6 @@ int main (void) {
     (*input)[ai] = (float)rand()/(float)((float)RAND_MAX/(400.0f)) + ((float)rand()/(float)((float)RAND_MAX/(400.0f)) * I);
     (*fftOutput)[ai] = (*input)[ai];
   }
-
-
 
   DFT(size, (*input), (*dftOutput));
   fft((complex float (*)[4][2][3][3])fftOutput);
@@ -51,27 +92,5 @@ int main (void) {
             fabs(cimag((*fftOutput)[ai]) - cimag((*dftOutput)[ai]))
            );
   }
-  //printf("\n\n\nAverage Real Error = %.60f\nAverage Imag Error = %.60f\n", (realError / (float) size), (imagError / (float) size));
-
-
-  // for (size_t ai = 0; ai < size - 1; ai++) {
-  //     printf("%.2f+%.2fi, ", creal((*input)[ai]), cimag((*input)[ai]));
-  // }
-  // printf("%.2f+%.2fi", creal((*input)[size - 1]), cimag((*input)[size - 1]));
-
-  // printf("\n");
-  // printf("\n");
-
-  // for (size_t ai = 0; ai < size - 1; ai++) {
-  //     printf("%.2f+%.2fi, ", creal((*fftOutput)[ai]), cimag((*fftOutput)[ai]));
-  // }
-  // printf("%.2f+%.2fi", creal((*fftOutput)[size - 1]), cimag((*fftOutput)[size - 1]));
-
-  // printf("\n");
-  // printf("\n");
-
-  // for (size_t ai = 0; ai < size - 1; ai++) {
-  //     printf("%.2f+%.2fi, ", creal((*dftOutput)[ai]), cimag((*dftOutput)[ai]));
-  // }
-  // printf("%.2f+%.2fi", creal((*dftOutput)[size - 1]), cimag((*dftOutput)[size - 1]));
 }
+

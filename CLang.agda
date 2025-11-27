@@ -151,6 +151,14 @@ instance
   >>> part-row (`ffti nzp) eq 
   >>> copy (♯ ∙ reindex (*-comm (size p) _) ∙ ♭ ∙ swap) -- TODO: check whether this is correct
 
+`transpose-test₁ : Inp (ar s C) (ar (s ᵗ) C)
+`transpose-test₁ {s} = copy (recursive-transposeᵣ)
+
+-- Worked as expected:
+-- This is no longer transpose test, but too late to change the name
+--`transpose-test₁ : Inp (ar s C) (ar (s) C)
+--`transpose-test₁ {s} = copy (♯ ∙ ♭)
+
 module Interp (real : Real) (cplx : Cplx) where
   open Cplx cplx renaming (_+_ to _+𝕔_; _*_ to _*𝕔_)
   open Real.Real real using (_ᵣ)
@@ -690,6 +698,10 @@ module Tests where
   gen-fft s with show′ (num (arr C)) (arr "inp" idh) (fft s) "fft"
   ... | body , header = (preamble ++ "#include \"../src/dft.h\"\n" ++ header) , (preamble ++ "#include \"../src/dft.h\"\n" ++ body)
 
+--`transpose-test₁
+  gen-transpose-test : (s : Shape) → String × String
+  gen-transpose-test s with show′ (num (arr C)) (arr "inp" idh) (`transpose-test₁ {s}) "transposeTest"
+  ... | body , header = (preamble ++ "#include \"../src/dft.h\"\n" ++ header) , (preamble ++ "#include \"../src/dft.h\"\n" ++ body)
 
   --preamble , preamble ++ (showgenerated′ ? (fft s) "fft")
   --with show-test′ "fft" (fft s) 
@@ -705,7 +717,7 @@ module Tests where
   --res : String × String
   --res = show-test "test" fft-mini _
 
-open Tests using (gen-fft) public
+open Tests using (gen-fft; gen-transpose-test) public
 
 module Print where
   open ShowC
