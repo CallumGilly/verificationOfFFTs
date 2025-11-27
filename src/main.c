@@ -21,32 +21,37 @@ int main (void) {
   memset(dftOutput, 0, sizeof(*dftOutput));
 
   // Garble input
-  printf("complex float input[%u] = {\n", size);
   for (size_t ai = 0; ai < size; ai++) {
     (*input)[ai] = (float)rand()/(float)((float)RAND_MAX/(400.0f)) + ((float)rand()/(float)((float)RAND_MAX/(400.0f)) * I);
-    printf("%.20f, %.20f\n", creal((*input)[ai]), cimag((*input)[ai]));
+    (*fftOutput)[ai] = (*input)[ai];
   }
-  printf("};\n");
 
 
 
   DFT(size, (*input), (*dftOutput));
-  fft((complex float (*)[4][2][3][3])input);
+  fft((complex float (*)[4][2][3][3])fftOutput);
 
   double realError = 0;
   double imagError = 0;
 
+  printf("Index, Input-Real, Input-Imag, DFT-Real, DFT-Imag, FFT-Real, FFT-Imag, DFT-FFT-Diff-Real, DFT-FFT-Diff-Imag\n");
   for (size_t ai = 0; ai < size; ai++) {
     realError += fabs(creal((*input)[ai]) - creal((*dftOutput)[ai]));
     imagError += fabs(cimag((*input)[ai]) - cimag((*dftOutput)[ai]));
-    printf("output[%lu] - DFT Real  : %.60f\n", ai, (creal((*dftOutput)[ai])));
-    printf("output[%lu] - FFT Real  : %.60f\n", ai, (creal((*input)[ai])));
-    printf("output[%lu] - DFT Imag  : %.60f\n", ai, (cimag((*dftOutput)[ai])));
-    printf("output[%lu] - FFT Imag  : %.60f\n", ai, (cimag((*input)[ai])));
-    printf("output[%lu] - Real error: %.60f\n", ai, fabs(creal((*input)[ai]) - creal((*dftOutput)[ai])));
-    printf("output[%lu] - Imag error: %.60f\n", ai, fabs(cimag((*input)[ai]) - cimag((*dftOutput)[ai])));
+
+    printf("%zu, %.20f, %.20f, %.20f, %.20f, %.20f, %.20f, %.20f, %.20f\n",
+            ai,
+            creal((*input)[ai]),
+            cimag((*input)[ai]),
+            creal((*dftOutput)[ai]),
+            cimag((*dftOutput)[ai]),
+            creal((*fftOutput)[ai]),
+            cimag((*fftOutput)[ai]),
+            fabs(creal((*fftOutput)[ai]) - creal((*dftOutput)[ai])),
+            fabs(cimag((*fftOutput)[ai]) - cimag((*dftOutput)[ai]))
+           );
   }
-  printf("\n\n\nAverage Real Error = %.60f\nAverage Imag Error = %.60f\n", (realError / (float) size), (imagError / (float) size));
+  //printf("\n\n\nAverage Real Error = %.60f\nAverage Imag Error = %.60f\n", (realError / (float) size), (imagError / (float) size));
 
 
   // for (size_t ai = 0; ai < size - 1; ai++) {
