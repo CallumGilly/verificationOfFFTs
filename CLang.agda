@@ -415,22 +415,41 @@ module ShowC where
 
   --rshp-sel-to-str eq
 
+  malloc-op : Shape → String
+  malloc-op = printf "malloc(%u * sizeof(complex float))" ∘ size
 
-  sizeof-τ : Num τ → String
-  sizeof-τ (C) = "sizeof(complex float)"
-  sizeof-τ (arr {s = s} x) = printf "(%s * %u)" (sizeof-τ (x)) (size s)
-    
-  --sizeof-sel : (ptr : String) → Sel s p → String
-  --sizeof-sel {s} ptr idh            = ?
-  --sizeof-sel     ptr (view se x)    = ?
-  --sizeof-sel     ptr (chain se se₁) = ?
-  --sizeof-sel     ptr (left x se)    = ?
-  --sizeof-sel     ptr (right x se)   = ?
+  calloc-op : Shape → String
+  calloc-op = printf "calloc(%u, sizeof(complex float))" ∘ size
+
+  create-tmp-mem : Sel s p → (Shape → String) → State ℕ (String × String)
+  create-tmp-mem {s} sel op = do
+    var ← fresh-var
+    let declaration = printf "complex float (*%s)%s = %s;" var (shape-helper s) (op s)
+    return $ var , declaration
+
+  create-hole-copy : String → Sel s p → State ℕ (String × String)
+  create-hole-copy {s} ptr sel = do
+    var , var-declaration ← create-tmp-mem sel malloc-op
+    i ← generateIx s
+    let copy-values = loop-nest-helper s i $ printf "%s = %s;" (to-sel i var) (sel-to-str ptr sel i)
+    return $ var , var-declaration ++ copy-values
+
+  copy-into-sel : (fromPtr : String) → (toPtr : String) → Sel s p → State ℕ String
+  copy-into-sel {s} fromPtr toPtr sel = do
+    i ← generateIx s
+    return $ loop-nest-helper s i $ printf "%s = %s;" (sel-to-str toPtr sel i) (to-sel i fromPtr)
+
+  use-dft-macro : ℕ → String → String → String
+  use-dft-macro = printf "DFT(%u, *%s, *%s);"
 
   to-vali : Inp τ σ → AR τ → State ℕ (String × AR σ)
   to-vali (dft {n} nz-n) (arr ptr sel) = do
     j ← generateIx (ι n)
-    return $ (printf "//TODO, ptr=`%s` Ix j=`%s` sel-to-str=`%s`\n" ptr (to-sel j "") (sel-to-str ptr sel j)) , arr ptr sel
+    inp-var , create-inp-mem  ← create-hole-copy ptr sel
+    out-var , declare-out-mem ← create-tmp-mem sel calloc-op
+    let use-dft = use-dft-macro n inp-var out-var
+    copy-out-to-ptr ← copy-into-sel out-var ptr sel
+    return $ (create-inp-mem ++ declare-out-mem ++ use-dft ++ copy-out-to-ptr) , arr ptr sel
     {-
       Assign memory in which to store the output, this should be the size of the "hole"
       Assign some temp memory in which the input can be stored
@@ -455,21 +474,13 @@ module ShowC where
     e₁ , ARδ ← to-vali inp₁ arτ
     e₂ , ARσ ← to-vali inp₂ ARδ
     return $ (e₁ ++ e₂) , ARσ
-  to-vali (copy {s = s} {p = p} rshp) (arr {s = q} ptr se) = do
-    working-mem ← fresh-var
-    let setup-tmp     = printf "complex float %s = malloc(sizeof %s);" (shape-to-arg (q) working-mem) ptr
-    
-    i ← generateIx s
-    let copy-to-tmp   = loop-nest-helper s i $ printf "%s = %s;" (sel-to-str working-mem se i) (sel-to-str ptr se i)
+  to-vali (copy {s = s} {p = p} rshp) (arr ptr se) = do
+    working-mem , copy-out ← create-hole-copy ptr se
 
-    j ← generateIx p
-    let copy-from-tmp = loop-nest-helper p j $ printf "%s = %s;" 
-                          --(to-sel j ptr) 
-                          (rshp-sel-to-str rshp ptr se j) 
-                          (sel-to-str working-mem (view se (rev rshp)) j)
+    i ← generateIx p
 
-    let free-tmp      = ""
-    return $ (setup-tmp ++ copy-to-tmp ++ copy-from-tmp ++ free-tmp) , arr ptr (view se (rev rshp)) --sel-id
+    let copy-in = loop-nest-helper p i $ printf "%s = %s;" (rshp-sel-to-str rshp ptr se i) (to-sel (rshp-ix rshp i) working-mem)
+    return $ copy-out ++ copy-in , arr ptr idh
 
 
 

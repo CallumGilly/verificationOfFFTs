@@ -41,7 +41,7 @@ open import Matrix.NonZero using (NonZeroₛ; ι; _⊗_; nonZeroₛ-s⇒nonZero-
 import Matrix.Sum as S
 open S _+_ 0ℂ +-isCommutativeMonoid using (merge-sum; sum-reindex; sum-swap)
 sum = S.sum _+_ 0ℂ +-isCommutativeMonoid
-{-# DISPLAY S.sum _+_ 0ℂ +-isCommutativeMonoid = sum #-}
+--{-# DISPLAY S.sum _+_ 0ℂ +-isCommutativeMonoid = sum #-}
 sum-cong = S.sum-cong _+_ 0ℂ +-isCommutativeMonoid
 
 open import Matrix.Reshape using (reshape; Reshape; flat; ♭; ♯; recursive-transpose; recursive-transposeᵣ; _∙_; rev; _⊕_; swap; eq; split; _⟨_⟩; reindex; rev-eq; flatten-reindex; |s|≡|sᵗ|; reindex-reindex; recursive-transpose-inv)
