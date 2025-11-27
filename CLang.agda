@@ -440,7 +440,7 @@ module ShowC where
     return $ loop-nest-helper s i $ printf "%s = %s;" (sel-to-str toPtr sel i) (to-sel i fromPtr)
 
   use-dft-macro : ℕ → String → String → String
-  use-dft-macro = printf "DFT(%u, *%s, *%s);"
+  use-dft-macro = printf "DFT(%u, (*%s), (*%s));"
 
   to-vali : Inp τ σ → AR τ → State ℕ (String × AR σ)
   to-vali (dft {n} nz-n) (arr ptr sel) = do
