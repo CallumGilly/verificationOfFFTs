@@ -245,7 +245,6 @@ module ShowC where
   data Op : Set where
     += : Op
     ≔  : Op
-  
 
   op-str : Op → String
   op-str += = "+="
@@ -311,21 +310,9 @@ module ShowC where
       iᵣ ← generateIx p
       return (iₗ ⊗ iᵣ)
 
-  loop-nest-helper : (s : Shape) → Ix s → (String → String)
-  loop-nest-helper (ι n    ) (ι i    ) = for-template i n
-  loop-nest-helper (sₗ ⊗ sᵣ) (iₗ ⊗ iᵣ) = loop-nest-helper sₗ iₗ ∘ loop-nest-helper sᵣ iᵣ
-
-  --loop-nest : Fut τ → (res : String) → Op → (Ix s → State ℕ (String × Val τ)) → State ℕ (String × String)
-  --loop-nest {s = s} fut res op body =
-  --  do 
-  --    i ← generateIx s
-  --    body-pre , body-val ← body i
-  --    body-ass ← to-str fut body-val (sel-res op i) +=
-  --    return $ "" , loop-nest-helper s i (body-pre ++ (proj₂ body-ass))
-  --  where
-  --    sel-res : Op → Ix s → String
-  --    sel-res += _ = res
-  --    sel-res ≔  i = to-sel i res
+  loop-nest : (s : Shape) → Ix s → (String → String)
+  loop-nest (ι n    ) (ι i    ) = for-template i n
+  loop-nest (sₗ ⊗ sᵣ) (iₗ ⊗ iᵣ) = loop-nest sₗ iₗ ∘ loop-nest sᵣ iᵣ
 
   shape-helper : Shape → String
   shape-helper (ι n)   = printf "[%u]" n
@@ -334,10 +321,6 @@ module ShowC where
   shape-to-arg : Shape → String → String
   shape-to-arg (ι n)   res = printf "(*%s)[%u]" res n
   shape-to-arg (s ⊗ p) res = shape-to-arg s res ++ shape-helper p
-
-
-  --to-val′ : Inp Val τ σ → (adr : String) → {- (res op : String)  → -} State ℕ (String × Val τ)
-
 
   Var : (τ : Ty) → Num τ → Set
   Var C C = String
@@ -349,8 +332,6 @@ module ShowC where
   rshp-ix (x ⊕ x₂) (x₁ ⊗ x₃) = (rshp-ix x x₁) ⊗ (rshp-ix x₂ x₃)
   rshp-ix (split {m} {n}) (ι x ⊗ ι x₁) = ι (printf "((%s * %u) + %s)" x n x₁)
   rshp-ix (flat {m} {n}) (ι x) = ι (printf "(%s / %u)" x n) ⊗ ι (printf "(%s %% %u)" x n) -- TODO: Check this
-    --ι (printf "TODO: Flatten %s" ?) ⊗ ι ("TODO2: Flatten")
-    --Goal Type : Ix (ι m ⊗ ι n)
   rshp-ix Reshape.swap (x₁ ⊗ x₂) = x₂ ⊗ x₁
   
   data Sel : Shape → Shape → Set where
@@ -388,32 +369,15 @@ module ShowC where
   ix-up (left x se)    i = ix-up se i ⊗ x
   ix-up (right x se)   i = x ⊗ ix-up se i
 
-
   rshp-sel-to-str : Reshape s p → (ptr : String) → Sel s q → Ix p → String
   rshp-sel-to-str rshp ptr idh            ixp = to-sel ixp ptr
   rshp-sel-to-str rshp ptr (view se x)    ixp = "\n//TODO View\n"
   rshp-sel-to-str rshp ptr (chain se se₁) ixp = "\n//TODO Chain\n"
   rshp-sel-to-str rshp ptr (left ixq se)    ixp = to-sel′ ixq (rshp-sel-to-str rshp ptr se ixp) 
   rshp-sel-to-str rshp ptr (right ixs se)   ixp = rshp-sel-to-str rshp (to-sel′ ixs ptr) se ixp
-  --rshp-sel-to-str rshp ptr  sel-id         ixp = to-sel ixp ptr
-  --rshp-sel-to-str rshp ptr (left ixq sel)  ixp = to-sel′ ixq (rshp-sel-to-str rshp ptr sel ixp) 
-  --  -- the above is WRONG - Ends up outputting `(*inp[x_8])[x_10][x_0]` instead of `(*inp)[x_8][x_10][x_0]`, 
-  --  -- may be fixed by better sel AS just sent
-  --rshp-sel-to-str rshp ptr (right ixs sel) ixp = rshp-sel-to-str rshp (to-sel′ ixs ptr) sel ixp
 
   sel-to-str : String → Sel s p → Ix s → String
   sel-to-str ptr sel ixs = to-sel (ix-up sel ixs) ptr
-  ---- (*ptr)[ixs₁]...[ixsₙ]
-  --sel-to-str ptr idh               ixs = to-sel ixs ptr
-  --sel-to-str ptr (view sel rshp)   ixs = ?
-  --sel-to-str ptr (chain sel₁ sel₂) ixs = ?
-  ---- <sel-to-str>[ixq₁]...[ixqₙ] 
-  --sel-to-str ptr (left  ixq sel)   ixs = to-sel′ ixq (sel-to-str ptr sel ixs)
-  ---- (*ptr)[ixp₁]...[ixpₙ]<sel-to-str>
-  --sel-to-str ptr (right ixp sel)   ixs = sel-to-str (to-sel′ ixp ptr) sel ixs
-
-
-  --rshp-sel-to-str eq
 
   malloc-op : Shape → String
   malloc-op = printf "malloc(%u * sizeof(complex float))" ∘ size
@@ -431,13 +395,13 @@ module ShowC where
   create-hole-copy {s} ptr sel = do
     var , var-declaration ← create-tmp-mem sel malloc-op
     i ← generateIx s
-    let copy-values = loop-nest-helper s i $ printf "%s = %s;" (to-sel i var) (sel-to-str ptr sel i)
+    let copy-values = loop-nest s i $ printf "%s = %s;" (to-sel i var) (sel-to-str ptr sel i)
     return $ var , var-declaration ++ copy-values
 
   copy-into-sel : (fromPtr : String) → (toPtr : String) → Sel s p → State ℕ String
   copy-into-sel {s} fromPtr toPtr sel = do
     i ← generateIx s
-    return $ loop-nest-helper s i $ printf "%s = %s;" (sel-to-str toPtr sel i) (to-sel i fromPtr)
+    return $ loop-nest s i $ printf "%s = %s;" (sel-to-str toPtr sel i) (to-sel i fromPtr)
 
   use-dft-macro : ℕ → String → String → String
   use-dft-macro = printf "DFT(%u, (*%s), (*%s));"
@@ -450,26 +414,19 @@ module ShowC where
     let use-dft = use-dft-macro n inp-var out-var
     copy-out-to-ptr ← copy-into-sel out-var ptr sel
     return $ (create-inp-mem ++ declare-out-mem ++ use-dft ++ copy-out-to-ptr) , arr ptr sel
-    {-
-      Assign memory in which to store the output, this should be the size of the "hole"
-      Assign some temp memory in which the input can be stored
-      Copy the input into the temp memory
-      Do the DFT
-      Copy the output into the hole
-    -}
   to-vali (twid {s} {p}) (arr ptr sel) =
     do
       i ← generateIx (s ⊗ p)
       let memSel = sel-to-str ptr sel i
-      return $ (loop-nest-helper (s ⊗ p) i (printf "%s *= minus_omega(%u , %s);\n" memSel (size s * size p) (offset i))) , arr ptr sel
+      return $ (loop-nest (s ⊗ p) i (printf "%s *= minus_omega(%u , %s);\n" memSel (size s * size p) (offset i))) , arr ptr sel
   to-vali (part-col {p = p} e eq) (arr ptr se) = do
     i ← generateIx p
     expr , _ ← (to-vali e (arr ptr (sub-left  se i)))
-    return $ (loop-nest-helper p i expr) , arr ptr se
+    return $ (loop-nest p i expr) , arr ptr se
   to-vali (part-row {s = s} e eq) (arr ptr se) = do
     i ← generateIx s
     expr , _ ← (to-vali e (arr ptr (sub-right se i)))
-    return $ (loop-nest-helper s i expr) , arr ptr se
+    return $ (loop-nest s i expr) , arr ptr se
   to-vali {τ} (inp₁ >>> inp₂) arτ = do
     e₁ , ARδ ← to-vali inp₁ arτ
     e₂ , ARσ ← to-vali inp₂ ARδ
@@ -478,8 +435,8 @@ module ShowC where
     working-mem , copy-out ← create-hole-copy ptr se
 
     i ← generateIx p
+    let copy-in = loop-nest p i $ printf "%s = %s;" (rshp-sel-to-str rshp ptr se i) (to-sel (rshp-ix rshp i) working-mem)
 
-    let copy-in = loop-nest-helper p i $ printf "%s = %s;" (rshp-sel-to-str rshp ptr se i) (to-sel (rshp-ix rshp i) working-mem)
     return $ copy-out ++ copy-in , arr ptr idh
 
 

@@ -13,11 +13,11 @@ module CGenerator where
   open import Function using (_$_)
 
   sh : Shape
-  sh = (ι 4 ⊗ ι 4) ⊗ (ι 3 ) 
+  sh = (ι 4 ⊗ ι 2) ⊗ (ι 3 ⊗ ι 3) 
 
   main : Main
   main = run do
-    let (fft-head , fft-body) = (gen-fft sh ⦃ (ι _ ⊗ ι _) ⊗ (ι _ ) ⦄)
+    let (fft-head , fft-body) = (gen-fft sh ⦃ (ι _ ⊗ ι _) ⊗ (ι _ ⊗ ι _) ⦄)
     --let (dft-head , dft-body) = (gen-dft (size sh) ⦃ _ ⦄)
     writeFile "./generated/fft.h" fft-head
     --writeFile "./generated/dft.h" dft-head
