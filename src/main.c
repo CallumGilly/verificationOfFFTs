@@ -1,4 +1,4 @@
-#define size 144
+#define size 72
 #define tsize 15
 
 //#include "../generated/dft.h"
@@ -15,8 +15,8 @@ void testTranspose();
 void testDFTFFT();
 
 int main (void) {
-  //testDFTFFT();
-  testTranspose();
+  testDFTFFT();
+  //testTranspose();
 
   return 1;
 }

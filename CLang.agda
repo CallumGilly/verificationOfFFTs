@@ -274,7 +274,7 @@ module ShowC where
 
   offset-prod : Ix s → String
   offset-prod (ι x) = x
-  offset-prod {s ⊗ p} (i ⊗ j) = printf "(%s * %s)" (offset-prod i) (offset-prod j)
+  offset-prod {s ⊗ p} (i ⊗ j) = printf "(%s * %s)" (offset i) (offset j)
 
   to-sel′ : Ix s → String → String
   to-sel′ i a = printf "%s%s" a $ ix-join (ix-map (printf "[%s]") i) ""
@@ -445,10 +445,28 @@ module ShowC where
     e₂ , ARσ ← to-vali inp₂ ARδ
     return $ (e₁ ++ e₂) , ARσ
   to-vali (copy {s = s} {p = p} rshp) (arr ptr se) = do
-    working-mem , copy-out ← create-hole-copy ptr se
 
-    i ← generateIx p
-    let copy-in = loop-nest p i $ printf "%s = %s;" (?) (to-sel (rshp-ix rshp i) working-mem)
+    ------ working-mem , copy-out ← create-hole-copy ptr se
+    working-mem ← fresh-var
+    let var-declaration = printf "complex float (*%s)%s = %s;" 
+                            working-mem
+                            (shape-helper (ι (size s))) 
+                            (malloc-op (ι (size s)))
+    --working-mem , var-declaration ← create-tmp-mem se malloc-op
+    i ← generateIx s
+    let copy-values = loop-nest s i $ 
+                        printf "%s = %s;" 
+                          (to-sel (rshp-ix (rev rshp ∙ ♯) i) working-mem) 
+                          (sel-to-str ptr se i)
+    let copy-out = var-declaration ++ copy-values
+    ------ return $ var , var-declaration ++ copy-values
+
+
+    j ← generateIx s
+    let copy-in = loop-nest s j $ 
+                    printf "%s = %s;" 
+                      (sel-to-str ptr se j) 
+                      (to-sel (rshp-ix ♯ j) working-mem)
 
     return $ copy-out ++ copy-in , arr ptr idh
 

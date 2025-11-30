@@ -266,6 +266,20 @@ demo-mat₃ = reshape ( eq ∙ split) demo-mat₁-vec
       ι-cons (fromℝ $ - 31  ᵣ) $
       ι-cons (fromℝ $   61  ᵣ) nil
 
+demo-mat₄ : Ar ((ι 2 ⊗ ι 2) ⊗ ι 2) ℂ
+demo-mat₄ = reshape ( split ⊕ eq ∙ split) demo-mat₁-vec
+  where
+    demo-mat₁-vec : Ar (ι 8) ℂ
+    demo-mat₁-vec =
+      ι-cons (fromℝ $ - 31  ᵣ) $
+      ι-cons (fromℝ $   23  ᵣ) $ 
+      ι-cons (fromℝ $ - 54  ᵣ) $
+      ι-cons (fromℝ $ - 43  ᵣ) $
+      ι-cons (fromℝ $ - 12  ᵣ) $
+      ι-cons (fromℝ $   61  ᵣ) $ 
+      ι-cons (fromℝ $ - 56  ᵣ) $
+      ι-cons (fromℝ $   91  ᵣ) nil
+
 show-arr                  : Ar s ℂ → IO {a} ⊤
 show-flat-arr             : Ar s ℂ → IO {a} ⊤
 show-flat-Inp-FFT-result  : Ar s ℂ → IO {a} ⊤
@@ -289,7 +303,7 @@ show-full-stack xs = do
   show-flat-DFT-result xs
 
 main : Main
-main = run $ show-full-stack demo-mat₂
+main = run $ show-full-stack demo-mat₄
 
 --fft≅dft : 
 --    ∀ (arr : Ar s ℂ) 
