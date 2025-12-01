@@ -1,1 +1,0 @@
-./GenCompile.sh && ./program
