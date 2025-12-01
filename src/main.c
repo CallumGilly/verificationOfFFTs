@@ -76,13 +76,13 @@ void testDFTFFT() {
   DFT(size, (*input), (*dftOutput));
   fft((complex real (*)[4][2][3][3])fftOutput);
 
-  double realError = 0;
-  double imagError = 0;
+  //double realError = 0;
+  //double imagError = 0;
 
   printf("Index, Input-Real, Input-Imag, DFT-Real, DFT-Imag, FFT-Real, FFT-Imag, DFT-FFT-Diff-Real, DFT-FFT-Diff-Imag\n");
   for (size_t ai = 0; ai < size; ai++) {
-    realError += fabs(creal((*input)[ai]) - creal((*dftOutput)[ai]));
-    imagError += fabs(cimag((*input)[ai]) - cimag((*dftOutput)[ai]));
+    //realError += fabs(creal((*input)[ai]) - creal((*dftOutput)[ai]));
+    //imagError += fabs(cimag((*input)[ai]) - cimag((*dftOutput)[ai]));
 
     printf("%zu, %.20f, %.20f, %.20f, %.20f, %.20f, %.20f, %.20f, %.20f\n",
             ai,

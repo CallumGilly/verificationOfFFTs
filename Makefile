@@ -11,6 +11,9 @@ GenerateCCode: CompileGenerator
 CompileGCC: GenerateCCode $(wildcard ./src/*.c) $(wildcard ./generated/*.c)
 	cc -DDOUBLE_REAL $(wildcard ./src/*.c) $(wildcard ./generated/*.c) -Wall -Wextra -Wconversion -lm -o program
 
+CompileClang: GenerateCCode $(wildcard ./src/*.c) $(wildcard ./generated/*.c)
+	clang -DDOUBLE_REAL $(wildcard ./src/*.c) $(wildcard ./generated/*.c) -Warray-bounds-pointer-arithmetic -Wall -Wextra -Wconversion -lm -o program
+
 clean:
 	rm generated/*
 	rm CGenerator
