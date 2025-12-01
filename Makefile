@@ -15,7 +15,7 @@ CompileClang: GenerateCCode $(wildcard ./src/*.c) $(wildcard ./generated/*.c)
 	clang -DDOUBLE_REAL $(wildcard ./src/*.c) $(wildcard ./generated/*.c) -Warray-bounds-pointer-arithmetic -Wall -Wextra -Wconversion -lm -o program
 
 clean:
-	rm generated/*
-	rm CGenerator
-	rm program
-	rm FFT
+	rm -f generated/*
+	rm -f CGenerator
+	rm -f program
+	rm -f FFT
