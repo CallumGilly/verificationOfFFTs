@@ -4,6 +4,7 @@
 //#include "../generated/dft.h"
 #include "../generated/fft.h"
 #include "../generated/transTest.h"
+#include "./minus-omega.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,57 +24,57 @@ int main (void) {
 
 
 void testTranspose() {
-  complex float(*input)[tsize] = malloc(sizeof(*input));
+  complex real(*input)[tsize] = malloc(sizeof(*input));
   memset(input, 0, sizeof(*input));
 
   for (size_t ai = 0; ai < tsize; ai++) {
-    (*input)[ai] = (float) ai;
+    (*input)[ai] = (real) ai;
   }
 
-  //void transposeTest(complex float (*inp)[4][2][3][3]);
-  transposeTest((complex float (*)[3][5])input);
+  //void transposeTest(complex real (*inp)[4][2][3][3]);
+  transposeTest((complex real (*)[3][5])input);
 
   printf("Should get 0, 5, 10, 1, 6, 11...\n");
   for (size_t ai = 0; ai < tsize; ai++) {
     printf("At Pos: %zu, Got: %.0f\n", ai, creal((*input)[ai]));
   }
 
-  //printf("\nWith casting to (complex float (*)[3]):\n");
+  //printf("\nWith casting to (complex real (*)[3]):\n");
   //for (size_t i = 0; i < 5; i++) {
   //  for (size_t j = 0; j < 3; j++) {
-  //    printf("At Pos: (%zu, %zu), Got: %.0f\n", i, j, creal(((complex float (*)[3])input)[i][j]));
+  //    printf("At Pos: (%zu, %zu), Got: %.0f\n", i, j, creal(((complex real (*)[3])input)[i][j]));
   //  }
   //}
 
-  //// ((complex float (*)[3])input)[i][j]) or to ((complex float (*)[5])input)[i][j])
+  //// ((complex real (*)[3])input)[i][j]) or to ((complex real (*)[5])input)[i][j])
 
-  //printf("\nWith casting to (complex float (*)[5]):\n");
+  //printf("\nWith casting to (complex real (*)[5]):\n");
   //for (size_t i = 0; i < 5; i++) {
   //  for (size_t j = 0; j < 3; j++) {
-  //    printf("At Pos: (%zu, %zu), Got: %.0f\n", i, j, creal(((complex float (*)[5])input)[i][j]));
+  //    printf("At Pos: (%zu, %zu), Got: %.0f\n", i, j, creal(((complex real (*)[5])input)[i][j]));
   //  }
   //}
 }
 
 void testDFTFFT() {
   //sh = (ι 4 ⊗ ι 4) ⊗ (ι 3 ⊗ ι 3)
-  complex float(*input)[size] = malloc(sizeof(*input));
+  complex real(*input)[size] = malloc(sizeof(*input));
   memset(input, 0, sizeof(*input));
 
-  complex float(*fftOutput)[size] = malloc(sizeof(*fftOutput));
+  complex real(*fftOutput)[size] = malloc(sizeof(*fftOutput));
   memset(fftOutput, 0, sizeof(*fftOutput));
 
-  complex float(*dftOutput)[size] = malloc(sizeof(*dftOutput));
+  complex real(*dftOutput)[size] = malloc(sizeof(*dftOutput));
   memset(dftOutput, 0, sizeof(*dftOutput));
 
   // Garble input
   for (size_t ai = 0; ai < size; ai++) {
-    (*input)[ai] = (float)rand()/(float)((float)RAND_MAX/(400.0f)) + ((float)rand()/(float)((float)RAND_MAX/(400.0f)) * I);
+    (*input)[ai] = (real)rand()/(real)((real)RAND_MAX/(400.0f)) + ((real)rand()/(real)((real)RAND_MAX/(400.0f)) * I);
     (*fftOutput)[ai] = (*input)[ai];
   }
 
   DFT(size, (*input), (*dftOutput));
-  fft((complex float (*)[4][2][3][3])fftOutput);
+  fft((complex real (*)[4][2][3][3])fftOutput);
 
   double realError = 0;
   double imagError = 0;
