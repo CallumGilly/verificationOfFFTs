@@ -420,7 +420,7 @@ module ShowC where
       do
         let arg = ty-to-arg fut $ AR-name ARτ
         val , mem ← to-vali e ARτ
-        return $ (printf "void %s(%s) { %s }" fName arg val) , (printf "void %s(%s);" fName arg)
+        return $ (printf "void %s(%s) { %s }\n" fName arg val) , (printf "void %s(%s);\n" fName arg)
     ) 0 .proj₂
 
 module Tests where

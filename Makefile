@@ -12,10 +12,10 @@ GenerateCCode: CompileGenerator
 # to expand the contents of ./generated, otherwise make will try to check its 
 # cache and will miss the newly created files after `make clean`
 CompileGCC: GenerateCCode $(wildcard ./src/*.c)
-	cc -DDOUBLE_REAL $(wildcard ./src/*.c) ./generated/*.c -Wall -Wextra -Wconversion -lm -o program
+	cc -DDOUBLE_REAL $(wildcard ./src/*.c) ./generated/*.c -Wall -Wextra -Wconversion -pedantic -lm -o program
 
 CompileClang: GenerateCCode $(wildcard ./src/*.c)
-	clang -DDOUBLE_REAL $(wildcard ./src/*.c) ./generated/*.c -Warray-bounds-pointer-arithmetic -Wall -Wextra -Wconversion -lm -o program
+	clang -DDOUBLE_REAL $(wildcard ./src/*.c) ./generated/*.c -Warray-bounds-pointer-arithmetic -Wall -Wextra -Wconversion -pedantic -lm -o program
 
 clean:
 	rm -f generated/*
