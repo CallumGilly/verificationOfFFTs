@@ -11,6 +11,7 @@
 #include <complex.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
 
 void testTranspose();
 void testDFTFFT();
@@ -67,6 +68,7 @@ void testDFTFFT() {
   complex real(*dftOutput)[size] = malloc(sizeof(*dftOutput));
   memset(dftOutput, 0, sizeof(*dftOutput));
 
+  srand((unsigned int) time(NULL));
   // Garble input
   for (size_t ai = 0; ai < size; ai++) {
     (*input)[ai] = (real)rand()/(real)((real)RAND_MAX/(400.0f)) + ((real)rand()/(real)((real)RAND_MAX/(400.0f)) * I);
