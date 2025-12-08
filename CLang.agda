@@ -14,6 +14,11 @@ open import Complex using (Cplx)
 open import Matrix renaming (length to size)
 open import Matrix.Reshape
 open import Matrix.NonZero 
+open import Matrix.SubShape
+
+private variable
+  s q p q₁ q₂ : Shape
+  n : ℕ
 
 -- FIXME: these have to be actual definitions!
 _ᵗ : Shape → Shape
@@ -40,9 +45,6 @@ data Component : Set where
   REAL : Component
   IMAG : Component
 
-ar₂ : Shape → Ty → Component → Ty
-ar₂ s X comp = ix s ⇒ X
-
 variable
   τ σ δ ψ : Ty
 
@@ -55,184 +57,66 @@ data Fut : Ty → Set where
   num : Num τ → Fut τ
   fun : Num τ → Fut σ → Fut (τ ⇒ σ)
 
-data T : Ty → Ty → Set where
-  idₜ : T (ar s τ) (ar s τ)
-  _⊡_ : T (ar s σ) (ar q δ) → T (ar p τ) (ar s σ) → T (ar p τ) (ar q δ)
-  swapₜ : T (ar (s ⊗ p) τ) (ar (p ⊗ s) τ)
-  nestₜ   : T (ar (s ⊗ p) τ) (ar s (ar p τ))
-  unnestₜ : T (ar s (ar p τ)) (ar (s ⊗ p) τ)
-
-data E (V : Ty → Set) : Ty → Set
-
-data _~_ : Ty → Ty → Set where
-  sca : C ~ C
-  arr : Reshape s p → τ ~ σ → ar s τ ~ ar p σ
-
--- Inp V τ σ ~ τ ⇒ σ | 
---   void(τ a, σ *r) {
---      reuse(a, e₁)
---      ...
---      r = a
---   }
-{- 
-infixl 2 _>>>_
-data Inp (V : Ty → Set) : Ty → Ty → Set where
-  copy : τ ~ σ → E V (τ ⇒ σ) → Inp V τ σ
-  view : T τ δ → Inp V δ ψ → T ψ σ → Inp V τ σ 
-  mapi : Inp V τ σ → Inp V (ar s τ) (ar s σ)
-  -- TODO: Generalise
-  zipw : E V (ar s C)
-       → E V (C ⇒ C ⇒ C)
-       → Inp V (ar s C) (ar s C)
-  _>>>_ : Inp V τ δ → Inp V δ σ → Inp V τ σ
--}
-
-data Copy : Shape → Shape → Set where
-  eq : Copy s s
-
-private variable
-  q₁ q₂ : Shape
-
-data _⊂_ : Shape → Shape → Set
-data _⊆_ : Shape → Shape → Set
-
-data _⊆_ where
-  idh : s ⊆ s
-  srt : q ⊂  s → q ⊆ s 
-
-data _⊂_ where
-  left  : q  ⊆ s → q  ⊂ (s ⊗ p)
-  right : q  ⊆ p → q  ⊂ (s ⊗ p)
-  bothₗ : q₁ ⊂ p → q₂ ⊆ s → (q₁ ⊗ q₂) ⊂ (p ⊗ s) -- There should be a nicer way
-  bothᵣ : q₁ ⊆ p → q₂ ⊂ s → (q₁ ⊗ q₂) ⊂ (p ⊗ s) -- of representing these two
-  --bothᵣ : q₁ ⊆ s → q₂ ⊆ p → (q₁ ⊗ q₂) ⊂ (p ⊗ s) -- of representing these two
 
 infixl 2 _>>>_
 data Inp : Ty → Ty → Set where
   dft  : NonZero n → Inp (ar (ι 2 ⊗ ι n) R) (ar (ι 2 ⊗ ι n) R)
   twid : ⦃ NonZeroₛ (s ⊗ p) ⦄ → Inp (ar (ι 2 ⊗ (s ⊗ p)) R) (ar (ι 2 ⊗ (s ⊗ p)) R) 
   
-  part : Inp (ar s τ) (ar q τ) → Copy s q → s ⊂ p → Inp (ar p τ) (ar p τ)  
-  --part-col : Inp (ar (ι 2 ⊗ s) τ) (ar (ι 2 ⊗ q) τ) → Copy s q → Inp (ar (ι 2 ⊗ (s ⊗ p)) τ) (ar (ι 2 ⊗ (q ⊗ p)) τ)
-  --part-row : Inp (ar (ι 2 ⊗ p) τ) (ar (ι 2 ⊗ q) τ) → Copy p q → Inp (ar (ι 2 ⊗ (s ⊗ p)) τ) (ar (ι 2 ⊗ (s ⊗ q)) τ)
+  part : Inp (ar s τ) (ar q τ) → s ⊂ p → Inp (ar p τ) (ar p τ)  
 
   _>>>_ : Inp τ δ → Inp δ σ → Inp τ σ
 
   copy : Reshape s p → Inp (ar s τ) (ar p τ)
 
-{- Somewhat general, but getting quite ugly)
-data Inp′ : Ty → Ty → Set where
-  dft  : NonZero n → Inp′ (ar (ι 2) (ar (ι n) R)) (ar (ι 2) (ar (ι n) R))
-  twid : ⦃ NonZeroₛ (s ⊗ p) ⦄ → Inp′ (ar (ι 2) (ar (s ⊗ p) R)) (ar (ι 2) (ar (s ⊗ p) R))
-  
-  part-col : Inp′ (ar (ι n) (ar s τ)) (ar (ι n) (ar q τ)) → Copy s q → Inp′ (ar (ι 2) (ar (s ⊗ p) τ)) (ar (ι 2) (ar (q ⊗ p) τ))
-  part-row : Inp′ (ar (ι n) (ar p τ)) (ar (ι n) (ar q τ)) → Copy p q → Inp′ (ar (ι 2) (ar (s ⊗ p) τ)) (ar (ι 2) (ar (s ⊗ q) τ))
-  
-  _>>>_ : Inp′ τ δ → Inp′ δ σ → Inp′ τ σ
+private variable
+  BLOCKS LANES : ℕ
 
-  copy : Reshape s p → Inp′ (ar s τ) (ar p τ)
--}
-
---data Inp′ : Ty → Ty → Set where
---  dft  : NonZero n → Inp′ (ar₂ (ι n) R) (ar (ι n) R)
---  twid : ⦃ NonZeroₛ (s ⊗ p) ⦄ → Inp′ (ar (s ⊗ p) R) (ar (s ⊗ p) R) 
---  
---  part-col : Inp′ (ar s τ) (ar q τ) → Copy s q → Inp′ (ar (s ⊗ p) τ) (ar (q ⊗ p) τ)
---  part-row : Inp′ (ar p τ) (ar q τ) → Copy p q → Inp′ (ar (s ⊗ p) τ) (ar (s ⊗ q) τ)
---  
---  _>>>_ : Inp′ τ δ → Inp′ δ σ → Inp′ τ σ
---
---  copy : Reshape s p → Inp′ (ar s τ) (ar p τ)
-
-infixl 3 _`$_
---infixl 2 _`>>=_
-data E V where
-  `     : (V τ) → E V τ
-  `lam  : (V τ → E V σ) → E V (τ ⇒ σ)
-  _`$_  : E V (τ ⇒ σ) →  E V τ → E V σ
-  _`⊗_  : E V (ix s) → E V (ix p) → E V (ix (s ⊗ p))
-  `sum  : E V (ar (ι n) C) → E V C
-  `ω    : (n : ℕ) → .⦃ NonZero n ⦄ → E V (ix (s ⊗ p)) → E V C
-  _`*_  : (a b : E V C) → E V C
-
-infix 1 `lam
-syntax `lam (λ x → e) = `λ x ⇒ e
-
-variable
-  V : Ty → Set
-
---data First-Order (e : E V τ) : Set where
-  
-
+--``ffti : NonZeroₛ s → Inp (ar ((ι 2 ⊗ s) ⊗ (ι BLOCKS ⊗ ι LANES)) R) (ar ((ι 2 ⊗ s) ⊗ (ι BLOCKS ⊗ ι LANES)) R)
 {-
-instance
-  out : ⦃ NonZeroₛ (ι n) ⦄ → NonZero n
-  out ⦃ ι x ⦄ = x
+From FFTN:
+    #define BLOCK 8
+    #define LANES 4
+    assert BLOCK % LANES ≡ 0
 
-  ι-ins : ⦃ NonZero n ⦄ → NonZeroₛ (ι n)
-  ι-ins ⦃ p ⦄ = ι p
+Assuming an input (ι 2 ⊗ s), the value of each leaf in s must be ≥ BLOCK
+  n ≥ BLOCK ∀ ι n ∈ s 
 
-  ⊗-ins : ⦃ NonZeroₛ s ⦄ → ⦃ NonZeroₛ p ⦄ → NonZeroₛ (s ⊗ p)
-  ⊗-ins ⦃ p ⦄ ⦃ q ⦄ = p ⊗ q
+Following FFTN (fftn.c:157)
+- Setup, splitting the input into s ≡ (n₁ ⊗ n₂ ⊗ n₃) 
+  - Chunk = (n₂ * n₃ / BLOCK) ⌈/⌉ processCount*10 
+  for j ∈ n₂ * n₃ step BLOCK
 
-  ᵗ-ins : ⦃ NonZeroₛ s ⦄ → NonZeroₛ (s ᵗ)
-  ᵗ-ins ⦃ p ⦄ = nonZeroₛ-s⇒nonZeroₛ-sᵗ p
+     <- n₂ ->
 
-  --{-# INCOHERENT ι-ins ᵗ-ins out ⊗-ins #-} 
+    /------/|     ^
+   /      / |     |
+  /------/ /|     |
+  | | | | / |     |
+  -------/ /|     n₁
+  | | | | / |     |
+  -------/ /|     |
+  | | | | / |     |
+  -------/ /|     |
+  | | | | / |     ⌄
+  -------/ /   
+  | | | | /   n₃
+  -------/ 
+
+
+
 -}
-
-`mapₐ : E V ((τ ⇒ σ) ⇒ ar s τ ⇒ ar s σ)
-`mapₐ = `λ f ⇒ `λ a ⇒ `λ i ⇒ ` f `$ (` a `$ ` i)
-
-`map : E V ((τ ⇒ σ) ⇒ τ ⇒ σ)
-`map = `λ f ⇒ `λ a ⇒ ` f `$ ` a
-
-`dft : ⦃ NonZero n ⦄ → E V (ar (ι n) C ⇒ ar (ι n) C)
-`dft {n = n} = `λ a ⇒ `λ j ⇒ `sum (`λ k ⇒ (` a `$ ` k) `* `ω n (` k `⊗ ` j))
 
 `ffti : NonZeroₛ s → Inp (ar (ι 2 ⊗ s) R) (ar (ι 2 ⊗ s) R)
 `ffti (ι nz) = dft nz
 `ffti (_⊗_ {p = p} nzs nzp) =
-  part (`ffti nzs) eq (bothᵣ idh (left idh))
+  part (`ffti nzs) (bothᵣ idh (left idh))
   >>> twid ⦃ nzs ⊗ nzp ⦄
-  >>> part (`ffti nzp) eq (bothᵣ idh (right idh))
+  >>> part (`ffti nzp) (bothᵣ idh (right idh))
   >>> copy (eq ⊕ (♯ ∙ reindex (*-comm (size p) _) ∙ ♭ ∙ swap)) 
 
 `transpose-test₁ : Inp (ar s R) (ar (s ᵗ) R)
 `transpose-test₁ {s} = copy (recursive-transposeᵣ)
-
--- Worked as expected:
--- This is no longer transpose test, but too late to change the name
---`transpose-test₁ : Inp (ar s C) (ar (s) C)
---`transpose-test₁ {s} = copy (♯ ∙ ♭)
--- recursive-transposeᵣ and on ♯ ∙ ♭
-
---module CAst where
---  open import Data.String
---  open import Text.Printf
---
---  data CTy : Set where
---    real : CTy
---    comp : CTy
---    sptr  : CTy → CTy
---    aptr  : CTy → ℕ → CTy
---
---  show-CTy : CTy → String
---  show-CTy real = "REAL"
---  show-CTy comp = "complex"
---  show-CTy (sptr t) = ?
---  show-CTy (aptr t n) = ?
---
---  data CVar : String → CTy → Set where
---    ptr : (ty : CTy) → CVar ? ty
---    val : (ty : CTy) → CVar ? ty
---
---  variable
---    η : CTy
---
---  data CAst : Set where
---    _≔_ : CAst
-
 
 module Interp (real : Real) (cplx : Cplx) where
   open Cplx cplx renaming (_+_ to _+𝕔_; _*_ to _*𝕔_)
@@ -248,15 +132,6 @@ module Interp (real : Real) (cplx : Cplx) where
   Sem C = ℂ
   Sem (ix x) = Position x
   Sem (τ ⇒ σ) = Sem τ → Sem σ
-
-  interp : E Sem τ → Sem τ
-  interp (` x) = x
-  interp (`lam f) x = interp (f x)
-  interp (e `$ e₁) = interp e (interp e₁)
-  interp (e `⊗ e₁) = interp e ⊗ interp e₁
-  interp (`sum e) = sum (interp e)
-  interp (`ω n e) = -ω n (offset-prod (interp e))
-  interp (e `* e₁) = interp e *𝕔 interp e₁
 
   -- With the current state of Complex, the below cannot be defined without giving
   -- a concrete definition, this will make interp-inp... challenging
@@ -373,24 +248,6 @@ module ShowC where
     bothₗ : Sel q₁ p → Sel q₂ s → Sel (q₁ ⊗ q₂) (p ⊗ s)
     --bothᵣ : Sel q₁ s → Sel q₂ p → Sel (q₁ ⊗ q₂) (p ⊗ s)
 
-  --sub-right : Sel (s ⊗ p) q → Ix s → Sel p q
-  --sub-right idh          i = right i idh
-  --sub-right (view  se r) i = chain  (right i idh) (view se r)
-  --sub-right (chain a  b) i = chain   (sub-right a i) b
-  --sub-right (left  j  h) i = left  j (sub-right h i)
-  --sub-right (right j  h) i = right j (sub-right h i)
-  --sub-right (bothₗ l  r) i = ?
-  --sub-right (bothᵣ l  r) i = ?
-
-  --sub-left : Sel (s ⊗ p) q → Ix p → Sel s q
-  --sub-left idh          i = left  i idh
-  --sub-left (view  se r) i = chain   (left i idh) (view se r)
-  --sub-left (chain a  b) i = chain   (sub-left a i) b
-  --sub-left (left  j  h) i = left  j (sub-left h i)
-  --sub-left (right j  h) i = right j (sub-left h i)
-  --sub-left (bothₗ l  r) i = ?
-  --sub-left (bothᵣ l  r) i = ?
-
   data AR : Ty → Set where
     --cst : String → AR C
     rst : String → AR R
@@ -405,8 +262,6 @@ module ShowC where
   ix-up (bothₗ x y) (i ⊗ j) = ix-up x i ⊗ ix-up y j
   --ix-up (bothᵣ x y) (i ⊗ j) = ix-up y j ⊗ ix-up x i
 
---  difference : s ⊆ p → Sel ? p
---
   to-sel′ : Ix s → String → String
   to-sel′ i a = printf "%s%s" a $ ix-join (ix-map (printf "[%s]") i) ""
     where
@@ -424,54 +279,21 @@ module ShowC where
   sel-to-str : String → Sel s p → Ix s → String
   sel-to-str ptr sel ixs = to-sel (ix-up sel ixs) ptr
 
-  inv-⊂ : s ⊂ p → Shape
-  inv-⊆ : s ⊆ p → Maybe Shape
 
-  inv-⊆ {s} idh = nothing
-  inv-⊆ (srt x) = just (inv-⊂ x)
-  
-  inv-⊂ (left  {p = p} s⊆q) with inv-⊆ s⊆q
-  ... | just x  = x ⊗ p
-  ... | nothing = p
-  inv-⊂ (right {s = s} q⊆p) with inv-⊆ q⊆p
-  ... | just x  = s ⊗ x
-  ... | nothing = s
-  inv-⊂ (bothₗ q₁⊂p q₂⊆s)   with inv-⊂ q₁⊂p | inv-⊆ q₂⊆s
-  ... | x | just y  = x ⊗ y
-  ... | x | nothing = x
-  inv-⊂ (bothᵣ q₁⊆p q₂⊂s)   with inv-⊆ q₁⊆p | inv-⊂ q₂⊂s
-  ... | just x  | y = x ⊗ y
-  ... | nothing | y =     y
-
-  {-
-  g : Shape
-  g = ι 3 ⊗ (ι 5 ⊗ (ι 7 ⊗ ι 9))
-
-  g′ : Shape
-  g′ = ι 3 ⊗ ι 7
-
-  g′⊂g : g′ ⊂ g
-  g′⊂g = bothᵣ idh (right (srt (left idh)))
-
-  _ : inv-⊂ g′⊂g ≡ ?
-  _ = ?
-  -}
-
-  --⊆-to-sel : (s⊆p : s ⊆ p) → State ℕ ((Ix (inv-⊆ s⊆p)) × Sel s p)
   ⊂-to-sel : (s⊂p : s ⊂ p) → State ℕ ((Ix (inv-⊂ s⊂p)) × Sel s p)
 
-  ⊂-to-sel (left {p = p} idh) = do
-    i ← generateIx p
+  ⊂-to-sel (left {s₂ = s₂} idh) = do
+    i ← generateIx s₂
     return (i , left i idh)
-  ⊂-to-sel (left {p = p} (srt x))  = do
-    i ← generateIx p
+  ⊂-to-sel (left {s₂ = s₂} (srt x))  = do
+    i ← generateIx s₂
     j , se ← ⊂-to-sel x
     return ( (j ⊗ i) , left i se)
-  ⊂-to-sel (right {s = s} idh)     = do
-    i ← generateIx s
+  ⊂-to-sel (right {s₁ = s₁} idh)     = do
+    i ← generateIx s₁
     return (i , right i idh)
-  ⊂-to-sel (right {s = s} (srt x)) = do
-    i ← generateIx s
+  ⊂-to-sel (right {s₁ = s₁} (srt x)) = do
+    i ← generateIx s₁
     j , se ← ⊂-to-sel x
     return ((i ⊗ j) , right i se)
   ⊂-to-sel (bothₗ a idh)     = do
@@ -550,17 +372,7 @@ module ShowC where
     
     return $ (init-tmp-var ++ loop-nest (s ⊗ p) i ops , arr ptr sel)
 
-  -- I think I need to make sel more expressive to be able to fill the below holes
-        -- It seems I can get close with chain
-  --to-vali (part-col {p = p} e eq) (arr ptr se) = do
-  --  i ← generateIx p
-  --  expr , _ ← (to-vali e (arr ptr (chain (left i idh) (view se assoₗ) )))
-  --  return $ (loop-nest p i expr) , arr ptr se
-  --to-vali (part-row {s = s} e eq) (arr ptr se) = do
-  --  i ← generateIx s
-  --  expr , _ ← (to-vali e (arr ptr (chain (?) (view se (assoₗ ∙ ?)) )))
-  --  return $ (loop-nest s i expr) , arr ptr se
-  to-vali (part {s} {p = p} e eq s⊆p) (arr {s = t} ptr se) = 
+  to-vali (part {s} {p = p} e s⊆p) (arr {s = t} ptr se) = 
     do
       i , s-sel ← ⊂-to-sel s⊆p
       expr , _ ← to-vali e (arr ptr (chain (s-sel) se))
@@ -665,45 +477,6 @@ module Tests where
 
   fft : (s : Shape) → ⦃ _ : NonZeroₛ s ⦄ → Inp _ _
   fft s ⦃ nz ⦄ = `ffti nz
-
-  Edft : (n : ℕ) → ⦃ NonZero n ⦄ → E V _
-  Edft n = `dft {n}
-
-  -- The inner map should normalise away
-  test : E V (ar sh C ⇒ ar sh C) 
-  test = `λ a ⇒ `mapₐ `$ (`λ z ⇒ ` z) `$ ` a
-
-  -- We can define this expression, but we can't show that
-  -- its type is Fut
-  scary : E V (ix sh ⇒ ix sh)
-  scary = `λ i ⇒ ` i
-
-  _ : Fut (ix s ⇒ ix s) → ⊥
-  _ = λ { (num (arr ())) }
-
-  -- This one is ok, because scary will be inlined
-  test₁ : E V (ar sh C ⇒ ar sh C) 
-  test₁ = `λ a ⇒ `λ i ⇒ ` a `$ (scary `$ ` i) 
-
-  -- Can't have Fut of that type
-  test₂ : E V ((C ⇒ C) ⇒ _) 
-  test₂ = `λ f ⇒ ` f
-
-  _ : Fut ((C ⇒ C) ⇒ C) → ⊥
-  _ = foo where
-      foo : _
-      foo (num ())
-      foo (fun () _)
-
-  -- This is fine
-  -- test₃ :  E V (ar sh C ⇒ ar _ C) 
-  -- test₃ = `λ a ⇒ `swap (` a)
-
-  test₄ : E V (ar (ι 10 ⊗ ι 10) C ⇒ C) 
-  test₄ = `λ a ⇒ `sum (`λ i ⇒ `sum (`λ j ⇒ ` a `$ (` j `⊗ ` i)))
-
-  getType : E V τ → Ty
-  getType {τ = τ} _ = τ 
 
   --isNum : (τ : Ty) → Dec (Num τ)
   --isNum C = yes C

@@ -12,7 +12,7 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; trans; subst; sym)
 open Eq.≡-Reasoning
 
-variable
+private variable
   m n k : ℕ
   s p q r : Shape
   X Y Z : Set
