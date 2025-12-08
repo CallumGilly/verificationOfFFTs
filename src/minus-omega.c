@@ -20,3 +20,12 @@ complex real minus_omega(size_t n, size_t k) {
   //printf("minus-omega(%zu, %zu) = %.2f+%.2fi\n", n, k, creal(r1), cimag(r1));
   return r1;
 }
+
+real minus_omega_r(size_t n, size_t k) {
+  return creal(minus_omega(n, k));
+}
+
+real minus_omega_i(size_t n, size_t k) {
+  return cimag(minus_omega(n, k));
+}
+

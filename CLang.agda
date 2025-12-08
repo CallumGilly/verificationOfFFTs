@@ -36,6 +36,13 @@ data Ty : Set where
 ar : Shape → Ty → Ty
 ar s X = ix s ⇒ X
 
+data Component : Set where
+  REAL : Component
+  IMAG : Component
+
+ar₂ : Shape → Ty → Component → Ty
+ar₂ s X comp = ix s ⇒ X
+
 variable
   τ σ δ ψ : Ty
 
@@ -83,18 +90,59 @@ data Inp (V : Ty → Set) : Ty → Ty → Set where
 data Copy : Shape → Shape → Set where
   eq : Copy s s
 
+private variable
+  q₁ q₂ : Shape
+
+data _⊂_ : Shape → Shape → Set
+data _⊆_ : Shape → Shape → Set
+
+data _⊆_ where
+  idh : s ⊆ s
+  srt : q ⊂  s → q ⊆ s 
+
+data _⊂_ where
+  left  : q  ⊆ s → q  ⊂ (s ⊗ p)
+  right : q  ⊆ p → q  ⊂ (s ⊗ p)
+  bothₗ : q₁ ⊂ p → q₂ ⊆ s → (q₁ ⊗ q₂) ⊂ (p ⊗ s) -- There should be a nicer way
+  bothᵣ : q₁ ⊆ p → q₂ ⊂ s → (q₁ ⊗ q₂) ⊂ (p ⊗ s) -- of representing these two
+  --bothᵣ : q₁ ⊆ s → q₂ ⊆ p → (q₁ ⊗ q₂) ⊂ (p ⊗ s) -- of representing these two
+
 infixl 2 _>>>_
 data Inp : Ty → Ty → Set where
   dft  : NonZero n → Inp (ar (ι 2 ⊗ ι n) R) (ar (ι 2 ⊗ ι n) R)
   twid : ⦃ NonZeroₛ (s ⊗ p) ⦄ → Inp (ar (ι 2 ⊗ (s ⊗ p)) R) (ar (ι 2 ⊗ (s ⊗ p)) R) 
   
-  part-col : Inp (ar (ι 2 ⊗ s) τ) (ar (ι 2 ⊗ q) τ) → Copy s q → Inp (ar (ι 2 ⊗ (s ⊗ p)) τ) (ar (ι 2 ⊗ (q ⊗ p)) τ)
-  part-row : Inp (ar (ι 2 ⊗ p) τ) (ar (ι 2 ⊗ q) τ) → Copy p q → Inp (ar (ι 2 ⊗ (s ⊗ p)) τ) (ar (ι 2 ⊗ (s ⊗ q)) τ)
-  
+  part : Inp (ar s τ) (ar q τ) → Copy s q → s ⊂ p → Inp (ar p τ) (ar p τ)  
+  --part-col : Inp (ar (ι 2 ⊗ s) τ) (ar (ι 2 ⊗ q) τ) → Copy s q → Inp (ar (ι 2 ⊗ (s ⊗ p)) τ) (ar (ι 2 ⊗ (q ⊗ p)) τ)
+  --part-row : Inp (ar (ι 2 ⊗ p) τ) (ar (ι 2 ⊗ q) τ) → Copy p q → Inp (ar (ι 2 ⊗ (s ⊗ p)) τ) (ar (ι 2 ⊗ (s ⊗ q)) τ)
+
   _>>>_ : Inp τ δ → Inp δ σ → Inp τ σ
 
   copy : Reshape s p → Inp (ar s τ) (ar p τ)
 
+{- Somewhat general, but getting quite ugly)
+data Inp′ : Ty → Ty → Set where
+  dft  : NonZero n → Inp′ (ar (ι 2) (ar (ι n) R)) (ar (ι 2) (ar (ι n) R))
+  twid : ⦃ NonZeroₛ (s ⊗ p) ⦄ → Inp′ (ar (ι 2) (ar (s ⊗ p) R)) (ar (ι 2) (ar (s ⊗ p) R))
+  
+  part-col : Inp′ (ar (ι n) (ar s τ)) (ar (ι n) (ar q τ)) → Copy s q → Inp′ (ar (ι 2) (ar (s ⊗ p) τ)) (ar (ι 2) (ar (q ⊗ p) τ))
+  part-row : Inp′ (ar (ι n) (ar p τ)) (ar (ι n) (ar q τ)) → Copy p q → Inp′ (ar (ι 2) (ar (s ⊗ p) τ)) (ar (ι 2) (ar (s ⊗ q) τ))
+  
+  _>>>_ : Inp′ τ δ → Inp′ δ σ → Inp′ τ σ
+
+  copy : Reshape s p → Inp′ (ar s τ) (ar p τ)
+-}
+
+--data Inp′ : Ty → Ty → Set where
+--  dft  : NonZero n → Inp′ (ar₂ (ι n) R) (ar (ι n) R)
+--  twid : ⦃ NonZeroₛ (s ⊗ p) ⦄ → Inp′ (ar (s ⊗ p) R) (ar (s ⊗ p) R) 
+--  
+--  part-col : Inp′ (ar s τ) (ar q τ) → Copy s q → Inp′ (ar (s ⊗ p) τ) (ar (q ⊗ p) τ)
+--  part-row : Inp′ (ar p τ) (ar q τ) → Copy p q → Inp′ (ar (s ⊗ p) τ) (ar (s ⊗ q) τ)
+--  
+--  _>>>_ : Inp′ τ δ → Inp′ δ σ → Inp′ τ σ
+--
+--  copy : Reshape s p → Inp′ (ar s τ) (ar p τ)
 
 infixl 3 _`$_
 --infixl 2 _`>>=_
@@ -145,19 +193,12 @@ instance
 `ffti : NonZeroₛ s → Inp (ar (ι 2 ⊗ s) R) (ar (ι 2 ⊗ s) R)
 `ffti (ι nz) = dft nz
 `ffti (_⊗_ {p = p} nzs nzp) =
-  part-col (`ffti nzs) eq
+  part (`ffti nzs) eq (bothᵣ idh (left idh))
   >>> twid ⦃ nzs ⊗ nzp ⦄
-  >>> part-row (`ffti nzp) eq
-  >>> copy (eq ⊕ (♯ ∙ reindex (*-comm (size p) _) ∙ ♭ ∙ swap))
+  >>> part (`ffti nzp) eq (bothᵣ idh (right idh))
+  >>> copy (eq ⊕ (♯ ∙ reindex (*-comm (size p) _) ∙ ♭ ∙ swap)) 
 
---`ffti (ι nz)      = dft nz
---`ffti (_⊗_ {p = p} nzs nzp) = 
---  part-col (`ffti nzs) eq
---  >>> twid ⦃ nzs ⊗ nzp ⦄
---  >>> part-row (`ffti nzp) eq 
---  >>> copy (♯ ∙ reindex (*-comm (size p) _) ∙ ♭ ∙ swap) -- TODO: check whether this is correct
-
-`transpose-test₁ : Inp (ar s C) (ar (s ᵗ) C)
+`transpose-test₁ : Inp (ar s R) (ar (s ᵗ) R)
 `transpose-test₁ {s} = copy (recursive-transposeᵣ)
 
 -- Worked as expected:
@@ -219,16 +260,16 @@ module Interp (real : Real) (cplx : Cplx) where
 
   -- With the current state of Complex, the below cannot be defined without giving
   -- a concrete definition, this will make interp-inp... challenging
-  ℝ-to-ℂ : Ar (ι 2 ⊗ s) ℝ → Ar s ℂ
-  ℝ-to-ℂ ar i = ?
+  --ℝ-to-ℂ : Ar (ι 2 ⊗ s) ℝ → Ar s ℂ
+  --ℝ-to-ℂ ar i = ?
 
-  interp-inp : Inp τ σ → Sem τ → Sem σ
-  interp-inp (dft nz) ar = ? -- λ p → interp (`dft ⦃ nz ⦄ `$ (` ar) `$ (` p))
-  interp-inp (twid {s} {p} ⦃ nz-s⊗p ⦄ ) ar = ? --zipWith _*𝕔_ ar (twiddles ⦃ nz-s⊗p ⦄)
-  interp-inp (part-col inp eq) = ? --reshape swap ∘ unnest ∘ map (interp-inp inp) ∘ nest ∘ reshape swap 
-  interp-inp (part-row inp eq) = ? --               unnest ∘ map (interp-inp inp) ∘ nest
-  interp-inp (inp₁ >>> inp₂) = interp-inp inp₂ ∘ interp-inp inp₁
-  interp-inp (copy rshp) = reshape rshp
+  --interp-inp : Inp τ σ → Sem τ → Sem σ
+  --interp-inp (dft nz) ar = ? -- λ p → interp (`dft ⦃ nz ⦄ `$ (` ar) `$ (` p))
+  --interp-inp (twid {s} {p} ⦃ nz-s⊗p ⦄ ) ar = ? --zipWith _*𝕔_ ar (twiddles ⦃ nz-s⊗p ⦄)
+  ----interp-inp (part-col inp eq) = ? --reshape swap ∘ unnest ∘ map (interp-inp inp) ∘ nest ∘ reshape swap 
+  ----interp-inp (part-row inp eq) = ? --               unnest ∘ map (interp-inp inp) ∘ nest
+  --interp-inp (inp₁ >>> inp₂) = interp-inp inp₂ ∘ interp-inp inp₁
+  --interp-inp (copy rshp) = reshape rshp
 
 
   --prf : (nz-s : NonZeroₛ s) → (ar : Ar s ℂ) → (interp-inp (`ffti nz-s)) ar ≡ reshape m♭ (FFT′ ⦃ nz-s ⦄ ar)
@@ -236,7 +277,8 @@ module Interp (real : Real) (cplx : Cplx) where
 module ShowC where
   open import Data.Nat
   open import Data.String hiding (show)
-  open import Data.Product
+  open import Data.Product hiding (swap)
+  open import Data.Maybe hiding (_>>=_)
   open import Text.Printf
   open import Relation.Nullary
   open import Effect.Monad 
@@ -250,6 +292,14 @@ module ShowC where
   data Ix : Shape → Set where 
     ι   : String → Ix (ι n)
     _⊗_ : Ix s → Ix p → Ix (s ⊗ p)
+
+  component-ix : Component → Ix (ι 2)
+  component-ix REAL = ι "0"
+  component-ix IMAG = ι "1"
+
+  component-sym : Component → String
+  component-sym REAL = "r"
+  component-sym IMAG = "i"
 
   fresh : ℕ → String
   fresh = printf "x_%u"
@@ -277,11 +327,11 @@ module ShowC where
   complex-type : String
   complex-type = "complex " ++ real-type
 
-  malloc-op : Shape → String
-  malloc-op s = printf "malloc(%u * sizeof(%s))" (size s) complex-type
+  malloc-op : (type : String) → Shape → String
+  malloc-op ty s = printf "malloc(%u * sizeof(%s))" (size s) ty
 
-  calloc-op : Shape → String
-  calloc-op s = printf "calloc(%u, sizeof(%s))" (size s) complex-type
+  calloc-op : (type : String) → Shape → String
+  calloc-op ty s = printf "calloc(%u, sizeof(%s))" (size s) ty
 
   generateIx : (s : Shape) → State ℕ (Ix s)
   generateIx (ι n)   =
@@ -311,6 +361,8 @@ module ShowC where
   rshp-ix (split {m} {n}) (ι x) = ι (printf "(%s / %u)" x n) ⊗ ι (printf "(%s %% %u)" x n)
   rshp-ix (flat {m} {n}) (ι x₁ ⊗ ι x₂) = ι (printf "((%s * %u) + %s)" x₁ n x₂)
   rshp-ix Reshape.swap (i₁ ⊗ i₂) = i₂ ⊗ i₁
+  rshp-ix assoₗ ((i ⊗ j) ⊗ k) = i ⊗ (j ⊗ k)
+  rshp-ix assoᵣ (i ⊗ (j ⊗ k)) = (i ⊗ j) ⊗ k
   
   data Sel : Shape → Shape → Set where
     idh   : Sel s s
@@ -318,20 +370,26 @@ module ShowC where
     chain : Sel s p → Sel p q → Sel s q
     left  : Ix p → Sel q s → Sel q (s ⊗ p)
     right : Ix s → Sel q p → Sel q (s ⊗ p)
+    bothₗ : Sel q₁ p → Sel q₂ s → Sel (q₁ ⊗ q₂) (p ⊗ s)
+    --bothᵣ : Sel q₁ s → Sel q₂ p → Sel (q₁ ⊗ q₂) (p ⊗ s)
 
-  sub-right : Sel (s ⊗ p) q → Ix s → Sel p q
-  sub-right idh          i = right i idh
-  sub-right (view  se r) i = chain  (right i idh) (view se r)
-  sub-right (chain a  b) i = chain   (sub-right a i) b
-  sub-right (left  j  h) i = left  j (sub-right h i)
-  sub-right (right j  h) i = right j (sub-right h i)
+  --sub-right : Sel (s ⊗ p) q → Ix s → Sel p q
+  --sub-right idh          i = right i idh
+  --sub-right (view  se r) i = chain  (right i idh) (view se r)
+  --sub-right (chain a  b) i = chain   (sub-right a i) b
+  --sub-right (left  j  h) i = left  j (sub-right h i)
+  --sub-right (right j  h) i = right j (sub-right h i)
+  --sub-right (bothₗ l  r) i = ?
+  --sub-right (bothᵣ l  r) i = ?
 
-  sub-left : Sel (s ⊗ p) q → Ix p → Sel s q
-  sub-left idh          i = left  i idh
-  sub-left (view  se r) i = chain   (left i idh) (view se r)
-  sub-left (chain a  b) i = chain   (sub-left a i) b
-  sub-left (left  j  h) i = left  j (sub-left h i)
-  sub-left (right j  h) i = right j (sub-left h i)
+  --sub-left : Sel (s ⊗ p) q → Ix p → Sel s q
+  --sub-left idh          i = left  i idh
+  --sub-left (view  se r) i = chain   (left i idh) (view se r)
+  --sub-left (chain a  b) i = chain   (sub-left a i) b
+  --sub-left (left  j  h) i = left  j (sub-left h i)
+  --sub-left (right j  h) i = right j (sub-left h i)
+  --sub-left (bothₗ l  r) i = ?
+  --sub-left (bothᵣ l  r) i = ?
 
   data AR : Ty → Set where
     --cst : String → AR C
@@ -344,7 +402,11 @@ module ShowC where
   ix-up (chain se se₁) i = ix-up se₁ (ix-up se i)
   ix-up (left x se)    i = ix-up se i ⊗ x
   ix-up (right x se)   i = x ⊗ ix-up se i
+  ix-up (bothₗ x y) (i ⊗ j) = ix-up x i ⊗ ix-up y j
+  --ix-up (bothᵣ x y) (i ⊗ j) = ix-up y j ⊗ ix-up x i
 
+--  difference : s ⊆ p → Sel ? p
+--
   to-sel′ : Ix s → String → String
   to-sel′ i a = printf "%s%s" a $ ix-join (ix-map (printf "[%s]") i) ""
     where
@@ -362,15 +424,80 @@ module ShowC where
   sel-to-str : String → Sel s p → Ix s → String
   sel-to-str ptr sel ixs = to-sel (ix-up sel ixs) ptr
 
-  create-tmp-mem : Sel s p → (Shape → String) → State ℕ (String × String)
-  create-tmp-mem {s} sel op = do
+  inv-⊂ : s ⊂ p → Shape
+  inv-⊆ : s ⊆ p → Maybe Shape
+
+  inv-⊆ {s} idh = nothing
+  inv-⊆ (srt x) = just (inv-⊂ x)
+  
+  inv-⊂ (left  {p = p} s⊆q) with inv-⊆ s⊆q
+  ... | just x  = x ⊗ p
+  ... | nothing = p
+  inv-⊂ (right {s = s} q⊆p) with inv-⊆ q⊆p
+  ... | just x  = s ⊗ x
+  ... | nothing = s
+  inv-⊂ (bothₗ q₁⊂p q₂⊆s)   with inv-⊂ q₁⊂p | inv-⊆ q₂⊆s
+  ... | x | just y  = x ⊗ y
+  ... | x | nothing = x
+  inv-⊂ (bothᵣ q₁⊆p q₂⊂s)   with inv-⊆ q₁⊆p | inv-⊂ q₂⊂s
+  ... | just x  | y = x ⊗ y
+  ... | nothing | y =     y
+
+  {-
+  g : Shape
+  g = ι 3 ⊗ (ι 5 ⊗ (ι 7 ⊗ ι 9))
+
+  g′ : Shape
+  g′ = ι 3 ⊗ ι 7
+
+  g′⊂g : g′ ⊂ g
+  g′⊂g = bothᵣ idh (right (srt (left idh)))
+
+  _ : inv-⊂ g′⊂g ≡ ?
+  _ = ?
+  -}
+
+  --⊆-to-sel : (s⊆p : s ⊆ p) → State ℕ ((Ix (inv-⊆ s⊆p)) × Sel s p)
+  ⊂-to-sel : (s⊂p : s ⊂ p) → State ℕ ((Ix (inv-⊂ s⊂p)) × Sel s p)
+
+  ⊂-to-sel (left {p = p} idh) = do
+    i ← generateIx p
+    return (i , left i idh)
+  ⊂-to-sel (left {p = p} (srt x))  = do
+    i ← generateIx p
+    j , se ← ⊂-to-sel x
+    return ( (j ⊗ i) , left i se)
+  ⊂-to-sel (right {s = s} idh)     = do
+    i ← generateIx s
+    return (i , right i idh)
+  ⊂-to-sel (right {s = s} (srt x)) = do
+    i ← generateIx s
+    j , se ← ⊂-to-sel x
+    return ((i ⊗ j) , right i se)
+  ⊂-to-sel (bothₗ a idh)     = do
+    i , seᵢ ← ⊂-to-sel a
+    return (i , bothₗ seᵢ idh)
+  ⊂-to-sel (bothₗ a (srt x)) = do
+    i , seᵢ ← ⊂-to-sel a
+    j , seⱼ ← ⊂-to-sel x
+    return ((i ⊗ j) , bothₗ seᵢ seⱼ)
+  ⊂-to-sel (bothᵣ idh a)     = do
+    j , seⱼ ← ⊂-to-sel a
+    return (j , bothₗ idh seⱼ)
+  ⊂-to-sel (bothᵣ (srt x) a) = do
+    i , seᵢ ← ⊂-to-sel x
+    j , seⱼ ← ⊂-to-sel a
+    return ((i ⊗ j) , bothₗ seᵢ seⱼ)
+
+  create-tmp-mem : (type : String) → Sel s p → (Shape → String) → State ℕ (String × String)
+  create-tmp-mem {s} ty sel op = do
     var ← fresh-var
-    let declaration = printf "%s (*%s)%s = %s;" complex-type var (shape-helper s) (op s)
+    let declaration = printf "%s (*%s)%s = %s;" ty var (shape-helper s) (op s)
     return $ var , declaration
 
-  create-hole-copy : String → Sel s p → State ℕ (String × String)
-  create-hole-copy {s} ptr sel = do
-    var , var-declaration ← create-tmp-mem sel malloc-op
+  create-hole-copy : (type : String) → String → Sel s p → State ℕ (String × String)
+  create-hole-copy {s} ty ptr sel = do
+    var , var-declaration ← create-tmp-mem ty sel (malloc-op ty)
     i ← generateIx s
     let copy-values = loop-nest s i $ printf "%s = %s;" (to-sel i var) (sel-to-str ptr sel i)
     return $ var , var-declaration ++ copy-values
@@ -381,19 +508,7 @@ module ShowC where
     return $ loop-nest s i $ printf "%s = %s;" (sel-to-str toPtr sel i) (to-sel i fromPtr)
 
   use-dft-macro : ℕ → String → String → String
-  use-dft-macro = printf "SPLIT_DFT(%u, (*%s), (*%s));"
-
-  data Component : Set where
-    REAL : Component
-    IMAG : Component
-
-  component-ix : Component → Ix (ι 2)
-  component-ix REAL = ι "0"
-  component-ix IMAG = ι "1"
-
-  component-sym : Component → String
-  component-sym REAL = "r"
-  component-sym IMAG = "i"
+  use-dft-macro n xs ys = printf "SPLIT_DFT(%u, ((real (*)[%u])%s), ((real (*)[%u])%s));" n n xs n ys
 
   minus-omega : Component → (n : ℕ) → (j : String) → String
   minus-omega = printf "minus_omega_%s(%u, %s)" ∘ component-sym 
@@ -401,8 +516,8 @@ module ShowC where
   to-vali : Inp τ σ → AR τ → State ℕ (String × AR σ)
   to-vali (dft {n} nz-n) (arr ptr sel) = do 
     j ← generateIx (ι n)
-    inp-var , create-inp-mem  ← create-hole-copy ptr sel
-    out-var , declare-out-mem ← create-tmp-mem sel calloc-op
+    inp-var , create-inp-mem  ← create-hole-copy real-type ptr sel
+    out-var , declare-out-mem ← create-tmp-mem real-type sel (calloc-op real-type)
     let use-dft = use-dft-macro n inp-var out-var
     copy-out-to-ptr ← copy-into-sel out-var ptr sel
     return $ (create-inp-mem ++ declare-out-mem ++ use-dft ++ copy-out-to-ptr) , arr ptr sel
@@ -412,7 +527,8 @@ module ShowC where
     let memSel_r = sel-to-str ptr sel ((component-ix REAL) ⊗ i)
     let memSel_i = sel-to-str ptr sel ((component-ix IMAG) ⊗ i)
     
-    tmp-var ← fresh-var 
+    tmp-var ← fresh-var
+    let init-tmp-var = printf "%s %s;\n" real-type tmp-var
 
     let ops =  (printf "%s = %s;\n" tmp-var memSel_r)
             ++ (printf 
@@ -432,18 +548,23 @@ module ShowC where
                   (minus-omega REAL (size s * size p) (offset-prod i))
                )
     
-    return $ (loop-nest (s ⊗ p) i ops , arr ptr sel)
+    return $ (init-tmp-var ++ loop-nest (s ⊗ p) i ops , arr ptr sel)
 
   -- I think I need to make sel more expressive to be able to fill the below holes
         -- It seems I can get close with chain
-  to-vali (part-col {p = p} e eq) (arr ptr se) = do
-    i ← generateIx p
-    expr , _ ← (to-vali e (arr ptr (?))) --(ι 2 ⊗ 2) from (ι 2 ⊗ (s ⊗ p))
-    return $ (loop-nest p i expr) , arr ptr se
-  to-vali (part-row {s = s} e eq) (arr ptr se) = do
-    i ← generateIx s
-    expr , _ ← (to-vali e (arr ptr (?)))
-    return $ (loop-nest s i expr) , arr ptr se
+  --to-vali (part-col {p = p} e eq) (arr ptr se) = do
+  --  i ← generateIx p
+  --  expr , _ ← (to-vali e (arr ptr (chain (left i idh) (view se assoₗ) )))
+  --  return $ (loop-nest p i expr) , arr ptr se
+  --to-vali (part-row {s = s} e eq) (arr ptr se) = do
+  --  i ← generateIx s
+  --  expr , _ ← (to-vali e (arr ptr (chain (?) (view se (assoₗ ∙ ?)) )))
+  --  return $ (loop-nest s i expr) , arr ptr se
+  to-vali (part {s} {p = p} e eq s⊆p) (arr {s = t} ptr se) = 
+    do
+      i , s-sel ← ⊂-to-sel s⊆p
+      expr , _ ← to-vali e (arr ptr (chain (s-sel) se))
+      return $ (loop-nest (inv-⊂ s⊆p) i expr) , arr ptr se
   to-vali {τ} (inp₁ >>> inp₂) arτ = do
     e₁ , ARδ ← to-vali inp₁ arτ
     e₂ , ARσ ← to-vali inp₂ ARδ
@@ -453,10 +574,10 @@ module ShowC where
     ------ working-mem , copy-out ← create-hole-copy ptr se
     working-mem ← fresh-var
     let var-declaration = printf "%s (*%s)%s = %s;" 
-                            complex-type
+                            real-type
                             working-mem
                             (shape-helper (ι (size s))) 
-                            (malloc-op (ι (size s)))
+                            (malloc-op real-type (ι (size s))) --TODO : This is not reliable with real-type put here
     --working-mem , var-declaration ← create-tmp-mem se malloc-op
     i ← generateIx s
     let copy-values = loop-nest s i $ 
@@ -476,6 +597,7 @@ module ShowC where
 
   num-type : Num τ → String
   num-type C = complex-type
+  num-type R = real-type
   num-type {ix s ⇒ τ} (arr x) = num-type {τ} x ++ (shape-helper s)
   
   final-type : Fut τ → String
@@ -491,7 +613,9 @@ module ShowC where
   shape-to-arg (s ⊗ p) res = shape-to-arg s res ++ shape-helper p
 
   ty-to-arg : Fut τ → String → String
-  ty-to-arg {C} (num x) res = printf "%s (*%s)" complex-type res
+  ty-to-arg {C}        (num x)       res = printf "%s (*%s)" complex-type res
+  ty-to-arg {R}        (num x)       res = printf "%s (*%s)" real-type    res
+  ty-to-arg {ix s ⇒ R} (num (arr R)) res = real-type    ++ shape-to-arg s res 
   ty-to-arg {ix s ⇒ C} (num (arr C)) res = complex-type ++ shape-to-arg s res
   ty-to-arg {ix s ⇒ (ix p ⇒  τ)} (num (arr (arr x))) res = ty-to-arg {ix p ⇒ τ} (num (arr x)) res ++ shape-helper s
   -- The below case is the one I have been struggling to work out how to deal with...
@@ -515,7 +639,7 @@ module Tests where
   open import Relation.Nullary
   open import Data.String hiding (show)
   open import Agda.Builtin.Unit using (tt)
-  open import Data.Product
+  open import Data.Product hiding (swap)
 
   open ShowC
 
@@ -581,29 +705,29 @@ module Tests where
   getType : E V τ → Ty
   getType {τ = τ} _ = τ 
 
-  isNum : (τ : Ty) → Dec (Num τ)
-  isNum C = yes C
-  isNum (ix x) = no λ ()
-  isNum (C ⇒ σ) = no λ ()
-  isNum ((_ ⇒ _) ⇒ σ) = no λ ()
-  isNum (ix x ⇒ σ) with isNum σ
-  ... | yes p = yes (arr p)
-  ... | no ¬p = no λ { (arr p) → ¬p p }
+  --isNum : (τ : Ty) → Dec (Num τ)
+  --isNum C = yes C
+  --isNum (ix x) = no λ ()
+  --isNum (C ⇒ σ) = no λ ()
+  --isNum ((_ ⇒ _) ⇒ σ) = no λ ()
+  --isNum (ix x ⇒ σ) with isNum σ
+  --... | yes p = yes (arr p)
+  --... | no ¬p = no λ { (arr p) → ¬p p }
 
-  isFut : (τ : Ty) → Dec (Fut τ)
-  isFut C = yes (num C)
-  isFut (ix x) = no λ { (num ()) }
-  isFut (C ⇒ σ) with isFut σ
-  ... | no ¬p = no λ { (fun _ p) → ¬p p }
-  ... | yes p = yes (fun C p) 
-  isFut (ix x ⇒ σ) with isNum σ
-  ... | no ¬p = no λ { (num (arr p)) → ¬p p }
-  ... | yes p = yes (num (arr p))
-  isFut (τ@(_ ⇒ _) ⇒ σ) with isNum τ
-  ... | no ¬p = no λ { (fun p _) → ¬p p }
-  ... | yes p with isFut σ
-  ... | no ¬q = no λ { (fun _ q) → ¬q q }
-  ... | yes q = yes (fun p q)
+  --isFut : (τ : Ty) → Dec (Fut τ)
+  --isFut C = yes (num C)
+  --isFut (ix x) = no λ { (num ()) }
+  --isFut (C ⇒ σ) with isFut σ
+  --... | no ¬p = no λ { (fun _ p) → ¬p p }
+  --... | yes p = yes (fun C p) 
+  --isFut (ix x ⇒ σ) with isNum σ
+  --... | no ¬p = no λ { (num (arr p)) → ¬p p }
+  --... | yes p = yes (num (arr p))
+  --isFut (τ@(_ ⇒ _) ⇒ σ) with isNum τ
+  --... | no ¬p = no λ { (fun p _) → ¬p p }
+  --... | yes p with isFut σ
+  --... | no ¬q = no λ { (fun _ q) → ¬q q }
+  --... | yes q = yes (fun p q)
 
   preamble : String
   preamble = "#include <complex.h>\n" 
@@ -617,9 +741,9 @@ module Tests where
   gen-fft s with show′ (num (arr R)) (arr "inp" idh) (fft s) "fft"
   ... | body , header = (preamble ++ header) , (preamble ++ body)
 
-  --gen-transpose-test : (s : Shape) → String × String
-  --gen-transpose-test s with show′ (num (arr C)) (arr "inp" idh) (`transpose-test₁ {s}) "transposeTest"
-  --... | body , header = (preamble ++ header) , (preamble ++ body)
+  gen-transpose-test : (s : Shape) → String × String
+  gen-transpose-test s with show′ (num (arr R)) (arr "inp" idh) (`transpose-test₁ {s}) "transposeTest"
+  ... | body , header = (preamble ++ header) , (preamble ++ body)
 
 
 open Tests using (gen-fft; gen-transpose-test) public

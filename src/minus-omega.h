@@ -23,4 +23,7 @@
 
 complex real minus_omega(size_t n, size_t k);
 
+real minus_omega_r(size_t n, size_t k);
+real minus_omega_i(size_t n, size_t k);
+
 #endif

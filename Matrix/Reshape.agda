@@ -1,7 +1,7 @@
 module Matrix.Reshape where
 
 open import Data.Nat using (ℕ; _*_; NonZero)
-open import Data.Nat.Properties using (*-comm)
+open import Data.Nat.Properties using (*-comm; *-assoc)
 open import Data.Fin as F using (Fin; combine; remQuot; quotRem; toℕ; cast)
 open import Data.Fin.Properties using (remQuot-combine; combine-remQuot; cast-is-id; cast-trans)
 
@@ -31,18 +31,22 @@ data Reshape : Shape → Shape → Set where
   split  : Reshape (ι (m * n)) (ι m ⊗ ι n)
   flat   : Reshape (ι m ⊗ ι n) (ι (m * n))
   swap   : Reshape (s ⊗ p) (p ⊗ s)
+  assoₗ  : Reshape ((s ⊗ p) ⊗ q) (s ⊗ (p ⊗ q))
+  assoᵣ  : Reshape (s ⊗ (p ⊗ q)) ((s ⊗ p) ⊗ q)
 
 --------------------------------------------
 --- Application of Reshapes to Positions ---
 --------------------------------------------
 
 _⟨_⟩ : Position p → Reshape s p → Position s
-i           ⟨ eq     ⟩ = i
-i           ⟨ r ∙ r₁ ⟩ = i ⟨ r ⟩ ⟨ r₁ ⟩
-(i ⊗ j)     ⟨ r ⊕ r₁ ⟩ = (i ⟨ r ⟩) ⊗ (j ⟨ r₁ ⟩)
-(ι i ⊗ ι j) ⟨ split  ⟩ = ι (combine i j)
-ι i         ⟨ flat   ⟩ = let a , b = remQuot _ i in ι a ⊗ ι b
-(i ⊗ j)     ⟨ swap   ⟩ = j ⊗ i
+i             ⟨ eq     ⟩ = i
+i             ⟨ r ∙ r₁ ⟩ = i ⟨ r ⟩ ⟨ r₁ ⟩
+(i ⊗ j)       ⟨ r ⊕ r₁ ⟩ = (i ⟨ r ⟩) ⊗ (j ⟨ r₁ ⟩)
+(ι i ⊗ ι j)   ⟨ split  ⟩ = ι (combine i j)
+ι i           ⟨ flat   ⟩ = let a , b = remQuot _ i in ι a ⊗ ι b
+(i ⊗ j)       ⟨ swap   ⟩ = j ⊗ i
+(i ⊗ (j ⊗ k)) ⟨ assoₗ  ⟩ = (i ⊗ j) ⊗ k
+((i ⊗ j) ⊗ k) ⟨ assoᵣ  ⟩ = i ⊗ (j ⊗ k)
 
 ------------------------------------------
 --- Application of Reshape to Matrix's ---
@@ -62,6 +66,8 @@ rev (r ∙ r₁) = rev r₁ ∙ rev r
 rev split = flat
 rev flat = split
 rev swap = swap
+rev assoₗ = assoᵣ
+rev assoᵣ = assoₗ
 
 --- Properties of reverse
 rev-eq : 
@@ -83,6 +89,8 @@ rev-eq (split {m = m} {n = n}) (ι x ⊗ ι x₁) with cong proj₁ (remQuot-com
   ∎
 rev-eq (flat {m = m} {n = n}) (ι x) rewrite combine-remQuot {m} n x = refl 
 rev-eq swap (i ⊗ i₁) = refl
+rev-eq assoₗ (i ⊗ (j ⊗ k)) = refl
+rev-eq assoᵣ ((i ⊗ j) ⊗ k) = refl
 
 rev-rev : 
   ∀ (r : Reshape s p) 
@@ -95,6 +103,8 @@ rev-rev (r ⊕ r₁) (i ⊗ i₁) rewrite rev-rev r i | rev-rev r₁ i₁ = refl
 rev-rev split i = refl
 rev-rev flat i = refl
 rev-rev swap i = refl
+rev-rev assoₗ (i ⊗ (j ⊗  k)) = refl
+rev-rev assoᵣ ((i ⊗ j) ⊗ k) = refl
 
 --------------------------------------------------------------------
 --- Transposition of Shapes, and the relating Reshape operations ---
