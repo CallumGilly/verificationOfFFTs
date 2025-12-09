@@ -138,6 +138,9 @@ recursive-transpose-inv : recursive-transpose (recursive-transpose s) ≡ s
 recursive-transpose-inv {ι x   } = refl
 recursive-transpose-inv {s ⊗ s₁} rewrite recursive-transpose-inv {s} | recursive-transpose-inv {s₁} = refl
 
+recursive-transpose-invᵣ : Reshape (recursive-transpose (recursive-transpose s) ⊗ recursive-transpose (recursive-transpose p)) (s ⊗ p)
+recursive-transpose-invᵣ {s} {p} rewrite recursive-transpose-inv {s ⊗ p} = eq
+
 --- The cardinality of a shape, and the cardinality of its recursive transposition are equal
 |s|≡|sᵗ| : length s ≡ length (recursive-transpose s)
 |s|≡|sᵗ| {ι x} = refl

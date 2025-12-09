@@ -13,7 +13,7 @@ open import Function
 open import Real using (Real)
 open import Complex using (Cplx)
 
-open import Matrix renaming (length to size)
+open import Matrix renaming (length to size; nest to nestₛ; unnest to unnestₛ)
 open import Matrix.Reshape
 open import Matrix.NonZero 
 open import Matrix.SubShape
@@ -42,9 +42,6 @@ SIMD⇒S lanes (ss₁ ⊗ ss₂) = SIMD⇒S lanes ss₁ ⊗ (SIMD⇒S lanes ss�
 private variable
   s s₁ s₂ q p q₁ q₂ : Shape
   n : ℕ
-
-private variable
-  ss : SIMD-Shape
 
 infixr 5 _⇒_
 data Ty : Set where
@@ -100,17 +97,46 @@ _ = refl
 infixl 2 _>>>_
 data Inp : Ty → Ty → Set where
   dft  : NonZero n → Inp (ar (ι 2 ⊗ ι n) R) (ar (ι 2 ⊗ ι n) R)
-  dft′  : NonZero n → Inp (ar (ι 2 ⊗ (ι n ⊗ ι LANES)) R) (ar (ι 2 ⊗ (ι n ⊗ ι LANES)) R)
-  dft′′  : NonZero n → Inp (ar (ι 2 ⊗ ι (n * LANES)) R) (ar (ι 2 ⊗ ι (n * LANES)) R)
+  --dft′  : NonZero n → Inp (ar (ι 2 ⊗ (ι n ⊗ ι LANES)) R) (ar (ι 2 ⊗ (ι n ⊗ ι LANES)) R)
+  --dft′′  : NonZero n → Inp (ar (ι 2 ⊗ ι (n * LANES)) R) (ar (ι 2 ⊗ ι (n * LANES)) R)
   --dft′′  : NonZero n → Inp (ar (ι 2 ⊗ (ι n ⊗ μ)) R) (ar (ι 2 ⊗ (ι n ⊗ μ)) R)
   twid : ⦃ NonZeroₛ (s ⊗ p) ⦄ → Inp (ar (ι 2 ⊗ (s ⊗ p)) R) (ar (ι 2 ⊗ (s ⊗ p)) R) 
   
   part : Inp (ar s τ) (ar q τ) → s ⊂ p → Inp (ar p τ) (ar p τ)  
+  --part : Inp (ar q₁ τ) (ar q₂ τ) → (q₁⊂s₁ : q₁ ⊂ s₁) → (q₂⊂s₂ : q₂ ⊂ s₂) → (inv-⊂ q₁⊂s₁ ≡ inv-⊂ q₂⊂s₂) → Inp (ar s₁ τ) (ar s₂ τ)  
 
   _>>>_ : Inp τ δ → Inp δ σ → Inp τ σ
 
   copy : Reshape s p → Inp (ar s τ) (ar p τ)
 
+data Stmt (V : Ty → Set) : Ty → Set
+
+data Exp (V : Ty → Set) : Ty → Set where
+  var : V τ → Exp V τ
+  ixr : Exp V (ix s) → Reshape p s → Exp V (ix p)
+  sel : Exp V (ar s τ) → Exp V (ix s) → Exp V τ
+
+data View (V : Ty → Set) : Ty → Ty → Set where
+  nest   : View V (ar (s ⊗ p) τ)  (ar s (ar p τ))
+  unnest : View V (ar s (ar p τ)) (ar (s ⊗ p) τ)
+  vmap   : View V τ σ  → View V (ar s τ) (ar s σ)
+  _∙_    : View V σ δ  → View V τ σ → View V τ δ
+  resh   : Reshape s p → View V (ar s τ) (ar p τ)
+
+data Stmt V where
+  dft : Stmt V (ar (ι 2 ⊗ ι n) R)
+  twid : Stmt V (ar (ι 2 ⊗ (s ⊗ p)) R)
+
+  write : Exp V τ → Stmt V τ
+
+  view : View V τ σ → Stmt V σ → Stmt V τ
+
+  pfor : (V (ix s) → Stmt V τ) → Stmt V (ar s τ)
+  
+  _>>>_ : Stmt V τ → Stmt V τ → Stmt V τ
+
+  copy : (V (ar s R) → Stmt V (ar s R)) → Stmt V (ar s R)
+ 
 
 --``ffti : NonZeroₛ s → Inp (ar ((ι 2 ⊗ s) ⊗ (ι BLOCKS ⊗ ι LANES)) R) (ar ((ι 2 ⊗ s) ⊗ (ι BLOCKS ⊗ ι LANES)) R)
 {-
@@ -147,13 +173,50 @@ Following FFTN (fftn.c:157)
 
 -}
 
+--`uffti : NonZeroₛ s → Inp (ar (ι 2 ⊗ (s ᵗ)) R) (ar (ι 2 ⊗ s) R)
+--`uffti (ι nz)      = dft nz
+--`uffti (_⊗_ {s} {p} nz-s nz-p) =
+--  part (`uffti nz-s) (bothᵣ idh (right idh)) ? ?
+--  >>> twid
+--  >>> part (`uffti nz-p) (bothᵣ idh (left idh)) ? ?
+--  >>> ? --copy (recursive-transpose-invᵣ ∙ eq ⊕ recursive-transposeᵣ)
+--  where instance
+--    _ : NonZeroₛ (recursive-transpose p ⊗ recursive-transpose s)
+--    _ = (nonZeroₛ-s⇒nonZeroₛ-sᵗ (nz-s ⊗ nz-p))
+
+TODO : ?
+-- Why does this not give the correct results...
+
+`uffti : NonZeroₛ s → Inp (ar (ι 2 ⊗ s) R) (ar (ι 2 ⊗ s) R)
+`uffti (ι nz) = dft nz
+`uffti (_⊗_ {p = p} nzs nzp) =
+      part (`uffti nzs) (bothᵣ idh (left  idh)) 
+  >>> twid ⦃ nzs ⊗ nzp ⦄
+  >>> part (`uffti nzp) (bothᵣ idh (right idh)) 
+
+`ffti : NonZeroₛ s → Inp (ar (ι 2 ⊗ s) R) (ar (ι 2 ⊗ s) R)
+`ffti {s} nz-s = copy (eq ⊕ (♯ ∙ reindex (sym (|s|≡|sᵗ| {s})) ∙ ♭ ∙ recursive-transposeᵣ)) >>> `uffti nz-s
+
+TODO = ?
+
+{-
 `ffti : NonZeroₛ s → Inp (ar (ι 2 ⊗ s) R) (ar (ι 2 ⊗ s) R)
 `ffti (ι nz) = dft nz
 `ffti (_⊗_ {p = p} nzs nzp) =
-  part (`ffti nzs) (bothᵣ idh (left idh))
+  part (`ffti nzs) (bothᵣ idh (left idh)) 
   >>> twid ⦃ nzs ⊗ nzp ⦄
-  >>> part (`ffti nzp) (bothᵣ idh (right idh))
-  >>> copy (eq ⊕ (♯ ∙ reindex (*-comm (size p) _) ∙ ♭ ∙ swap)) 
+  >>> part (`ffti nzp) (bothᵣ idh (right idh)) 
+  -->>> ? --copy (eq ⊕ (♯ ∙ reindex (*-comm (size p) _) ∙ ♭ ∙ swap)) 
+-}
+  
+
+`ffts : ∀ { V } → Stmt V (ar (ι 2 ⊗ s) R)
+`ffts {ι n} = dft
+`ffts {s ⊗ p} = view (nest ∙ resh (swap ∙ assoᵣ)) (pfor (λ _ → `ffts {s})) 
+                >>> twid
+                >>> view (nest ∙ resh (swap ∙ assoᵣ ∙ eq ⊕ swap)) (pfor (λ i → `ffts {p}))
+                >>> copy λ t → pfor λ i → (write (sel (var t) 
+                                (ixr (var i) (eq ⊕ (♯ ∙ reindex (*-comm (size p) _) ∙ ♭ ∙ swap)))))
 
 `transpose-test₁ : Inp (ar s R) (ar (s ᵗ) R)
 `transpose-test₁ {s} = copy (recursive-transposeᵣ)
@@ -317,7 +380,7 @@ module ShowC where
   to-sel i a = to-sel′ i (printf "(*%s)" a)
 
   sel-to-str : String → Sel s p → Ix s → String
-  sel-to-str ptr sel ixs = to-sel (ix-up sel ixs) ptr
+  sel-to-str ptr se ixs = to-sel (ix-up se ixs) ptr
 
 
   ⊂-to-sel : (s⊂p : s ⊂ p) → State ℕ ((Ix (inv-⊂ s⊂p)) × Sel s p)
@@ -352,50 +415,41 @@ module ShowC where
     return ((i ⊗ j) , bothₗ seᵢ seⱼ)
 
   create-tmp-mem : (type : String) → Sel s p → (Shape → String) → State ℕ (String × String)
-  create-tmp-mem {s} ty sel op = do
-    var ← fresh-var
-    let declaration = printf "%s (*%s)%s = %s;" ty var (shape-helper s) (op s)
-    return $ var , declaration
+  create-tmp-mem {s} ty _ op = do
+    tmp-var ← fresh-var
+    let declaration = printf "%s (*%s)%s = %s;" ty tmp-var (shape-helper s) (op s)
+    return $ tmp-var , declaration
 
   create-hole-copy : (type : String) → String → Sel s p → State ℕ (String × String)
-  create-hole-copy {s} ty ptr sel = do
-    var , var-declaration ← create-tmp-mem ty sel (malloc-op ty)
+  create-hole-copy {s} ty ptr se = do
+    tmp-var , var-declaration ← create-tmp-mem ty se (malloc-op ty)
     i ← generateIx s
-    let copy-values = loop-nest s i $ printf "%s = %s;" (to-sel i var) (sel-to-str ptr sel i)
-    return $ var , var-declaration ++ copy-values
+    let copy-values = loop-nest s i $ printf "%s = %s;" (to-sel i tmp-var) (sel-to-str ptr se i)
+    return $ tmp-var , var-declaration ++ copy-values
 
   copy-into-sel : (fromPtr : String) → (toPtr : String) → Sel s p → State ℕ String
-  copy-into-sel {s} fromPtr toPtr sel = do
+  copy-into-sel {s} fromPtr toPtr se = do
     i ← generateIx s
-    return $ loop-nest s i $ printf "%s = %s;" (sel-to-str toPtr sel i) (to-sel i fromPtr)
+    return $ loop-nest s i $ printf "%s = %s;" (sel-to-str toPtr se i) (to-sel i fromPtr)
 
   use-dft-macro : ℕ → String → String → String
   use-dft-macro n xs ys = printf "SPLIT_DFT(%u, ((real (*)[%u])%s), ((real (*)[%u])%s));" n n xs n ys
-
-  use-lane-dft-macro : ℕ → String → String → String
-  use-lane-dft-macro n xs ys = printf "LANE_DFT(%u, ((real (*)[%u * %u])%s), ((real (*)[%u * %u])%s))" n n LANES xs n LANES ys
 
   minus-omega : Component → (n : ℕ) → (j : String) → String
   minus-omega = printf "minus_omega_%s(%u, %s)" ∘ component-sym 
 
   to-vali : Inp τ σ → AR τ → State ℕ (String × AR σ)
-  to-vali (dft {n} nz-n) (arr ptr sel) = do 
-    inp-var , create-inp-mem  ← create-hole-copy real-type ptr sel
-    out-var , declare-out-mem ← create-tmp-mem real-type sel (calloc-op real-type)
+  to-vali (dft {n} nz-n) (arr ptr se) = do 
+    inp-var , create-inp-mem  ← create-hole-copy real-type ptr se
+    out-var , declare-out-mem ← create-tmp-mem real-type se (calloc-op real-type)
     let use-dft = use-dft-macro n inp-var out-var
-    copy-out-to-ptr ← copy-into-sel out-var ptr sel
-    return $ (create-inp-mem ++ declare-out-mem ++ use-dft ++ copy-out-to-ptr) , arr ptr sel
-  to-vali (dft′ {n} nz-n) (arr ptr sel) = do
-    inp-var , create-inp-mem  ← create-hole-copy real-type ptr sel
-    out-var , declare-out-mem ← create-tmp-mem real-type sel (calloc-op real-type)
-    let use-dft = use-lane-dft-macro n inp-var out-var
-    copy-out-to-ptr ← copy-into-sel out-var ptr sel
-    return ((create-inp-mem ++ declare-out-mem ++ use-dft ++ copy-out-to-ptr) , arr ptr sel)
-  to-vali (twid {s} {p}) (arr ptr sel) = do
+    copy-out-to-ptr ← copy-into-sel out-var ptr se
+    return $ (create-inp-mem ++ declare-out-mem ++ use-dft ++ copy-out-to-ptr) , arr ptr se
+  to-vali (twid {s} {p}) (arr ptr se) = do
     i ← generateIx (s ⊗ p)
     ----- I Really wish I had fin types here....
-    let memSel_r = sel-to-str ptr sel ((component-ix REAL) ⊗ i)
-    let memSel_i = sel-to-str ptr sel ((component-ix IMAG) ⊗ i)
+    let memSel_r = sel-to-str ptr se ((component-ix REAL) ⊗ i)
+    let memSel_i = sel-to-str ptr se ((component-ix IMAG) ⊗ i)
     
     tmp-var ← fresh-var
     let init-tmp-var = printf "%s %s;\n" real-type tmp-var
@@ -418,9 +472,9 @@ module ShowC where
                   (minus-omega REAL (size s * size p) (offset-prod i))
                )
     
-    return $ (init-tmp-var ++ loop-nest (s ⊗ p) i ops , arr ptr sel)
+    return $ (init-tmp-var ++ loop-nest (s ⊗ p) i ops , arr ptr se)
 
-  to-vali (part {s} {p = p} e s⊆p) (arr {s = t} ptr se) = 
+  to-vali (part {s} {p = p} e s⊆p ) (arr {s = t} ptr se) = 
     do
       i , s-sel ← ⊂-to-sel s⊆p
       expr , _ ← to-vali e (arr ptr (chain (s-sel) se))
@@ -561,6 +615,10 @@ module Tests where
   gen-fft : (s : Shape) → ⦃ _ : NonZeroₛ s ⦄ → String × String
   gen-fft s with show′ (num (arr R)) (arr "inp" idh) (fft s) "fft"
   ... | body , header = (preamble ++ header) , (preamble ++ body)
+
+  --gen-ufft : (s : Shape) → ⦃ _ : NonZeroₛ s ⦄ → String × String
+  --gen-ufft s ⦃ nz-s ⦄ with show′ (num (arr R)) (arr "inp" idh) (`uffti nz-s) "ufft"
+  --... | body , header = (preamble ++ header) , (preamble ++ body)
 
   gen-transpose-test : (s : Shape) → String × String
   gen-transpose-test s with show′ (num (arr R)) (arr "inp" idh) (`transpose-test₁ {s}) "transposeTest"

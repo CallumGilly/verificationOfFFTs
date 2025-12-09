@@ -1,6 +1,3 @@
-#define size 105
-#define tsize 15
-
 //#include "../generated/dft.h"
 #include "../generated/fft.h"
 #include "../generated/transTest.h"
@@ -14,6 +11,11 @@
 #include <math.h>
 #include <time.h>
 
+#define SIZE 105
+#define TSIZE 15
+
+typedef real (*FFT_TYPE)[2][3][5];
+
 void testTranspose();
 void testDFTFFT();
 
@@ -26,10 +28,10 @@ int main (void) {
 
 
 void testTranspose() {
-  real(*input)[tsize] = malloc(sizeof(*input));
+  real(*input)[TSIZE] = malloc(sizeof(*input));
   memset(input, 0, sizeof(*input));
 
-  for (size_t ai = 0; ai < tsize; ai++) {
+  for (size_t ai = 0; ai < TSIZE; ai++) {
     (*input)[ai] = (real) ai;
   }
 
@@ -37,7 +39,7 @@ void testTranspose() {
   transposeTest((real (*)[3][5])input);
 
   printf("Should get 0, 5, 10, 1, 6, 11...\n");
-  for (size_t ai = 0; ai < tsize; ai++) {
+  for (size_t ai = 0; ai < TSIZE; ai++) {
     printf("At Pos: %zu, Got: %.0f\n", ai, creal((*input)[ai]));
   }
 
@@ -60,35 +62,35 @@ void testTranspose() {
 
 void testDFTFFT() {
   //sh = (ι 4 ⊗ ι 4) ⊗ (ι 3 ⊗ ι 3)
-  complex real(*input)[size] = malloc(sizeof(*input));
+  complex real(*input)[SIZE] = malloc(sizeof(*input));
   memset(input, 0, sizeof(*input));
 
-  real(*fftMem)[2 * size] = malloc(sizeof(*fftMem));
+  real(*fftMem)[2 * SIZE] = malloc(sizeof(*fftMem));
   memset(fftMem, 0, sizeof(*fftMem));
 
-  complex real(*dftOutput)[size] = malloc(sizeof(*dftOutput));
+  complex real(*dftOutput)[SIZE] = malloc(sizeof(*dftOutput));
   memset(dftOutput, 0, sizeof(*dftOutput));
 
-  real(*dftSplitOutput)[2 * size] = malloc(sizeof(*dftSplitOutput));
+  real(*dftSplitOutput)[2 * SIZE] = malloc(sizeof(*dftSplitOutput));
   memset(dftSplitOutput, 0, sizeof(*dftSplitOutput));
 
   srand((unsigned int) time(NULL));
   // Garble input
-  for (size_t ai = 0; ai < size; ai++) {
+  for (size_t ai = 0; ai < SIZE; ai++) {
     (*fftMem)[ai] = (real)rand()/(real)((real)RAND_MAX/(400.0f));
-    (*fftMem)[size + ai] = (real)rand()/(real)((real)RAND_MAX/(400.0f));
-    (*input)[ai] = (*fftMem)[ai] + ((*fftMem)[size + ai] * I);
+    (*fftMem)[SIZE + ai] = (real)rand()/(real)((real)RAND_MAX/(400.0f));
+    (*input)[ai] = (*fftMem)[ai] + ((*fftMem)[SIZE + ai] * I);
   }
 
-  DFT(size, (*input), (*dftOutput));
-  SPLIT_DFT(size, ((real (*)[size])fftMem), ((real (*)[size])dftSplitOutput));
-  fft((real (*)[2][3][5][7])fftMem);
+  DFT(SIZE, (*input), (*dftOutput));
+  SPLIT_DFT(SIZE, ((real (*)[SIZE])fftMem), ((real (*)[SIZE])dftSplitOutput));
+  fft((FFT_TYPE)fftMem);
 
   //double realError = 0;
   //double imagError = 0;
 
   printf("Index, Input-Real, Input-Imag, DFT-Real, DFT-Imag, FFT-Real, FFT-Imag, DFT-FFT-Diff-Real, DFT-FFT-Diff-Imag\n");
-  for (size_t ai = 0; ai < size; ai++) {
+  for (size_t ai = 0; ai < SIZE; ai++) {
     //realError += fabs(creal((*input)[ai]) - creal((*dftOutput)[ai]));
     //imagError += fabs(cimag((*input)[ai]) - cimag((*dftOutput)[ai]));
 
@@ -97,11 +99,11 @@ void testDFTFFT() {
             creal((*input)[ai]),
             cimag((*input)[ai]),
             ((*dftSplitOutput)[ai]),
-            ((*dftSplitOutput)[size + ai]),
+            ((*dftSplitOutput)[SIZE + ai]),
             ((*fftMem)[ai]),
-            ((*fftMem)[size + ai]),
+            ((*fftMem)[SIZE + ai]),
             fabs(((*fftMem)[ai]) - creal((*dftOutput)[ai])),
-            fabs(((*fftMem)[size + ai]) - cimag((*dftOutput)[ai]))
+            fabs(((*fftMem)[SIZE + ai]) - cimag((*dftOutput)[ai]))
            );
   }
 }
