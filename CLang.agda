@@ -3,6 +3,7 @@
 
 open import Relation.Binary.PropositionalEquality
 open import Data.Nat
+open import Data.Nat.DivMod
 open import Data.Nat.Properties using (*-comm)
 open import Data.Fin using (Fin; zero; suc; cast; toℕ)
 open import Data.Fin.Properties
@@ -57,10 +58,19 @@ data Fut : Ty → Set where
   num : Num τ → Fut τ
   fun : Num τ → Fut σ → Fut (τ ⇒ σ)
 
+LANES : ℕ
+LANES = 4
+
+BLOCKS : ℕ
+BLOCKS = 8
+
+_ : BLOCKS % LANES ≡ 0
+_ = refl
 
 infixl 2 _>>>_
 data Inp : Ty → Ty → Set where
   dft  : NonZero n → Inp (ar (ι 2 ⊗ ι n) R) (ar (ι 2 ⊗ ι n) R)
+  dft′  : Inp (ar (ι 2 ⊗ ι LANES) R) (ar (ι 2 ⊗ ι LANES) R)
   twid : ⦃ NonZeroₛ (s ⊗ p) ⦄ → Inp (ar (ι 2 ⊗ (s ⊗ p)) R) (ar (ι 2 ⊗ (s ⊗ p)) R) 
   
   part : Inp (ar s τ) (ar q τ) → s ⊂ p → Inp (ar p τ) (ar p τ)  
@@ -69,8 +79,6 @@ data Inp : Ty → Ty → Set where
 
   copy : Reshape s p → Inp (ar s τ) (ar p τ)
 
-private variable
-  BLOCKS LANES : ℕ
 
 --``ffti : NonZeroₛ s → Inp (ar ((ι 2 ⊗ s) ⊗ (ι BLOCKS ⊗ ι LANES)) R) (ar ((ι 2 ⊗ s) ⊗ (ι BLOCKS ⊗ ι LANES)) R)
 {-
@@ -332,17 +340,26 @@ module ShowC where
   use-dft-macro : ℕ → String → String → String
   use-dft-macro n xs ys = printf "SPLIT_DFT(%u, ((real (*)[%u])%s), ((real (*)[%u])%s));" n n xs n ys
 
+  use-lane-dft-macro : String → String → String
+  use-lane-dft-macro xs ys = printf "LANE_DFT(((real (*)[%u])%s), ((real (*)[%u])%s))" LANES xs LANES ys
+
   minus-omega : Component → (n : ℕ) → (j : String) → String
   minus-omega = printf "minus_omega_%s(%u, %s)" ∘ component-sym 
 
   to-vali : Inp τ σ → AR τ → State ℕ (String × AR σ)
   to-vali (dft {n} nz-n) (arr ptr sel) = do 
-    j ← generateIx (ι n)
     inp-var , create-inp-mem  ← create-hole-copy real-type ptr sel
     out-var , declare-out-mem ← create-tmp-mem real-type sel (calloc-op real-type)
     let use-dft = use-dft-macro n inp-var out-var
     copy-out-to-ptr ← copy-into-sel out-var ptr sel
     return $ (create-inp-mem ++ declare-out-mem ++ use-dft ++ copy-out-to-ptr) , arr ptr sel
+  to-vali dft′ (arr ptr sel) = do
+    --j ← generateIx (ι n)
+    inp-var , create-inp-mem  ← create-hole-copy real-type ptr sel
+    out-var , declare-out-mem ← create-tmp-mem real-type sel (calloc-op real-type)
+    let use-dft = use-lane-dft-macro inp-var out-var
+    copy-out-to-ptr ← copy-into-sel out-var ptr sel
+    return ((create-inp-mem ++ declare-out-mem ++ use-dft ++ copy-out-to-ptr) , arr ptr sel)
   to-vali (twid {s} {p}) (arr ptr sel) = do
     i ← generateIx (s ⊗ p)
     ----- I Really wish I had fin types here....
