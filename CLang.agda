@@ -2,11 +2,12 @@
 {-# OPTIONS --guardedness #-}
 
 open import Relation.Binary.PropositionalEquality
+open import Relation.Nullary
 open import Data.Nat
 open import Data.Nat.DivMod
 open import Data.Nat.Properties using (*-comm)
-open import Data.Fin using (Fin; zero; suc; cast; toℕ)
-open import Data.Fin.Properties
+open import Data.Fin using (Fin; zero; suc; cast; toℕ) hiding (_≟_)
+open import Data.Fin.Properties hiding (_≟_)
 open import Function
 
 open import Real using (Real)
@@ -17,20 +18,33 @@ open import Matrix.Reshape
 open import Matrix.NonZero 
 open import Matrix.SubShape
 
-private variable
-  s q p q₁ q₂ : Shape
-  n : ℕ
 
 -- FIXME: these have to be actual definitions!
 _ᵗ : Shape → Shape
 _ᵗ = recursive-transpose
 
-nzᵗ : NonZeroₛ s → NonZeroₛ (s ᵗ)
+nzᵗ : {s : Shape} → NonZeroₛ s → NonZeroₛ (s ᵗ)
 nzᵗ = nonZeroₛ-s⇒nonZeroₛ-sᵗ
 
-nz-# : NonZeroₛ s → NonZero (size s)
+nz-# : {s : Shape} → NonZeroₛ s → NonZero (size s)
 nz-# = nonZeroₛ-s⇒nonZero-s
 
+data SIMD-Shape : Set where
+  μ   : SIMD-Shape
+  ι   : ℕ → SIMD-Shape
+  _⊗_ : SIMD-Shape → SIMD-Shape → SIMD-Shape
+
+SIMD⇒S : ℕ → SIMD-Shape → Shape
+SIMD⇒S lanes μ = ι lanes
+SIMD⇒S _ (ι n) = ι n
+SIMD⇒S lanes (ss₁ ⊗ ss₂) = SIMD⇒S lanes ss₁ ⊗ (SIMD⇒S lanes ss₂)
+
+private variable
+  s s₁ s₂ q p q₁ q₂ : Shape
+  n : ℕ
+
+private variable
+  ss : SIMD-Shape
 
 infixr 5 _⇒_
 data Ty : Set where
@@ -67,10 +81,28 @@ BLOCKS = 8
 _ : BLOCKS % LANES ≡ 0
 _ = refl
 
+--data Vec-AR : Shape → Set where
+--  vid : Vec-AR (ι LANES)
+--  mul : (n : ℕ) → Vec-AR (ι (n * LANES))
+--  mul′ : (n : ℕ) → Vec-AR (ι n ⊗ ι LANES)
+--  --left  : Vec-AR s₁ → Vec-AR (s₁ ⊗ s₂)
+--  right : Vec-AR s₂ → Vec-AR (s₁ ⊗ s₂)
+
+--is-Vec-AR : (s : Shape) → Dec (Vec-AR s)
+--is-Vec-AR (ι x) with x ≟ LANES | ?
+--... | yes refl | _ = yes vid
+--... | no ¬a    | tmp = ?
+--is-Vec-AR (s ⊗ s₁) = ?
+
+--NonZeroₛₛ : ( s : SIMD-Shape ) → Set
+--NonZeroₛₛ = ?
+
 infixl 2 _>>>_
 data Inp : Ty → Ty → Set where
   dft  : NonZero n → Inp (ar (ι 2 ⊗ ι n) R) (ar (ι 2 ⊗ ι n) R)
-  dft′  : Inp (ar (ι 2 ⊗ ι LANES) R) (ar (ι 2 ⊗ ι LANES) R)
+  dft′  : NonZero n → Inp (ar (ι 2 ⊗ (ι n ⊗ ι LANES)) R) (ar (ι 2 ⊗ (ι n ⊗ ι LANES)) R)
+  dft′′  : NonZero n → Inp (ar (ι 2 ⊗ ι (n * LANES)) R) (ar (ι 2 ⊗ ι (n * LANES)) R)
+  --dft′′  : NonZero n → Inp (ar (ι 2 ⊗ (ι n ⊗ μ)) R) (ar (ι 2 ⊗ (ι n ⊗ μ)) R)
   twid : ⦃ NonZeroₛ (s ⊗ p) ⦄ → Inp (ar (ι 2 ⊗ (s ⊗ p)) R) (ar (ι 2 ⊗ (s ⊗ p)) R) 
   
   part : Inp (ar s τ) (ar q τ) → s ⊂ p → Inp (ar p τ) (ar p τ)  
@@ -340,8 +372,8 @@ module ShowC where
   use-dft-macro : ℕ → String → String → String
   use-dft-macro n xs ys = printf "SPLIT_DFT(%u, ((real (*)[%u])%s), ((real (*)[%u])%s));" n n xs n ys
 
-  use-lane-dft-macro : String → String → String
-  use-lane-dft-macro xs ys = printf "LANE_DFT(((real (*)[%u])%s), ((real (*)[%u])%s))" LANES xs LANES ys
+  use-lane-dft-macro : ℕ → String → String → String
+  use-lane-dft-macro n xs ys = printf "LANE_DFT(%u, ((real (*)[%u * %u])%s), ((real (*)[%u * %u])%s))" n n LANES xs n LANES ys
 
   minus-omega : Component → (n : ℕ) → (j : String) → String
   minus-omega = printf "minus_omega_%s(%u, %s)" ∘ component-sym 
@@ -353,11 +385,10 @@ module ShowC where
     let use-dft = use-dft-macro n inp-var out-var
     copy-out-to-ptr ← copy-into-sel out-var ptr sel
     return $ (create-inp-mem ++ declare-out-mem ++ use-dft ++ copy-out-to-ptr) , arr ptr sel
-  to-vali dft′ (arr ptr sel) = do
-    --j ← generateIx (ι n)
+  to-vali (dft′ {n} nz-n) (arr ptr sel) = do
     inp-var , create-inp-mem  ← create-hole-copy real-type ptr sel
     out-var , declare-out-mem ← create-tmp-mem real-type sel (calloc-op real-type)
-    let use-dft = use-lane-dft-macro inp-var out-var
+    let use-dft = use-lane-dft-macro n inp-var out-var
     copy-out-to-ptr ← copy-into-sel out-var ptr sel
     return ((create-inp-mem ++ declare-out-mem ++ use-dft ++ copy-out-to-ptr) , arr ptr sel)
   to-vali (twid {s} {p}) (arr ptr sel) = do
