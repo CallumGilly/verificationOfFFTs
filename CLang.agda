@@ -461,6 +461,10 @@ module ShowC where
 
   --for-template : String → ℕ → String → String
   --for-template i n expr = printf "for (size_t %s = 0; %s < %u; %s++) {\n%s\n}" i i n i expr
+
+  ----- TODO: Change this such that a subshape ι n ⊂ s can be used to select 
+  ----- which loop to vectorise over.... maybe
+  TODO : ?
   SIMD-loop : ?SIMD s → (Ix s → String) → State ℕ String
   SIMD-loop {.(ι (m * LANES))} (ι m) f = do
     i ← generateIx (ι m)
