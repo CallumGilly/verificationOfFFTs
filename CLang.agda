@@ -6,8 +6,7 @@ open import Relation.Nullary
 open import Data.Nat
 open import Data.Nat.DivMod
 open import Data.Nat.Properties using (*-comm)
-open import Data.Fin using (Fin; zero; suc; cast; toℕ) hiding (_≟_)
-open import Data.Fin.Properties hiding (_≟_)
+open import Data.Fin using (Fin; zero; suc; cast; toℕ)
 open import Function
 
 open import Real using (Real)
@@ -100,7 +99,9 @@ data Inp : Ty → Ty → Set where
   --dft′  : NonZero n → Inp (ar (ι 2 ⊗ (ι n ⊗ ι LANES)) R) (ar (ι 2 ⊗ (ι n ⊗ ι LANES)) R)
   --dft′′  : NonZero n → Inp (ar (ι 2 ⊗ ι (n * LANES)) R) (ar (ι 2 ⊗ ι (n * LANES)) R)
   --dft′′  : NonZero n → Inp (ar (ι 2 ⊗ (ι n ⊗ μ)) R) (ar (ι 2 ⊗ (ι n ⊗ μ)) R)
+  pretwid : ⦃ NonZeroₛ (s ⊗ p) ⦄ → Inp (ar (ι 2 ⊗ (s ⊗ p)) R) (ar (ι 2 ⊗ (s ⊗ p)) R) 
   twid : ⦃ NonZeroₛ (s ⊗ p) ⦄ → Inp (ar (ι 2 ⊗ (s ⊗ p)) R) (ar (ι 2 ⊗ (s ⊗ p)) R) 
+  --izip : Neex Expr → Inp (ar s τ) (ar s σ)
   
   part : Inp (ar s τ) (ar q τ) → s ⊂ p → Inp (ar p τ) (ar p τ)  
   --part : Inp (ar q₁ τ) (ar q₂ τ) → (q₁⊂s₁ : q₁ ⊂ s₁) → (q₂⊂s₂ : q₂ ⊂ s₂) → (inv-⊂ q₁⊂s₁ ≡ inv-⊂ q₂⊂s₂) → Inp (ar s₁ τ) (ar s₂ τ)  
@@ -184,20 +185,40 @@ Following FFTN (fftn.c:157)
 --    _ : NonZeroₛ (recursive-transpose p ⊗ recursive-transpose s)
 --    _ = (nonZeroₛ-s⇒nonZeroₛ-sᵗ (nz-s ⊗ nz-p))
 
-TODO : ?
+--TODO : ?
 -- Why does this not give the correct results...
 
-`uffti : NonZeroₛ s → Inp (ar (ι 2 ⊗ s) R) (ar (ι 2 ⊗ s) R)
-`uffti (ι nz) = dft nz
-`uffti (_⊗_ {p = p} nzs nzp) =
-      part (`uffti nzs) (bothᵣ idh (left  idh)) 
-  >>> twid ⦃ nzs ⊗ nzp ⦄
-  >>> part (`uffti nzp) (bothᵣ idh (right idh)) 
+`uffti′ : NonZeroₛ s → Inp (ar (ι 2 ⊗ s) R) (ar (ι 2 ⊗ s) R)
+`uffti′ (ι nz) = dft nz
+`uffti′ {s ⊗ p} (_⊗_ {p = p} nzs nzp) =
+      part (`uffti′ {s} nzs) (bothᵣ idh (left  idh))
+  >>> pretwid ⦃ nzs ⊗ nzp ⦄
+  >>> part (`uffti′ {p} nzp) (bothᵣ idh (right idh))
 
-`ffti : NonZeroₛ s → Inp (ar (ι 2 ⊗ s) R) (ar (ι 2 ⊗ s) R)
-`ffti {s} nz-s = copy (eq ⊕ (♯ ∙ reindex (sym (|s|≡|sᵗ| {s})) ∙ ♭ ∙ recursive-transposeᵣ)) >>> `uffti nz-s
+`uffti : NonZeroₛ s → Inp (ar (ι 2 ⊗ s) R) (ar (ι 2 ⊗ (s ᵗ)) R)
+`uffti {s} nz-s = `uffti′ nz-s
+                  >>> copy (eq ⊕  recursive-transposeᵣ)
+                
 
-TODO = ?
+--`uffti {s} nz-s = copy (eq ⊕ recursive-transposeᵣ) 
+--                >>> `uffti′ (nonZeroₛ-s⇒nonZeroₛ-sᵗ nz-s) 
+--                >>> copy (eq ⊕ (♯ ∙ (reindex (sym $ |s|≡|sᵗ| {s})) ∙ ♭))
+
+`ffti : NonZeroₛ s → Inp (ar (ι 2 ⊗ s) R) (ar (ι 2 ⊗ (s ᵗ)) R)
+`ffti  = `uffti
+--TODO = ?
+
+private variable
+  n₁ n₂ n₃ : ℕ
+
+`fftCube : NonZero n₁ → NonZero n₂ → NonZero n₃ → Inp (ar (ι 2 ⊗ (ι n₁ ⊗ (ι n₂ ⊗ ι n₃))) R) (ar (ι 2 ⊗ (ι n₁ ⊗ (ι n₂ ⊗ ι n₃))) R)
+`fftCube {n₁} {n₂} {n₃} nz-n₁ nz-n₂ nz-n₃ = 
+      part (dft nz-n₁)                  (bothᵣ idh (left idh))
+  >>> twid ⦃ ι nz-n₁ ⊗ (ι nz-n₂ ⊗ ι nz-n₃) ⦄
+  >>> part (dft nz-n₂)                  (bothᵣ idh (right (srt (left idh))))
+  >>> part (twid ⦃ ι nz-n₂ ⊗ ι nz-n₃ ⦄) (bothᵣ idh (right idh))
+  >>> part (dft nz-n₃)                  (bothᵣ idh (right (srt (right idh))))
+  >>> copy (eq ⊕ (♯ ∙ reindex (sym $ |s|≡|sᵗ| {ι n₁ ⊗ (ι n₂ ⊗ ι n₃)}) ∙ ♭ ∙ recursive-transposeᵣ))
 
 {-
 `ffti : NonZeroₛ s → Inp (ar (ι 2 ⊗ s) R) (ar (ι 2 ⊗ s) R)
@@ -228,7 +249,7 @@ module Interp (real : Real) (cplx : Cplx) where
   open import Matrix.Equality
   open import Matrix.Reshape
   open import FFT cplx using (twiddles; offset-prod; FFT′; FFT′′)
-  open import Proof cplx
+--  open import Proof cplx
 
   Sem : Ty → Set
   Sem R = ℝ
@@ -292,6 +313,9 @@ module ShowC where
   offset (ι x) = x
   offset {s ⊗ p} (i ⊗ j) = printf "((%u * %s) + %s)" (size p) (offset i) (offset j)
 
+  iota : Ix (ι n) → String
+  iota (ι x) = x
+
   offset-prod : Ix s → String
   offset-prod (ι x) = x
   offset-prod {s ⊗ p} (i ⊗ j) = printf "(%s * %s)" (offset i) (offset j)
@@ -341,6 +365,15 @@ module ShowC where
   rshp-ix Reshape.swap (i₁ ⊗ i₂) = i₂ ⊗ i₁
   rshp-ix assoₗ ((i ⊗ j) ⊗ k) = i ⊗ (j ⊗ k)
   rshp-ix assoᵣ (i ⊗ (j ⊗ k)) = (i ⊗ j) ⊗ k
+
+  -- Have to be careful here because, assuming an input shape of s ⊗ p, in the inp definition of 
+  -- ufft I do not swap and so call pretwid over the shape s ⊗ p, while in the agda definition of prefft
+  -- We call pre-twid over p ⊗ s!
+  preoffset-prod : Ix (s ⊗ p) → String
+  preoffset-prod {s} {p} (i ⊗ j) = printf "(%s * %s)" (iota (rshp-ix (♭ ∙ recursive-transposeᵣ) i)) (iota (rshp-ix (♭ ) j))
+  --preoffset-prod {s} {p} (i ⊗ j) = printf "(%s * %s)" (offset (i)) (offset (rshp-ix (recursive-transposeᵣ) j))
+  --preoffset-prod {s} {p} (i ⊗ j) = printf "(%s * %s)" (offset (rshp-ix recursive-transposeᵣ i)) (offset (j))
+  --preoffset-prod {s} {p} (i ⊗ j) = printf "(%s * %s)" (iota (rshp-ix (♭) i)) (iota (rshp-ix (♭ ∙ recursive-transposeᵣ) j))
   
   data Sel : Shape → Shape → Set where
     idh   : Sel s s
@@ -454,26 +487,57 @@ module ShowC where
     tmp-var ← fresh-var
     let init-tmp-var = printf "%s %s;\n" real-type tmp-var
 
+    let power = offset-prod i
+    let size-sp = size s * size p
     let ops =  (printf "%s = %s;\n" tmp-var memSel_r)
             ++ (printf 
                   "%s = (%s * %s) - (%s * %s);\n" 
                   memSel_r 
                   memSel_r 
-                  (minus-omega REAL (size s * size p) (offset-prod i))
+                  (minus-omega REAL size-sp power)
                   memSel_i
-                  (minus-omega IMAG (size s * size p) (offset-prod i))
+                  (minus-omega IMAG size-sp power)
                )
             ++ (printf 
                   "%s = (%s * %s) + (%s * %s);\n" 
                   memSel_i 
                   tmp-var
-                  (minus-omega IMAG (size s * size p) (offset-prod i))
+                  (minus-omega IMAG size-sp power)
                   memSel_i
-                  (minus-omega REAL (size s * size p) (offset-prod i))
+                  (minus-omega REAL size-sp power)
                )
     
     return $ (init-tmp-var ++ loop-nest (s ⊗ p) i ops , arr ptr se)
+  to-vali (pretwid {s} {p}) (arr ptr se) = do
+    i ← generateIx (s ⊗ p)
+    ----- I Really wish I had fin types here....
+    let memSel_r = sel-to-str ptr se ((component-ix REAL) ⊗ i)
+    let memSel_i = sel-to-str ptr se ((component-ix IMAG) ⊗ i)
+    
+    tmp-var ← fresh-var
+    let init-tmp-var = printf "%s %s;\n" real-type tmp-var
 
+    let power = preoffset-prod i
+    let size-sp = size s * size p
+    let ops =  (printf "%s = %s;\n" tmp-var memSel_r)
+            ++ (printf 
+                  "%s = (%s * %s) - (%s * %s);\n" 
+                  memSel_r 
+                  memSel_r 
+                  (minus-omega REAL size-sp power)
+                  memSel_i
+                  (minus-omega IMAG size-sp power)
+               )
+            ++ (printf 
+                  "%s = (%s * %s) + (%s * %s);\n" 
+                  memSel_i 
+                  tmp-var
+                  (minus-omega IMAG size-sp power)
+                  memSel_i
+                  (minus-omega REAL size-sp power)
+               )
+    
+    return $ (init-tmp-var ++ loop-nest (s ⊗ p) i ops , arr ptr se)
   to-vali (part {s} {p = p} e s⊆p ) (arr {s = t} ptr se) = 
     do
       i , s-sel ← ⊂-to-sel s⊆p
@@ -616,13 +680,17 @@ module Tests where
   gen-fft s with show′ (num (arr R)) (arr "inp" idh) (fft s) "fft"
   ... | body , header = (preamble ++ header) , (preamble ++ body)
 
-  --gen-ufft : (s : Shape) → ⦃ _ : NonZeroₛ s ⦄ → String × String
-  --gen-ufft s ⦃ nz-s ⦄ with show′ (num (arr R)) (arr "inp" idh) (`uffti nz-s) "ufft"
-  --... | body , header = (preamble ++ header) , (preamble ++ body)
+  gen-ufft : (s : Shape) → ⦃ _ : NonZeroₛ s ⦄ → String × String
+  gen-ufft s ⦃ nz-s ⦄ with show′ (num (arr R)) (arr "inp" idh) (`uffti nz-s) "ufft"
+  ... | body , header = (preamble ++ header) , (preamble ++ body)
+
+  gen-fft-cube : ⦃ _ : NonZero n₁ ⦄ → ⦃ _ : NonZero n₂ ⦄ → ⦃ _ : NonZero n₃ ⦄ → String × String
+  gen-fft-cube ⦃ nz-n₁ ⦄ ⦃ nz-n₂ ⦄ ⦃ nz-n₃ ⦄ with show′ (num (arr R)) (arr "inp" idh) (`fftCube nz-n₁ nz-n₂ nz-n₃ ) "fftCube"
+  ... | body , header = (preamble ++ header) , (preamble ++ body)
 
   gen-transpose-test : (s : Shape) → String × String
   gen-transpose-test s with show′ (num (arr R)) (arr "inp" idh) (`transpose-test₁ {s}) "transposeTest"
   ... | body , header = (preamble ++ header) , (preamble ++ body)
 
 
-open Tests using (gen-fft; gen-transpose-test) public
+open Tests using (gen-fft; gen-ufft; gen-fft-cube; gen-transpose-test) public

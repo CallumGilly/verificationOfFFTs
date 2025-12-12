@@ -44,7 +44,7 @@ sum = S.sum _+_ 0ℂ +-isCommutativeMonoid
 --{-# DISPLAY S.sum _+_ 0ℂ +-isCommutativeMonoid = sum #-}
 sum-cong = S.sum-cong _+_ 0ℂ +-isCommutativeMonoid
 
-open import Matrix.Reshape using (reshape; Reshape; flat; ♭; ♯; recursive-transpose; recursive-transposeᵣ; _∙_; rev; _⊕_; swap; eq; split; _⟨_⟩; reindex; rev-eq; flatten-reindex; |s|≡|sᵗ|; reindex-reindex; recursive-transpose-inv)
+open import Matrix.Reshape using (reshape; Reshape; flat; ♭; ♯; recursive-transpose; recursive-transposeᵣ; _∙_; rev; _⊕_; swap; eq; split; _⟨_⟩; reindex; rev-eq; flatten-reindex; |s|≡|sᵗ|; reindex-reindex; recursive-transpose-inv; recursive-transpose-invᵣ)
 open import Function.Base using (_$_; id; _∘_; flip; _∘₂_)
 
 open import FFT cplx using (DFT; FFT; DFT′; FFT′; FFT′′; offset-prod; iota; twiddles)
@@ -497,4 +497,107 @@ fft≅dft {s} arr i | no ¬nz-s  | no ¬nz-#sᵗ  | p | j =
     $ (sym (rev-eq ♯ p)) 
     ⊡ (cong _⟨ rev ♯ ⟩ (¬nonZero-N⇒PosN-irrelevant (¬nonZero-sᵗ⇒¬nonZero-s {s} ¬nz-#sᵗ) (p ⟨ ♯ ⟩) (j ⟨ ♯ ⟩) ))
     ⊡ (rev-eq ♯ j)
+
+
+
+
+
+
+
+fin-nz : (N : ℕ) → Fin N → NonZero N
+fin-nz (suc n) i = _
+
+pos⇒nz : Position s → NonZeroₛ s
+pos⇒nz (ι i) = ι (fin-nz _ i)
+pos⇒nz (i ⊗ i₁) = pos⇒nz i ⊗ pos⇒nz i₁
+
+zs-nopos : ¬ NonZeroₛ s → Position s → ⊥
+zs-nopos ¬nz-s (ι {suc n} i) = ¬nz-s (ι (fin-nz _ i))
+zs-nopos ¬nz-s (i ⊗ i₁) = ¬nz-s (pos⇒nz (i ⊗ i₁)) 
+
+twiddles′ :  Ar (s ⊗ p) ℂ
+twiddles′ {s} {p} i with nonZeroDec (s ⊗ p)
+... | no ¬nz = ⊥-elim (zs-nopos ¬nz i)
+... | yes nz = -ω (length (s ⊗ p)) ⦃ nonZeroₛ-s⇒nonZero-s nz ⦄ (offset-prod i)
+
+dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ
+dft {n} xs with nonZero? n
+... | no ¬nz = λ { (ι j) → ⊥-elim (¬nz (fin-nz _ j)) }
+... | yes nz = λ j → sum (λ k → xs k * -ω n ⦃ nz ⦄ (iota k *ₙ iota j))
+
+
+-- Original FFT
+fft : ∀ {s : Shape} → Ar s ℂ → Ar (recursive-transpose s) ℂ
+fft {ι n} = dft
+fft {s ⊗ p} a = let
+                  b = mapLeft fft (reshape swap a)  
+                  c = zipWith _*_ b twiddles′
+                  d  = mapLeft fft (reshape swap c)
+                in reshape swap d
+
+-- XXX: Here is where we compute twiddles differently!
+preoffset-prod : Position (s ⊗ p) → ℕ
+preoffset-prod (k ⊗ j) = iota (k ⟨ ♯ ⟩) *ₙ iota (j ⟨ rev recursive-transposeᵣ ∙ ♯ ⟩)
+--                                                   ^
+--                                                   |
+--                                                   +---- HERE
+
+pretwiddles′ :  Ar (s ⊗ p) ℂ
+pretwiddles′ {s} {p} i with nonZeroDec (s ⊗ p)
+... | no ¬nz = ⊥-elim (zs-nopos ¬nz i)
+... | yes nz = -ω (length (s ⊗ p)) ⦃ nonZeroₛ-s⇒nonZero-s nz ⦄ (preoffset-prod i)
+
+
+-- FFT that does not swap dimensions
+prefft : ∀ {s : Shape} → Ar s ℂ → Ar s ℂ
+prefft {ι n} = dft
+prefft {s ⊗ p} a = let
+  b = mapLeft (prefft {s}) (reshape swap a)  
+  c = zipWith _*_ b pretwiddles′
+  d = mapLeft (prefft {p}) (reshape swap c)
+  in d
+
+trans-helper : (i : Position (recursive-transpose s)) → ((i ⟨ recursive-transposeᵣ ⟩) ⟨ rev recursive-transposeᵣ ⟩) ≡ i
+trans-helper {ι n} (ι i) = refl
+trans-helper {s ⊗ s₁} (i ⊗ i₁) rewrite
+    trans-helper i 
+  | trans-helper i₁ = refl
+
+-- Helper lemma
+-- twid {s} {transp p} (j ⊗ i) ≟ pretwid {s} {p} (j ⊗ transp i)
+-- |s| * |pᵗ|  (flat j * flat i) ≟ |s| * |p|  (flat j * flat (transp (transp i)))
+twid-pretwid : (i : Position s) (j : Position (recursive-transpose p))
+             → twiddles′ (i ⊗ j) ≡ pretwiddles′ (i ⊗ (j ⟨ recursive-transposeᵣ ⟩))
+twid-pretwid {s}{p} i j  with nonZeroDec (s ⊗ recursive-transpose p)
+... | no ¬nzspt = ⊥-elim (¬nzspt (pos⇒nz (i ⊗ j)))
+... | yes (nzs ⊗ nzpt) with nonZeroDec (s ⊗ p)
+... | no ¬nzsp = ⊥-elim (¬nzsp (pos⇒nz (i ⊗ (j ⟨ rev recursive-transposeᵣ ∙ recursive-transpose-invᵣ ⟩))))
+... | yes (nzs ⊗ nzp) rewrite trans-helper j = -ω-cong₂ (cong (length s *ₙ_) (sym (|s|≡|sᵗ| {p}))) refl 
+  where
+    instance
+      _ : NonZero (length s *ₙ length (recursive-transpose p))
+      _ = nonZeroₛ-s⇒nonZero-s (nzs ⊗ nzpt)
+      _ : NonZero (length s *ₙ length p)
+      _ = nonZeroₛ-s⇒nonZero-s (nzs ⊗ nzp)
+
+
+
+dft-cong : ∀ {xs ys : Ar (ι N) ℂ} → ⦃ nonZero-N : NonZero N ⦄ → xs ≅ ys → dft xs ≅ dft ys
+dft-cong {suc N} ⦃ nonZero-N ⦄ prf (ι j) = sum-cong {suc N} (λ i → cong₂ _*_ (prf i) refl)
+
+-- Prove that fft a ~ trans (prefft a)
+trans-after : (a b : Ar s ℂ) → (∀ i → a i ≡ b i) → ∀ i → fft a i ≡ reshape recursive-transposeᵣ (prefft b) i
+trans-after {ι zero} a b e (ι ())
+trans-after {ι (suc x)} a b e i with dft-cong e 
+... | tm = tm i
+trans-after {s ⊗ s₁} a b e (i ⊗ i₁) = trans-after _ _ (λ j → Eq.cong₂ _*_ (trans-after _ _ (λ i₂ → e ((j ⊗ i₂) ⟨ swap ⟩)) i₁) (twid-pretwid j _)) i
+
+
+
+
+
+
+
+
+
 
