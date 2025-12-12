@@ -20,8 +20,8 @@ void printer(size_t n, complex real input[], real dftOutput[], real fftOutput[])
 /*****************************************************************************/
 
 // FFT Size & Shape
-#define SIZE 1155
-typedef real (*FFT_TYPE)[2][3][5][7][11];
+#define SIZE 384
+typedef real (*FFT_TYPE)[2][4][8][12];
 
 // Transpose Test Size
 #define TRANSPOSE_TEST_SIZE 16

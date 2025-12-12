@@ -28,16 +28,6 @@ nzᵗ = nonZeroₛ-s⇒nonZeroₛ-sᵗ
 nz-# : {s : Shape} → NonZeroₛ s → NonZero (size s)
 nz-# = nonZeroₛ-s⇒nonZero-s
 
-data SIMD-Shape : Set where
-  μ   : SIMD-Shape
-  ι   : ℕ → SIMD-Shape
-  _⊗_ : SIMD-Shape → SIMD-Shape → SIMD-Shape
-
-SIMD⇒S : ℕ → SIMD-Shape → Shape
-SIMD⇒S lanes μ = ι lanes
-SIMD⇒S _ (ι n) = ι n
-SIMD⇒S lanes (ss₁ ⊗ ss₂) = SIMD⇒S lanes ss₁ ⊗ (SIMD⇒S lanes ss₂)
-
 private variable
   s s₁ s₂ q p q₁ q₂ : Shape
   n : ℕ
@@ -77,6 +67,10 @@ BLOCKS = 8
 _ : BLOCKS % LANES ≡ 0
 _ = refl
 
+data ?SIMD : Shape → Set where
+  ι : (m : ℕ) → ?SIMD (ι (m * LANES))
+  _⊗_ : ?SIMD s → ?SIMD p → ?SIMD (s ⊗ p)
+
 --data Vec-AR : Shape → Set where
 --  vid : Vec-AR (ι LANES)
 --  mul : (n : ℕ) → Vec-AR (ι (n * LANES))
@@ -99,7 +93,7 @@ data Inp : Ty → Ty → Set where
   --dft′  : NonZero n → Inp (ar (ι 2 ⊗ (ι n ⊗ ι LANES)) R) (ar (ι 2 ⊗ (ι n ⊗ ι LANES)) R)
   --dft′′  : NonZero n → Inp (ar (ι 2 ⊗ ι (n * LANES)) R) (ar (ι 2 ⊗ ι (n * LANES)) R)
   --dft′′  : NonZero n → Inp (ar (ι 2 ⊗ (ι n ⊗ μ)) R) (ar (ι 2 ⊗ (ι n ⊗ μ)) R)
-  pretwid : ⦃ NonZeroₛ (s ⊗ p) ⦄ → Inp (ar (ι 2 ⊗ (s ⊗ p)) R) (ar (ι 2 ⊗ (s ⊗ p)) R) 
+  pretwid : ⦃ NonZeroₛ (s ⊗ p) ⦄ → ?SIMD (s ⊗ p) → Inp (ar (ι 2 ⊗ (s ⊗ p)) R) (ar (ι 2 ⊗ (s ⊗ p)) R) 
   twid : ⦃ NonZeroₛ (s ⊗ p) ⦄ → Inp (ar (ι 2 ⊗ (s ⊗ p)) R) (ar (ι 2 ⊗ (s ⊗ p)) R) 
   --izip : Neex Expr → Inp (ar s τ) (ar s σ)
   
@@ -188,15 +182,15 @@ Following FFTN (fftn.c:157)
 --TODO : ?
 -- Why does this not give the correct results...
 
-`uffti′ : NonZeroₛ s → Inp (ar (ι 2 ⊗ s) R) (ar (ι 2 ⊗ s) R)
-`uffti′ (ι nz) = dft nz
-`uffti′ {s ⊗ p} (_⊗_ {p = p} nzs nzp) =
-      part (`uffti′ {s} nzs) (bothᵣ idh (left  idh))
-  >>> pretwid ⦃ nzs ⊗ nzp ⦄
-  >>> part (`uffti′ {p} nzp) (bothᵣ idh (right idh))
+`uffti′ : NonZeroₛ s → ?SIMD s → Inp (ar (ι 2 ⊗ s) R) (ar (ι 2 ⊗ s) R)
+`uffti′ (ι nz) _ = dft nz
+`uffti′ {s ⊗ p} (_⊗_ {p = p} nzs nzp) (pred₁ ⊗ pred₂) = 
+      part (`uffti′ {s} nzs pred₁) (bothᵣ idh (left  idh))
+  >>> pretwid ⦃ nzs ⊗ nzp ⦄ (pred₁ ⊗ pred₂)
+  >>> part (`uffti′ {p} nzp pred₂) (bothᵣ idh (right idh))
 
-`uffti : NonZeroₛ s → Inp (ar (ι 2 ⊗ s) R) (ar (ι 2 ⊗ (s ᵗ)) R)
-`uffti {s} nz-s = `uffti′ nz-s
+`uffti : NonZeroₛ s → ?SIMD s → Inp (ar (ι 2 ⊗ s) R) (ar (ι 2 ⊗ (s ᵗ)) R)
+`uffti {s} nz-s pred = `uffti′ nz-s pred
                   >>> copy (eq ⊕  recursive-transposeᵣ)
                 
 
@@ -204,7 +198,7 @@ Following FFTN (fftn.c:157)
 --                >>> `uffti′ (nonZeroₛ-s⇒nonZeroₛ-sᵗ nz-s) 
 --                >>> copy (eq ⊕ (♯ ∙ (reindex (sym $ |s|≡|sᵗ| {s})) ∙ ♭))
 
-`ffti : NonZeroₛ s → Inp (ar (ι 2 ⊗ s) R) (ar (ι 2 ⊗ (s ᵗ)) R)
+`ffti : NonZeroₛ s → ?SIMD s → Inp (ar (ι 2 ⊗ s) R) (ar (ι 2 ⊗ (s ᵗ)) R)
 `ffti  = `uffti
 --TODO = ?
 
@@ -465,6 +459,21 @@ module ShowC where
     i ← generateIx s
     return $ loop-nest s i $ printf "%s = %s;" (sel-to-str toPtr se i) (to-sel i fromPtr)
 
+  --for-template : String → ℕ → String → String
+  --for-template i n expr = printf "for (size_t %s = 0; %s < %u; %s++) {\n%s\n}" i i n i expr
+  SIMD-loop : ?SIMD s → (Ix s → String) → State ℕ String
+  SIMD-loop {.(ι (m * LANES))} (ι m) f = do
+    i ← generateIx (ι m)
+    a ← generateIx (ι LANES)
+    let j = rshp-ix flat (i ⊗  a)
+    return  $  loop-nest (ι m) i
+            $  "\n#pragma omp simd\n" 
+            ++ loop-nest (ι LANES) a (f j)
+  SIMD-loop {(s₁ ⊗ s₂)} (_ ⊗ pred₂) f = do
+    i ← generateIx s₁
+    inner ← SIMD-loop pred₂ λ j → f (i ⊗ j)
+    return $ loop-nest s₁ i inner
+
   use-dft-macro : ℕ → String → String → String
   use-dft-macro n xs ys = printf "SPLIT_DFT(%u, ((real (*)[%u])%s), ((real (*)[%u])%s));" n n xs n ys
 
@@ -508,36 +517,34 @@ module ShowC where
                )
     
     return $ (init-tmp-var ++ loop-nest (s ⊗ p) i ops , arr ptr se)
-  to-vali (pretwid {s} {p}) (arr ptr se) = do
-    i ← generateIx (s ⊗ p)
-    ----- I Really wish I had fin types here....
-    let memSel_r = sel-to-str ptr se ((component-ix REAL) ⊗ i)
-    let memSel_i = sel-to-str ptr se ((component-ix IMAG) ⊗ i)
-    
+  to-vali (pretwid {s} {p} pred) (arr ptr se) = do
+
     tmp-var ← fresh-var
     let init-tmp-var = printf "%s %s;\n" real-type tmp-var
 
-    let power = preoffset-prod i
     let size-sp = size s * size p
-    let ops =  (printf "%s = %s;\n" tmp-var memSel_r)
+
+    simd-loop ← SIMD-loop pred λ i →
+               (printf "%s = %s;\n" tmp-var (sel-to-str ptr se ((component-ix REAL) ⊗ i)))
             ++ (printf 
                   "%s = (%s * %s) - (%s * %s);\n" 
-                  memSel_r 
-                  memSel_r 
-                  (minus-omega REAL size-sp power)
-                  memSel_i
-                  (minus-omega IMAG size-sp power)
+                  (sel-to-str ptr se ((component-ix REAL) ⊗ i)) 
+                  (sel-to-str ptr se ((component-ix REAL) ⊗ i)) 
+                  (minus-omega REAL size-sp (preoffset-prod i))
+                  (sel-to-str ptr se ((component-ix IMAG) ⊗ i))
+                  (minus-omega IMAG size-sp (preoffset-prod i))
                )
             ++ (printf 
                   "%s = (%s * %s) + (%s * %s);\n" 
-                  memSel_i 
+                  (sel-to-str ptr se ((component-ix IMAG) ⊗ i)) 
                   tmp-var
-                  (minus-omega IMAG size-sp power)
-                  memSel_i
-                  (minus-omega REAL size-sp power)
+                  (minus-omega IMAG size-sp (preoffset-prod i))
+                  (sel-to-str ptr se ((component-ix IMAG) ⊗ i))
+                  (minus-omega REAL size-sp (preoffset-prod i))
                )
     
-    return $ (init-tmp-var ++ loop-nest (s ⊗ p) i ops , arr ptr se)
+    return (init-tmp-var ++ simd-loop , arr ptr se)
+    --return $ (init-tmp-var ++ loop-nest (s ⊗ p) i ops , arr ptr se)
   to-vali (part {s} {p = p} e s⊆p ) (arr {s = t} ptr se) = 
     do
       i , s-sel ← ⊂-to-sel s⊆p
@@ -641,8 +648,8 @@ module Tests where
   fft s = `fft {s = s}
   -}
 
-  fft : (s : Shape) → ⦃ _ : NonZeroₛ s ⦄ → Inp _ _
-  fft s ⦃ nz ⦄ = `ffti nz
+  fft : (s : Shape) → ⦃ _ : NonZeroₛ s ⦄ → ?SIMD s → Inp _ _
+  fft s ⦃ nz ⦄ = `ffti nz 
 
   --isNum : (τ : Ty) → Dec (Num τ)
   --isNum C = yes C
@@ -676,12 +683,12 @@ module Tests where
            ++ "#include \"../src/dft.h\"\n"
 
 
-  gen-fft : (s : Shape) → ⦃ _ : NonZeroₛ s ⦄ → String × String
-  gen-fft s with show′ (num (arr R)) (arr "inp" idh) (fft s) "fft"
+  gen-fft : (s : Shape) → ⦃ _ : NonZeroₛ s ⦄ → ?SIMD s → String × String
+  gen-fft s pred with show′ (num (arr R)) (arr "inp" idh) (fft s pred) "fft"
   ... | body , header = (preamble ++ header) , (preamble ++ body)
 
-  gen-ufft : (s : Shape) → ⦃ _ : NonZeroₛ s ⦄ → String × String
-  gen-ufft s ⦃ nz-s ⦄ with show′ (num (arr R)) (arr "inp" idh) (`uffti nz-s) "ufft"
+  gen-ufft : (s : Shape) → ⦃ _ : NonZeroₛ s ⦄ → ?SIMD s → String × String
+  gen-ufft s ⦃ nz-s ⦄ pred with show′ (num (arr R)) (arr "inp" idh) (`uffti nz-s pred) "ufft"
   ... | body , header = (preamble ++ header) , (preamble ++ body)
 
   gen-fft-cube : ⦃ _ : NonZero n₁ ⦄ → ⦃ _ : NonZero n₂ ⦄ → ⦃ _ : NonZero n₃ ⦄ → String × String

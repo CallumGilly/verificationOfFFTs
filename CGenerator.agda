@@ -2,7 +2,7 @@
 
 module CGenerator where
 
-  open import CLang using (gen-fft; gen-transpose-test; gen-fft-cube)
+  open import CLang using (gen-fft; gen-transpose-test; gen-fft-cube; ?SIMD; ι; _⊗_)
   open import Matrix using (Shape; ι; _⊗_) renaming (length to size)
   open import Matrix.NonZero using (ι; _⊗_; NonZeroₛ)
   open import IO using (IO; run; Main; _>>_; _>>=_)
@@ -18,12 +18,15 @@ module CGenerator where
   --------------------------
 
   sh : Shape
-  sh = (ι 3 ⊗ ι 5) ⊗ (ι 7 ⊗ ι 11)  -- ((ι 4 ⊗ ι 2) ⊗ ι 3) ⊗ ι 3
+  sh = (ι 4 ⊗ ι 8) ⊗ ι 12   -- ((ι 4 ⊗ ι 2) ⊗ ι 3) ⊗ ι 3
 
   -- My love for instance arguments remains strong
   instance
     _ : NonZeroₛ sh
-    _ = (ι _ ⊗ ι _) ⊗ (ι _ ⊗ ι _)
+    _ = (ι _ ⊗ ι _) ⊗ ι _ 
+
+  pred : ?SIMD sh
+  pred = (ι 1 ⊗ ι 2) ⊗ ι 3
 
   -------------------------------------
   ---- Set shape of transpose test ----
@@ -52,7 +55,7 @@ module CGenerator where
 
   main : Main
   main = run do
-    let (fft-head , fft-body) = gen-fft sh
+    let (fft-head , fft-body) = gen-fft sh pred
     writeFile "./generated/fft.h" fft-head
     writeFile "./generated/fft.c" fft-body
 
