@@ -87,6 +87,9 @@ data ?SIMD : Shape → Set where
 --NonZeroₛₛ : ( s : SIMD-Shape ) → Set
 --NonZeroₛₛ = ?
 
+--assoᵣ : Reshape (s ⊗ (p ⊗ q)) ((s ⊗ p) ⊗ q)
+--assoᵣ {s} {p} {q} = ?
+
 infixl 2 _>>>_
 data Inp : Ty → Ty → Set where
   dft  : NonZero n → Inp (ar (ι 2 ⊗ ι n) R) (ar (ι 2 ⊗ ι n) R)
@@ -272,6 +275,7 @@ module ShowC where
   open import Data.String hiding (show)
   open import Data.Product hiding (swap)
   open import Data.Maybe hiding (_>>=_)
+  open import Data.Empty
   open import Text.Printf
   open import Relation.Nullary
   open import Effect.Monad 
@@ -464,9 +468,197 @@ module ShowC where
 
   ----- TODO: Change this such that a subshape ι n ⊂ s can be used to select 
   ----- which loop to vectorise over.... maybe
-  TODO : ?
+
+  -- This needs to do the actuall looping
+
+  ⊂-preserves-SIMD : ?SIMD s → p ⊂ s → ?SIMD p
+  ⊆-preserves-SIMD : ?SIMD s → p ⊆ s → ?SIMD p
+
+  ⊂-preserves-SIMD {s₁ ⊗ s₂} (SIMD-s₁ ⊗ SIMD-s₂) (left  p⊆s₁) = ⊆-preserves-SIMD SIMD-s₁ p⊆s₁
+  ⊂-preserves-SIMD {s₁ ⊗ s₂} (SIMD-s₁ ⊗ SIMD-s₂) (right p⊆s₂) = ⊆-preserves-SIMD SIMD-s₂ p⊆s₂
+  ⊂-preserves-SIMD {s₁ ⊗ s₂} (SIMD-s₁ ⊗ SIMD-s₂) (bothₗ q₁⊂s₁ q₂⊆s₂) = ⊂-preserves-SIMD SIMD-s₁ q₁⊂s₁ ⊗ ⊆-preserves-SIMD SIMD-s₂ q₂⊆s₂
+  ⊂-preserves-SIMD {s₁ ⊗ s₂} (SIMD-s₁ ⊗ SIMD-s₂) (bothᵣ q₁⊆s₁ q₂⊂s₂) = ⊆-preserves-SIMD SIMD-s₁ q₁⊆s₁ ⊗ ⊂-preserves-SIMD SIMD-s₂ q₂⊂s₂
+
+  ⊆-preserves-SIMD {ι _} (ι m) idh = ι m
+  ⊆-preserves-SIMD (SIMD-s₁ ⊗ SIMD-s₂) idh = SIMD-s₁ ⊗ SIMD-s₂
+  ⊆-preserves-SIMD (SIMD-s₁ ⊗ SIMD-s₂) (srt p⊂s) = ⊂-preserves-SIMD (SIMD-s₁ ⊗ SIMD-s₂) p⊂s
+
+
+  -- combine-⊆ cannot be defined (easily) as inv-⊆ is not guaruteed to exist, show
+  -- I ended up with this ugly mess
+  combine-⊂ : (p⊂s : p ⊂ s) → Ix p → Ix (inv-⊂ p⊂s) → Ix s
+  combine-⊂ (left idh) ix-p ix-p′ = ix-p ⊗ ix-p′
+  combine-⊂ (left (srt p⊂s₁)) ix-p (ix-p′ ⊗ ix-s₁) = combine-⊂ p⊂s₁ ix-p ix-p′ ⊗ ix-s₁
+  combine-⊂ (right idh) ix-p ix-p′ = ix-p′ ⊗ ix-p
+  combine-⊂ (right (srt p⊂s₂)) ix-p (ix-s₁ ⊗ ix-p′) = ix-s₁ ⊗ combine-⊂ p⊂s₂ ix-p ix-p′
+  combine-⊂ (bothₗ q₁⊂s₁ idh) (ix-q₁ ⊗ ix-q₂) ix-q₁′ = combine-⊂ q₁⊂s₁ ix-q₁ ix-q₁′ ⊗ ix-q₂
+  combine-⊂ (bothₗ q₁⊂s₁ (srt q₂⊂s₂)) (ix-q₁ ⊗ ix-q₂) (ix-q₁′ ⊗ ix-q₂′) = combine-⊂ q₁⊂s₁ ix-q₁ ix-q₁′ ⊗ combine-⊂ q₂⊂s₂ ix-q₂ ix-q₂′
+  combine-⊂ (bothᵣ idh q₂⊂s₂) (ix-q₁ ⊗ ix-q₂) ix-q₁′ = ix-q₁ ⊗ combine-⊂ q₂⊂s₂ ix-q₂ ix-q₁′
+  combine-⊂ (bothᵣ (srt q₁⊂s₁) q₂⊂s₂) (ix-q₁ ⊗ ix-q₂) (ix-q₁′ ⊗ ix-q₂′) = combine-⊂ q₁⊂s₁ ix-q₁ ix-q₁′ ⊗ combine-⊂ q₂⊂s₂ ix-q₂ ix-q₂′
+
+  --tmp {.(ι (m * LANES))} {p} (ι m) = ?
+  --tmp {s ⊗ s₁} m = ?
+
+  right-most : Shape → ℕ
+  right-most (ι n) = n
+  right-most (_ ⊗ s) = right-most s
+
+  right-most-sub : (s : Shape) → (ι (right-most s)) ⊆ s
+  right-most-sub (ι n) = idh
+  right-most-sub (s₁ ⊗ s₂) = srt (right (right-most-sub s₂))
+
+  SIMD-pragma : String
+  SIMD-pragma = "\n#pragma omp simd\n"
+
+{-
+
+  SIMD-loop′ : ?SIMD s → (Ix s → String) → (ι (right-most s)) ⊆ s → ?SIMD (ι (right-most s)) → State ℕ String
+  SIMD-loop′ {s} SIMD-s f ιn⊆s SIMD-ιn with right-most s -- This with is needed to be able to admit the absurd case
+  SIMD-loop′ {.(ι (m * LANES))} (ι m) f idh SIMD-ιn | .(m * LANES) = do
+    -- In this case we don't need to copy out, as the data is already vecotorised
+    i ← generateIx (ι m)
+    a ← generateIx (ι LANES)
+    let j = rshp-ix flat (i ⊗  a)
+    return  (loop-nest (ι m) i
+            $  SIMD-pragma
+            ++ loop-nest (ι LANES) a (f j))
+  SIMD-loop′ {s₁ ⊗ s₂} (SIMD-s₁ ⊗ SIMD-s₂) f (srt ιn⊂s) (ι m) | _ with inv-⊂ ιn⊂s
+  SIMD-loop′ {s₁ ⊗ s₂} (SIMD-s₁ ⊗ SIMD-s₂) f (srt ιn⊂s) (ι m) | _ | s′ = do
+    ix-s′ ← generateIx (inv-⊂ ιn⊂s)
+    
+    ix-m ← generateIx (ι m)
+    ix-lanes ← generateIx (ι LANES)
+    -- This hole is the point at which I can no longer use inp, as I'm not parsing enough information
+
+    let tmp = combine-⊂ ιn⊂s (rshp-ix flat (ix-m ⊗ ix-lanes)) ix-s′
+    return (f ?) 
+
+-}
+  --SIMD-loop′ {ι x} SIMD-s f ιn⊆s (ι m) | n@.(m * LANES) | nothing = ?
+  --SIMD-loop′ {s ⊗ s₁} (SIMD-s ⊗ SIMD-s₁) f (srt (left x)) (ι m) | n@.(m * LANES) | nothing = ?
+  --SIMD-loop′ {s ⊗ s₁} (SIMD-s ⊗ SIMD-s₁) f (srt (right x)) (ι m) | n@.(m * LANES) | nothing = ?
+
+  -- This case is invalid, but is a pain to find a ⊥ case for
+  --do 
+  --SIMD-loop′ {s} SIMD-s f ιn⊆s (ι m) | n@.(m * LANES) | just x = do
+  --  --- Create temp array
+  --  working-mem ← fresh-var
+  --  let assign-mem = printf "(*%s)[%u][%u] = malloc(sizeof *%s);" working-mem m LANES working-mem
+
+  --  let outer-loop = loop-nest 
+  --  
+  --  --- Copy into tmp array
+  --  --- SIMD loop
+  --  --- Copy out of tmp array
+  --  ?
+
+  {-
+  -- This needs to create and then free the temp memory
+  SIMD-loop : ?SIMD s → (Ix s → String) → State ℕ String
+  SIMD-loop {s} SIMD-s f = do
+    -- P will always be (ι n), annoyingly however we don't carry this property
+    let p = right-most s
+    let p⊆s = right-most-sub s
+    let SIMD-p = ⊆-preserves-SIMD SIMD-s p⊆s
+
+    SIMD-loop′ SIMD-s f p⊆s SIMD-p
+  -}
+
+  SIMD-loop-new′ : 
+      ?SIMD s 
+    → (elemAccessor : Ix (ι 2 ⊗ s) → String) 
+    → (operation : (Ix (s) × (Ix (ι 2) → String)) → String) 
+    → (ι (right-most s)) ⊆ s 
+    → ?SIMD (ι (right-most s)) 
+    → State ℕ String
+  SIMD-loop-new′ {s} SIMD-s _ _ _ _ with right-most s
+  SIMD-loop-new′ {.(ι (m * LANES))} (ι m) e f idh SIMD-ιn | .(m * LANES) = do
+    i ← generateIx (ι m)
+    j ← generateIx (ι LANES)
+    let i⊗j = rshp-ix flat (i ⊗ j)
+
+    return  $ loop-nest (ι m) i 
+            $  SIMD-pragma
+            ++ loop-nest (ι LANES) j 
+            (  f (i⊗j , λ c → e (c ⊗ i⊗j)))
+            
+  SIMD-loop-new′ {s₁ ⊗ s₂} (SIMD-s₁ ⊗ SIMD-s₂) e f (srt ιn⊂s) (ι m) | _ = do
+    ix-s′ ← generateIx (inv-⊂ ιn⊂s)
+    
+    ix-ι2 ← generateIx (ι 2)
+    ix-m ← generateIx (ι m)
+    ix-lanes ← generateIx (ι LANES)
+    let ix-ml♭ = ix-ι2 ⊗ (rshp-ix flat (ix-m ⊗ ix-lanes))
+
+    -- Another place where INP really isn't descriptive enough (or I just haven't
+    -- parsed enough info, as we cannot infer real from anywhere so just have to
+    -- piss it into existence and pray)
+    working-mem ← fresh-var
+    let malloc-mem = printf "%s (*%s)%s = %s;" 
+                      real-type 
+                      working-mem
+                      (shape-helper (ι 2 ⊗ ι (size (ι m ⊗ ι LANES))))
+                      (malloc-op real-type (ι 2 ⊗ (ι m ⊗ ι LANES)))
+    let accessor = combine-⊂ ιn⊂s (rshp-ix flat (ix-m ⊗ ix-lanes)) ix-s′
+
+    -- As I wrote the below funciton, I felt small parts of my soul die, this is in dire need of improvement
+    let outer-loop = loop-nest (inv-⊂ ιn⊂s) ix-s′ (
+                        -- Copy into working-mem
+                           (loop-nest (ι 2) ix-ι2
+                             (loop-nest (ι m) ix-m 
+                              (loop-nest (ι LANES) ix-lanes (
+                                printf "%s = %s;" (to-sel ix-ml♭ working-mem) (e (ix-ι2 ⊗ accessor))
+                              ))
+                             )
+                           )
+                        -- perform operations in simd loop
+                        ++ (loop-nest (ι m) ix-m 
+                            (SIMD-pragma  ++ loop-nest (ι LANES) ix-lanes (
+                              printf "%s" (f (accessor , λ c → to-sel (c ⊗ rshp-ix flat (ix-m ⊗ ix-lanes)) working-mem))
+                            ))
+                           )
+                        -- Copy back
+                        ++ (loop-nest (ι 2) ix-ι2
+                             (loop-nest (ι m) ix-m 
+                              (loop-nest (ι LANES) ix-lanes (
+                                printf "%s = %s;" (e (ix-ι2 ⊗ accessor)) (to-sel ix-ml♭ working-mem)
+                              ))
+                             )
+                           )
+                      )
+
+
+    --(f (accessor , (λ c → e (c ⊗ accessor)))) 
+    return $ malloc-mem ++ outer-loop
+
+  SIMD-loop-new : ?SIMD s → (elemAccessor : Ix (ι 2 ⊗ s) → String) → (operation : (Ix (s) × (Ix (ι 2) → String)) → String) → State ℕ String
+  SIMD-loop-new {s} SIMD-s e f = do
+    let p = right-most s
+    let p⊆s = right-most-sub s
+    let SIMD-p = ⊆-preserves-SIMD SIMD-s p⊆s
+    
+    SIMD-loop-new′ SIMD-s e f p⊆s SIMD-p
+    {-
+      Copy into sequential memory
+      Perform operations
+      Copy back
+    -}
+    --i ← generateIx ?
+    --?
+    
+
+  -- This is the old SIMD-loop, The above code includes attempts at creating a 
+  -- better one, however I think I have ran into the limmitations of Inp here, as
+  -- I need to sepearate what elements are accessed and what opearations are performed
+
+  
   SIMD-loop : ?SIMD s → (Ix s → String) → State ℕ String
   SIMD-loop {.(ι (m * LANES))} (ι m) f = do
+    {-
+      Copy into sequential memory
+      Perform operations
+      Copy back
+    -}
     i ← generateIx (ι m)
     a ← generateIx (ι LANES)
     let j = rshp-ix flat (i ⊗  a)
@@ -528,6 +720,27 @@ module ShowC where
 
     let size-sp = size s * size p
 
+    simd-loop′ ← SIMD-loop-new pred (sel-to-str ptr se) λ { 
+        ((ix-s) , val) → 
+            (printf "%s = %s;\n" tmp-var (val (component-ix REAL)))
+            ++ (printf 
+                  "%s = (%s * %s) - (%s * %s);\n" 
+                  (val (component-ix REAL))
+                  (val (component-ix REAL))
+                  (minus-omega REAL size-sp (preoffset-prod ix-s))
+                  (val (component-ix IMAG))
+                  (minus-omega IMAG size-sp (preoffset-prod ix-s))
+               )
+            ++ (printf 
+                  "%s = (%s * %s) + (%s * %s);\n" 
+                  (val (component-ix IMAG))
+                  tmp-var
+                  (minus-omega IMAG size-sp (preoffset-prod ix-s))
+                  (val (component-ix IMAG))
+                  (minus-omega REAL size-sp (preoffset-prod ix-s))
+               )
+      }
+
     simd-loop ← SIMD-loop pred λ i →
                (printf "%s = %s;\n" tmp-var (sel-to-str ptr se ((component-ix REAL) ⊗ i)))
             ++ (printf 
@@ -547,7 +760,7 @@ module ShowC where
                   (minus-omega REAL size-sp (preoffset-prod i))
                )
     
-    return (init-tmp-var ++ simd-loop , arr ptr se)
+    return (init-tmp-var ++ simd-loop′ , arr ptr se)
     --return $ (init-tmp-var ++ loop-nest (s ⊗ p) i ops , arr ptr se)
   to-vali (part {s} {p = p} e s⊆p ) (arr {s = t} ptr se) = 
     do
