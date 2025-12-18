@@ -842,6 +842,7 @@ module Tests where
   open import Data.String hiding (show)
   open import Agda.Builtin.Unit using (tt)
   open import Data.Product hiding (swap)
+  open import Text.Printf
 
   open ShowC
 
@@ -898,15 +899,22 @@ module Tests where
            ++ "#include <stdlib.h>\n"
            ++ "#include \"../src/minus-omega.h\"\n"
            ++ "#include \"../src/dft.h\"\n"
+           ++ "\n"
+
+  sizeDef : Shape → String → String
+  sizeDef s name =     (printf "#ifndef %s_SIZE\n" name)
+                    ++ (printf "#define %s_SIZE %u\n" name (size s))
+                    ++ (printf "typedef real (*%s_TYPE)%s;\n" name (shape-helper (ι 2 ⊗ s)))
+                    ++ "#endif\n"
 
 
   gen-fft : (s : Shape) → ⦃ _ : NonZeroₛ s ⦄ → ?SIMD s → String × String
   gen-fft s pred with show′ (num (arr R)) (arr "inp" idh) (fft s pred) "fft"
-  ... | body , header = (preamble ++ header) , (preamble ++ body)
+  ... | body , header = (preamble ++ (sizeDef s "fft") ++ header) , (preamble ++ (sizeDef s "fft") ++ body)
 
   gen-ufft : (s : Shape) → ⦃ _ : NonZeroₛ s ⦄ → ?SIMD s → String × String
   gen-ufft s ⦃ nz-s ⦄ pred with show′ (num (arr R)) (arr "inp" idh) (`uffti nz-s pred) "ufft"
-  ... | body , header = (preamble ++ header) , (preamble ++ body)
+  ... | body , header = (preamble ++ (sizeDef s "ufft") ++ header) , (preamble ++ (sizeDef s "ufft") ++ body)
 
   gen-fft-cube : ⦃ _ : NonZero n₁ ⦄ → ⦃ _ : NonZero n₂ ⦄ → ⦃ _ : NonZero n₃ ⦄ → String × String
   gen-fft-cube ⦃ nz-n₁ ⦄ ⦃ nz-n₂ ⦄ ⦃ nz-n₃ ⦄ with show′ (num (arr R)) (arr "inp" idh) (`fftCube nz-n₁ nz-n₂ nz-n₃ ) "fftCube"

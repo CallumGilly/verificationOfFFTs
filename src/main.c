@@ -20,8 +20,8 @@ void printer(size_t n, complex real input[], real dftOutput[], real fftOutput[])
 /*****************************************************************************/
 
 // FFT Size & Shape
-#define SIZE 384
-typedef real (*FFT_TYPE)[2][4][8][12];
+//#define SIZE 384
+//typedef real (*FFT_TYPE)[2][4][8][12];
 
 // Transpose Test Size
 #define TRANSPOSE_TEST_SIZE 16
@@ -56,39 +56,39 @@ void testTranspose() {
 }
 
 void testDFTFFT() {
-  complex real(*input)[SIZE] = malloc(sizeof(*input));
+  complex real(*input)[fft_SIZE] = malloc(sizeof(*input));
   memset(input, 0, sizeof(*input));
 
-  real(*fftMem)[2 * SIZE] = malloc(sizeof(*fftMem));
+  real(*fftMem)[2 * fft_SIZE] = malloc(sizeof(*fftMem));
   memset(fftMem, 0, sizeof(*fftMem));
 
-  real(*splitDftMem)[2 * SIZE] = malloc(sizeof(*splitDftMem));
+  real(*splitDftMem)[2 * fft_SIZE] = malloc(sizeof(*splitDftMem));
   memset(splitDftMem, 0, sizeof(*splitDftMem));
 
-  complex real(*dftOutput)[SIZE] = malloc(sizeof(*dftOutput));
+  complex real(*dftOutput)[fft_SIZE] = malloc(sizeof(*dftOutput));
   memset(dftOutput, 0, sizeof(*dftOutput));
 
-  real(*dftSplitOutput)[2 * SIZE] = malloc(sizeof(*dftSplitOutput));
+  real(*dftSplitOutput)[2 * fft_SIZE] = malloc(sizeof(*dftSplitOutput));
   memset(dftSplitOutput, 0, sizeof(*dftSplitOutput));
 
   srand((unsigned int) time(NULL));
   // Garble input
   real x_r; real x_i;
-  for (size_t ai = 0; ai < SIZE; ai++) {
+  for (size_t ai = 0; ai < fft_SIZE; ai++) {
     x_r = (real)rand()/(real)((real)RAND_MAX/(400.0f));
     x_i = (real)rand()/(real)((real)RAND_MAX/(400.0f));
     (*input)[ai] = x_r + (x_i * I);
     (*fftMem)[ai] = x_r;
-    (*fftMem)[(SIZE + ai)] = x_i;
+    (*fftMem)[(fft_SIZE + ai)] = x_i;
     (*splitDftMem)[ai] = x_r;
-    (*splitDftMem)[SIZE + ai] = x_i;
+    (*splitDftMem)[fft_SIZE + ai] = x_i;
   }
 
-  DFT(SIZE, (*input), (*dftOutput));
-  SPLIT_DFT(SIZE, ((real (*)[SIZE])splitDftMem), ((real (*)[SIZE])dftSplitOutput));
-  fft((FFT_TYPE)fftMem);
+  DFT(fft_SIZE, (*input), (*dftOutput));
+  SPLIT_DFT(fft_SIZE, ((real (*)[fft_SIZE])splitDftMem), ((real (*)[fft_SIZE])dftSplitOutput));
+  fft((fft_TYPE)fftMem);
 
-  printer(SIZE, *input, *dftSplitOutput, *fftMem);
+  printer(fft_SIZE, *input, *dftSplitOutput, *fftMem);
 }
 
 void testDFTFFTCUBE() {
