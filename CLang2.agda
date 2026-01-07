@@ -1,4 +1,4 @@
-{-# OPTIONS --backtracking-instance-search #-}
+--{-# OPTIONS --backtracking-instance-search #-}
 {-# OPTIONS --instance-search-depth 10 #-}
 {-# OPTIONS --guardedness #-}
 
@@ -19,7 +19,6 @@ open import Complex using (Cplx)
 open import Matrix renaming (length to size; nest to nestₛ; unnest to unnestₛ)
 open import Matrix.Reshape
 open import Matrix.NonZero 
-open import Matrix.SubShape
 
 
 -- FIXME: these have to be actual definitions!
@@ -71,6 +70,12 @@ data ?SIMD : Shape → Set where
   ι : (m : ℕ) → ?SIMD (ι (m * LANES))
   _⊗_ : ?SIMD s → ?SIMD p → ?SIMD (s ⊗ p)
 
+data ?SIMD′ : Shape → Set where
+  ι : ?SIMD′ (ι LANES)
+  _⊗_ : ?SIMD′ s → ?SIMD′ p → ?SIMD′ (s ⊗ p)
+  -⊗_ : ?SIMD′ p → ?SIMD′ (s ⊗ p)
+  _⊗- : ?SIMD′ s → ?SIMD′ (s ⊗ p)
+
 --data Vec-AR : Shape → Set where
 --  vid : Vec-AR (ι LANES)
 --  mul : (n : ℕ) → Vec-AR (ι (n * LANES))
@@ -102,6 +107,7 @@ data Exp (V : Ty → Set) : Ty → Set where
   var : V τ → Exp V τ
   ixr : Exp V (ix s) → Reshape p s → Exp V (ix p)
   sel : Exp V (ar s τ) → Exp V (ix s) → Exp V τ
+
   _𝕔*_ : Exp V C → Exp V C → Exp V C
   ω : Exp V (ix (s ⊗ p)) → Exp V C
 
@@ -111,23 +117,22 @@ data View (V : Ty → Set) : Ty → Ty → Set where
   vmap   : View V τ σ  → View V (ar s τ) (ar s σ)
   _∙_    : View V σ δ  → View V τ σ → View V τ δ
   resh   : Reshape s p → View V (ar s τ) (ar p τ)
-  subs   : (p⊂s : p ⊂ s) → View V (ar s τ) (ar (inv-⊂ p⊂s) (ar p τ))
+  --subs   : (p⊂s : p ⊂ s) → View V (ar s τ) (ar (inv-⊂ p⊂s) (ar p τ))
 
 infixl 2 _>>>_
 data Stmt V where
   dft  : ⦃ ?SIMD (ι n)   ⦄ → Stmt V (ar (ι 2 ⊗ ι n) R)
-  twid : ⦃ ?SIMD (s ⊗ p) ⦄ → Stmt V (ar (ι 2 ⊗ (s ⊗ p)) R)
-
   write : Exp V τ → Stmt V τ
 
   view : View V τ σ → Stmt V σ → Stmt V τ
 
-  pfor : (V (ix s) → Stmt V τ) → Stmt V (ar s τ)
+  --pfor : (V (ix s) → Stmt V τ) → Stmt V (ar s τ)
   -- Would be nice to be more specific about the following, but gives map nicely
   -- which should be SIMD able without the need for copy (i.e. for the case where
   -- elements don't interact such as twiddle
-  afor : Copyable τ → ((V τ × (V (ix s))) → Stmt V τ) → Stmt V (ar s τ)
-  
+  afor : {- Copyable τ → -} ((V τ × (V (ix s))) → Stmt V τ) → Stmt V (ar s τ)
+  --SIMD-for : (V τ × V (ix (s ⊗ ι LANES)) → Stmt V τ) → Stmt V (ar (s ⊗ ι LANES) τ)
+
   _>>>_ : Stmt V τ → Stmt V τ → Stmt V τ
 
   --copy : (V (ar s R) → Stmt V (ar s R)) → Stmt V (ar s R)
@@ -139,8 +144,9 @@ data Stmt V where
   copy : Copyable τ → (V (ar s τ) → Stmt V (ar s τ)) → Stmt V (ar s τ)
 
 twid′ : ⦃ ?SIMD (s ⊗ p) ⦄ → ∀ {V} → Stmt V (ar (ι 2 ⊗ (s ⊗ p)) R)
-twid′ {s} {p} = view (subs (left idh)) (
-    afor ℂ (λ (v , i) → write (var v 𝕔* (ω (var i))))
+--twid′ {s} {p} = view (subs (left idh)) (
+twid′ {s} {p} = view (nest ∙ resh swap) (
+    afor (λ (v , i) → write (var v 𝕔* (ω (var i))))
   )
 --twid′ {s} {p} = view (subs (left idh)) (copy ℂ λ t → pfor (λ i → write (
 --    (sel (var t) (var i)) 𝕔* (ω (var i))
@@ -159,9 +165,9 @@ twid′ {s} {p} = view (subs (left idh)) (
 ufft′ : ⦃ SIMD-s : ?SIMD s ⦄ → ∀{V} → Stmt V (ar (ι 2 ⊗ s) R)
 ufft′ {ι n} = dft 
 ufft′ {s₁ ⊗ s₂} ⦃ SIMD-s@(SIMD-s₁ ⊗ SIMD-s₂) ⦄ =
-  view (subs (bothᵣ idh (left idh))) (pfor λ _ → ufft′ {s₁})
+      view ( nest ∙ resh (swap ∙ assoᵣ)) (afor λ _ → ufft′ {s₁}) --(pfor λ _ → ufft′ {s₁})
   >>> twid′
-  >>> view (subs (bothᵣ idh (right idh))) (pfor λ _ → ufft′ {s₂})
+  >>> view (nest ∙ resh (swap ∙ assoᵣ ∙ eq ⊕ swap)) (afor λ _ → ufft′ {s₂})
   where instance
     --- I really don't think these should be necassary from reading the docs
     --- Doesn't even work with --backtracking-instance-search
@@ -171,9 +177,18 @@ ufft′ {s₁ ⊗ s₂} ⦃ SIMD-s@(SIMD-s₁ ⊗ SIMD-s₂) ⦄ =
     _ = SIMD-s₁
     _ : ?SIMD s₂
     _ = SIMD-s₂
+    -- This one here is needed only if --backtrack-instance-search is not present
+    -- (And my version of agda apparently does not have this option)
+    _ : ?SIMD (s₁ ⊗ s₂)
+    _ = SIMD-s
+
+--ufft′ {s₁ ⊗ s₂} ⦃ SIMD-s@(SIMD-s₁ ⊗ SIMD-s₂) ⦄ =
+--  view (subs (bothᵣ idh (left idh))) (pfor λ _ → ufft′ {s₁})
+--  >>> twid′
+--  >>> view (subs (bothᵣ idh (right idh))) (pfor λ _ → ufft′ {s₂})
 
 fft′ : ⦃ ?SIMD s ⦄ → ∀{V} → Stmt V (ar (ι 2 ⊗ s) R)
-fft′ {s} ⦃ SIMD-s ⦄ = ufft′ ⦃ SIMD-s ⦄ >>> copy ℝ (λ t → pfor λ i → (write (
+fft′ {s} ⦃ SIMD-s ⦄ = ufft′ ⦃ SIMD-s ⦄ >>> copy ℝ (λ t → afor λ (_ , i) → (write (
                     sel (var t) (ixr (var i) (eq ⊕ (♯ ∙ reindex (sym $ |s|≡|sᵗ| {s}) ∙ ♭ ∙ recursive-transposeᵣ)))
                  )))
 
@@ -200,16 +215,6 @@ module Codegen where
   data Ix : Shape → Set where
     ι : String → Ix (ι n)
     _⊗_ : Ix s → Ix p → Ix (s ⊗ p)
-
-  combine-⊂ : (p⊂s : p ⊂ s) → Ix p → Ix (inv-⊂ p⊂s) → Ix s
-  combine-⊂ (left idh) ix-p ix-p′ = ix-p ⊗ ix-p′
-  combine-⊂ (left (srt p⊂s₁)) ix-p (ix-p′ ⊗ ix-s₁) = combine-⊂ p⊂s₁ ix-p ix-p′ ⊗ ix-s₁
-  combine-⊂ (right idh) ix-p ix-p′ = ix-p′ ⊗ ix-p
-  combine-⊂ (right (srt p⊂s₂)) ix-p (ix-s₁ ⊗ ix-p′) = ix-s₁ ⊗ combine-⊂ p⊂s₂ ix-p ix-p′
-  combine-⊂ (bothₗ q₁⊂s₁ idh) (ix-q₁ ⊗ ix-q₂) ix-q₁′ = combine-⊂ q₁⊂s₁ ix-q₁ ix-q₁′ ⊗ ix-q₂
-  combine-⊂ (bothₗ q₁⊂s₁ (srt q₂⊂s₂)) (ix-q₁ ⊗ ix-q₂) (ix-q₁′ ⊗ ix-q₂′) = combine-⊂ q₁⊂s₁ ix-q₁ ix-q₁′ ⊗ combine-⊂ q₂⊂s₂ ix-q₂ ix-q₂′
-  combine-⊂ (bothᵣ idh q₂⊂s₂) (ix-q₁ ⊗ ix-q₂) ix-q₁′ = ix-q₁ ⊗ combine-⊂ q₂⊂s₂ ix-q₂ ix-q₁′
-  combine-⊂ (bothᵣ (srt q₁⊂s₁) q₂⊂s₂) (ix-q₁ ⊗ ix-q₂) (ix-q₁′ ⊗ ix-q₂′) = combine-⊂ q₁⊂s₁ ix-q₁ ix-q₁′ ⊗ combine-⊂ q₂⊂s₂ ix-q₂ ix-q₂′
 
   freshv : String → State ℕ String
   freshv x = do
@@ -273,6 +278,8 @@ module Codegen where
   ix-reshape (ι i) (flat {n = n}) = ι (printf "(%s) / %u" i n)
                                   ⊗ ι (printf "(%s) %% %u" i n)
   ix-reshape (i ⊗ j) swap = j ⊗ i
+  ix-reshape (i ⊗ (j ⊗ k)) assoₗ = (i ⊗ j) ⊗ k
+  ix-reshape ((i ⊗ j) ⊗ k) assoᵣ = i ⊗ (j ⊗ k)
 
   --omega : ℕ → Ix (s ⊗ p) → Val R
   --omega sz (i ⊗ j) = printf "minus_omega(%u, (%s * %s))" 
@@ -294,7 +301,7 @@ module Codegen where
   etov (e₁ 𝕔* e₂) = do
     v₁ ← etov e₁
     v₂ ← etov e₂
-    return λ i → do
+    return λ c → do
       s₁_r ← v₁ (ι "0")
       s₁_i ← v₁ (ι "1")
       s₂_r ← v₂ (ι "0")
@@ -304,10 +311,12 @@ module Codegen where
 
       -- Here I am having a big problem, think I need to re-evaluate how I model pairs
       -- of reals away from how I did so in INP, as I need to be able to pattern match on i
-      
 
       -- Maybe I try to change Ix?
-      return $ printf "s₁ *𝕔 s₂; // where:\n//s₁_r = %s, s₁_i = %s, s₂_r = %s, s₂_i = %s\n" s₁_r s₁_i s₂_r s₂_i
+      --return $ printf "s₁ *𝕔 s₂; // where:\n//s₁_r = %s, s₁_i = %s, s₂_r = %s, s₂_i = %s\n" s₁_r s₁_i s₂_r s₂_i
+
+      return $ printf "COMP_MULT(%s, %s, %s, %s, %s)" s₁_r s₁_i s₂_r s₂_i (offset c)
+
   etov (ω {s} {p} j) = return λ c → do
     pos ← etov j
     omega (size (s ⊗ p)) pos c
@@ -329,7 +338,7 @@ module Codegen where
     w ← valview v β
     valview w α
   valview v (resh x) = return λ i → v (ix-reshape i x)
-  valview v (subs p⊂s) = return λ i → return λ j → v (combine-⊂ p⊂s j i)
+  --valview v (subs p⊂s) = return λ i → return λ j → v (combine-⊂ p⊂s j i)
 
   for-loop : Ix s → String → String
   for-loop {ι n} (ι i) b = 
@@ -362,25 +371,27 @@ module Codegen where
     j ← freshv "c"
     vi ← v (ι j ⊗ ι i)
     return (printf "DFT_SPLIT(%u, %s, %s, %s);" n i j vi)
-  tov v (twid {s}{p}) = do
-    i ← fresh-ix "i"
-    vi ← v i
-    return "DEPRECIATED"
-    --let o = omega (size (s ⊗ p)) i
-    --let b = printf "%s *= %s" vi o
-    --return (for-loop i b)
+  --tov v (twid {s}{p}) = do
+  --  i ← fresh-ix "i"
+  --  vi ← v i
+  --  return "DEPRECIATED"
+  --  --let o = omega (size (s ⊗ p)) i
+  --  --let b = printf "%s *= %s" vi o
+  --  --return (for-loop i b)
 
   tov v (view α u) = do
     w ← valview v α
     tov w u
 
+  {-
   tov v (pfor f) = do
     i ← fresh-ix "i"
     vi ← v i
     u ← tov vi (f i)
     return (for-loop i u)
+  -}
 
-  tov v (afor {s = s} ty f) = do
+  tov v (afor {s = s} {- ty -} f) = do
     i ← fresh-ix "i"
     vi ← v i
     u ← tov vi (f (vi , i))
@@ -411,7 +422,7 @@ module Codegen where
   
   res = runState (comp (fft′ {s = ι 8 ⊗ ι 16} ⦃ ι 2 ⊗ ι 4 ⦄ ) "a") 0 .proj₂
 
-  _ : res ≡ ?
+  _ : res ≢ ""
   _ = ?
 
 

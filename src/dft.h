@@ -26,3 +26,12 @@ void dft(size_t n, complex float x_0[], complex float dft[]);
     } \
   }
 
+      //ι 0 ≡ (s₁_r * s₁_r) - (s₁_i * s₂_i)
+      //ι 1 ≡ (s₁_r * s₂_i) + (s₁_i * s₂_r)
+#define COMP_MULT(__a_r, __a_i, __b_r, __b_i, __component) \
+    { \
+      if ( __component == 0) \
+        return (__a_r * __b_r) - (__a_i * __b_i) \
+      return (__a_r * __b_i) + (__a_i * __b_r) \
+    }
+

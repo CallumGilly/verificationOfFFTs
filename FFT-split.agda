@@ -64,7 +64,6 @@ module FFT-split (real : Real) where
 --  --- DFT and FFT ---
 --  -------------------
 --
-  DFT′ : ∀ {N : ℕ} → ⦃ nonZero-N : NonZero N ⦄ → Ar (ι 2 ⊗ ι N ) ℝ → Ar (ι 2 ⊗ ι N) ℝ
 
   DFT′ : ∀ {N : ℕ} → ⦃ nonZero-N : NonZero N ⦄ → Ar (ι N ⊗ ι 2) ℝ → Ar (ι N ⊗ ι 2) ℝ
   DFT′ {N} ⦃ nonZero-N ⦄ xs (j ⊗ ι fzero)        = sum {N} (λ k → 
