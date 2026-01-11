@@ -19,6 +19,7 @@ open import Complex using (Cplx)
 open import Matrix renaming (length to size; nest to nestₛ; unnest to unnestₛ)
 open import Matrix.Reshape
 open import Matrix.NonZero 
+open import Matrix.SubShape 
 
 
 -- FIXME: these have to be actual definitions!
@@ -44,6 +45,7 @@ private variable
 
 data Ty : Set where
   R : Ty
+  C′ : Ty
   ar : Shape → Ty → Ty
   ix : Shape → Ty
 
@@ -70,11 +72,21 @@ data ?SIMD : Shape → Set where
   ι : (m : ℕ) → ?SIMD (ι (m * LANES))
   _⊗_ : ?SIMD s → ?SIMD p → ?SIMD (s ⊗ p)
 
+data ?SIMD′′′ : Shape → Set where
+  ι : (m : ℕ) → ?SIMD′′′ (ι (m * LANES))
+  _⊗_ : ?SIMD′′′ s → ?SIMD′′′ p → ?SIMD′′′ (s ⊗ p)
+
 data ?SIMD′ : Shape → Set where
   ι : ?SIMD′ (ι LANES)
   _⊗_ : ?SIMD′ s → ?SIMD′ p → ?SIMD′ (s ⊗ p)
   -⊗_ : ?SIMD′ p → ?SIMD′ (s ⊗ p)
   _⊗- : ?SIMD′ s → ?SIMD′ (s ⊗ p)
+
+data ?SIMD′′ : Shape → Set where
+  η : (m : ℕ) → ?SIMD′′ (ι m)
+  ι : (m : ℕ) → ?SIMD′′ (ι (LANES * m))
+  _⊗_ : ?SIMD′′ s₁ → ?SIMD′′ s₂ → ?SIMD′′ (s₁ ⊗ s₂)
+
 
 --data Vec-AR : Shape → Set where
 --  vid : Vec-AR (ι LANES)
@@ -102,6 +114,7 @@ C = ar (ι 2) R
 data Copyable : Ty → Set where
   ℝ : Copyable R
   ℂ : Copyable (ar (ι 2) R)
+  ℂ′ : Copyable C′
 
 data Exp (V : Ty → Set) : Ty → Set where
   var : V τ → Exp V τ
@@ -109,7 +122,9 @@ data Exp (V : Ty → Set) : Ty → Set where
   sel : Exp V (ar s τ) → Exp V (ix s) → Exp V τ
 
   _𝕔*_ : Exp V C → Exp V C → Exp V C
+  _𝕔′*_ : Exp V C′ → Exp V C′ → Exp V C′
   ω : Exp V (ix (s ⊗ p)) → Exp V C
+  ω′ : Exp V (ix (s ⊗ p)) → Exp V C′
 
 data View (V : Ty → Set) : Ty → Ty → Set where
   nest   : View V (ar (s ⊗ p) τ)  (ar s (ar p τ))
@@ -119,9 +134,17 @@ data View (V : Ty → Set) : Ty → Ty → Set where
   resh   : Reshape s p → View V (ar s τ) (ar p τ)
   --subs   : (p⊂s : p ⊂ s) → View V (ar s τ) (ar (inv-⊂ p⊂s) (ar p τ))
 
+{-
+data SIMD-Stmt (V : Ty → Set) : Ty → Set where
+  dft : SIMD-Stmt V (ar (ι 2 ⊗ ι n) R)
+  afor : ((V τ × (V (ix (ι LANES ⊗ s)))) → Stmt V τ) → SIMD-Stmt V (ar s τ)
+-}
+
+
 infixl 2 _>>>_
 data Stmt V where
-  dft  : ⦃ ?SIMD (ι n)   ⦄ → Stmt V (ar (ι 2 ⊗ ι n) R)
+  dft  : Stmt V (ar (ι 2 ⊗ ι n) R)
+  dft′  : Stmt V (ar (ι (n * LANES)) C′)
   write : Exp V τ → Stmt V τ
 
   view : View V τ σ → Stmt V σ → Stmt V τ
@@ -143,24 +166,57 @@ data Stmt V where
  
   copy : Copyable τ → (V (ar s τ) → Stmt V (ar s τ)) → Stmt V (ar s τ)
 
-twid′ : ⦃ ?SIMD (s ⊗ p) ⦄ → ∀ {V} → Stmt V (ar (ι 2 ⊗ (s ⊗ p)) R)
+  --simd : Stmt V (ar s τ) → Stmt V (ar (ι LANES) (ar s τ)) --- Ering towards this, below or 4 down
+  --simd : Stmt V (ar s τ) → Stmt V (ar (ι LANES ⊗ s) τ)
+  --simd : (V (ix (ι LANES)) → Stmt V τ) → Stmt V (ar (ι LANES) τ)
+  --simd : Stmt V (ar s τ) → Stmt V (ar (ι LANES ⊗ s) τ)
+  --simd : Stmt V τ → Stmt V (ar (ι LANES) τ)
+  --simd : (sub : ι LANES ⊂ s) → Stmt V (ar (inv-⊂ sub) τ) → Stmt V (ar s τ) -- Tried seeing if subshape makes life easier in anyway - it didn't help
+  --simd : {prf : ?SIMD s} → Stmt V (ar s τ) → Stmt V (ar s τ) -- Sure i can "Add simd to anything" with this but it gives be 0 semantics...
+  --simd-afor : (V τ × V (ix (s ⊗ ι LANES)) → Stmt V τ) → Stmt V (ar (s ⊗ ι LANES) τ)
+  simd : (m : ℕ) → Stmt V τ → Stmt V (ar (ι (m * LANES)) τ) -- Useless operator no. 9921
+
+twid′ : ∀ {V} → Stmt V (ar (ι 2 ⊗ (s ⊗ p)) R)
 --twid′ {s} {p} = view (subs (left idh)) (
 twid′ {s} {p} = view (nest ∙ resh swap) (
     afor (λ (v , i) → write (var v 𝕔* (ω (var i))))
   )
---twid′ {s} {p} = view (subs (left idh)) (copy ℂ λ t → pfor (λ i → write (
---    (sel (var t) (var i)) 𝕔* (ω (var i))
---  )))
 
---copy (λ t → view (subs (left idh)) (pfor (λ i → write (
---    (sel (var ?) (ixr (var i) ?)) 𝕔* ?
---  ))) )
+c′-twid′ : ∀ {V} → Stmt V (ar ((s ⊗ p)) C′)
+--twid′ {s} {p} = view (subs (left idh)) (
+c′-twid′ {s} {p} = (
+    afor (λ (v , i) → write (var v 𝕔′* (ω′ (var i))))
+  )
 
---view (subs (left idh)) (copy (λ t → ?))
-
---(copy (λ t → (pfor (λ i → write (
---    (sel ? (var i)) 𝕔* ? ))
---  )))
+--simd-twid′ : ∀ {V} → Stmt V (ar (ι LANES) (ar (ι 2 ⊗ (s ⊗ p)) R))
+--simd-twid′ {s} {p} = simd λ i → view (nest ∙ resh swap) (
+--                      afor (λ (v , j) → write (var v 𝕔* (ω ?)))
+--                     )
+  --view (nest ∙ resh swap) (
+  --  afor (λ (v , i) → write (var v 𝕔* (ω (var i))))
+  --)
+--simd-twid′ : ∀ {V} → Stmt V (ar (ι LANES ⊗ (ι 2 ⊗ (s ⊗ p))) R)
+--simd-twid′ = simd (view (nest ∙ resh swap) (
+--    afor (λ (v , i) → write (var v 𝕔* (ω (var i))))
+--  ))
+--
+--simd-twid′′ : {simd-s : ?SIMD (s ⊗ p)} → ∀ {V} → Stmt V (ar ((ι 2 ⊗ (s ⊗ p))) R)
+--simd-twid′′ {s} {simd-s} = afor (λ z → write (var (proj₁ z)))
+--
+--simd-dft′ : ∀ {V} → ∀ {m : ℕ} → Stmt V (ar (ι 2 ⊗ ι (m * LANES)) R)
+--simd-dft′ {V} {m} = view ((resh (assoₗ ∙ (swap ⊕ eq) ∙ assoᵣ ∙ eq ⊕ (swap ∙ split {m} {LANES}) ))) (simd dft)
+--                  >>> ?
+--
+----lanes-ufft′ : ∀ {V} → ∀ {m : ℕ} → Stmt V (ar (ι 2 ⊗ (ι LANES ⊗ ι m)) R)
+----lanes-ufft′ {V} {m} = view (resh (swap ∙ assoᵣ ∙ eq ⊕ swap)) simd-dft′
+----              >>> ?
+--
+--simd-ufft′ : ∀ { simd-s : ?SIMD s} → ∀ {V} → Stmt V (ar (ι 2 ⊗ s) R)
+--simd-ufft′ {.(ι (m * LANES))} {ι m} {V} = simd-dft′ {V} {m}
+--simd-ufft′ {s₁ ⊗ s₂} {simd-s₁ ⊗ simd-s₂} =
+--      view ( nest ∙ resh (swap ∙ assoᵣ)) (afor λ _ → simd-ufft′ {s₁} {simd-s₁})
+--  >>> twid′
+--  >>> view (nest ∙ resh (swap ∙ assoᵣ ∙ eq ⊕ swap)) (afor λ _ → simd-ufft′ {s₂} {simd-s₂})
 
 ufft′ : ⦃ SIMD-s : ?SIMD s ⦄ → ∀{V} → Stmt V (ar (ι 2 ⊗ s) R)
 ufft′ {ι n} = dft 
@@ -181,6 +237,66 @@ ufft′ {s₁ ⊗ s₂} ⦃ SIMD-s@(SIMD-s₁ ⊗ SIMD-s₂) ⦄ =
     -- (And my version of agda apparently does not have this option)
     _ : ?SIMD (s₁ ⊗ s₂)
     _ = SIMD-s
+
+c′-ufft′ : ⦃ SIMD-s : ?SIMD s ⦄ → ∀{V} → Stmt V (ar s C′)
+c′-ufft′ {ι .(m * LANES)} ⦃ ι m ⦄ = dft′ {n = m}
+c′-ufft′ {s₁ ⊗ s₂} ⦃ SIMD-s@(SIMD-s₁ ⊗ SIMD-s₂) ⦄ =
+      view (nest ∙ resh (swap)) (afor λ _ → c′-ufft′ {s₁})
+  >>> c′-twid′
+  >>> view (nest              ) (afor λ _ → c′-ufft′ {s₂})
+  where instance
+    _ : ?SIMD s₁
+    _ = SIMD-s₁
+    _ : ?SIMD s₂
+    _ = SIMD-s₂
+    _ : ?SIMD (s₁ ⊗ s₂)
+    _ = SIMD-s
+
+-- How do I add simd here in a nice way without ecessive use of pattern matching????
+simd-c′-twid′ : ∀ {V} → (predicate : ?SIMD s) → Stmt V (ar ((s ⊗ p)) C′)
+simd-c′-twid′ {s} {p} pred = (
+   afor (λ (v , i) → write (var v 𝕔′* (ω′ (var i))))
+ )
+{-
+simd-c′-twid′ {s} {p} pred = (
+    afor (λ (v , i) → write (var v 𝕔′* (ω′ (var i))))
+  )
+-}
+
+simd-c′-ufft′ : ∀ {V} → (predicate : ?SIMD s) → Stmt V (ar s C′)
+simd-c′-ufft′ (ι m) = dft′ {n = m}
+--simd-c′-ufft′ (ι m) = dft′ -- Assume dft′ to be simdified for now
+simd-c′-ufft′ (pred₁ ⊗ pred₂) =
+        view (nest ∙ resh swap) (afor λ _ → simd-c′-ufft′ pred₁)
+    >>> c′-twid′
+    >>> view (nest) (afor λ _ → simd-c′-ufft′ pred₂)
+
+--simd-ufft′ : ⦃ SIMD-s : ?SIMD′′′ s ⦄ → ∀{V} → Stmt V (ar (ι 2 ⊗ s) R)
+--simd-ufft′ {ι n} = dft 
+--simd-ufft′ {s₁ ⊗ s₂} ⦃ SIMD-s@(SIMD-s₁ ⊗ SIMD-s₂) ⦄ =
+--      view ( nest ∙ resh (swap ∙ assoᵣ)) (simd-afor ?) --(afor λ _ → simd-ufft′ {s₁}) --(pfor λ _ → ufft′ {s₁})
+--  >>> twid′
+--  >>> view (nest ∙ resh (swap ∙ assoᵣ ∙ eq ⊕ swap)) ? --(afor λ _ → simd-ufft′ {s₂})
+--  where instance
+--    _ : ?SIMD′′′ s₁
+--    _ = SIMD-s₁
+--    _ : ?SIMD′′′ s₂
+--    _ = SIMD-s₂
+--    _ : ?SIMD′′′ (s₁ ⊗ s₂)
+--    _ = SIMD-s
+
+--simd′-ufft′ : ⦃ SIMD-s : ?SIMD s ⦄ → ∀ {V} → Stmt V (ar (ι LANES ⊗ (ι 2 ⊗ s)) R)
+--simd′-ufft′ {s} ⦃ SIMD-s ⦄ = simd (ufft′ ⦃ SIMD-s ⦄)
+
+--simd′′-ufft′ : ⦃ SIMD-s : ?SIMD′′ s ⦄ → ∀ {V} → Stmt V (ar (ι 2 ⊗ s) R)
+--simd′′-ufft′ ⦃ SIMD-s = η m ⦄ = dft
+--simd′′-ufft′ ⦃ SIMD-s = ι m ⦄ = ?
+--simd′′-ufft′ ⦃ SIMD-s = SIMD-s ⊗ SIMD-s₁ ⦄ = ?
+
+-- simd′′-ufft′ : ⦃ SIMD-s : ?SIMD′′ s ⦄ → ∀ {V} → Stmt V (ar (ι 2 ⊗ s) R)
+-- simd′′-ufft′ ⦃ SIMD-s = η m ⦄ = dft 
+-- simd′′-ufft′ ⦃ SIMD-s = ι s ⦄ = afor (λ z → write (var (proj₁ z)))
+-- simd′′-ufft′ ⦃ SIMD-s = SIMD-s ⊗ SIMD-s₁ ⦄ = afor (λ z → write (var (proj₁ z)))
 
 --ufft′ {s₁ ⊗ s₂} ⦃ SIMD-s@(SIMD-s₁ ⊗ SIMD-s₂) ⦄ =
 --  view (subs (bothᵣ idh (left idh))) (pfor λ _ → ufft′ {s₁})
@@ -396,6 +512,7 @@ module Codegen where
     vi ← v i
     u ← tov vi (f (vi , i))
     return (for-loop i u)
+  --tov v (simd a) = do ?
 
   tov v (write x) = do
     w ← etov x
