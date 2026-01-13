@@ -87,6 +87,9 @@ data ?SIMD′′ : Shape → Set where
   ι : (m : ℕ) → ?SIMD′′ (ι (LANES * m))
   _⊗_ : ?SIMD′′ s₁ → ?SIMD′′ s₂ → ?SIMD′′ (s₁ ⊗ s₂)
 
+data ?NewSIMD : Shape → Set where
+  ι : (m : ℕ) → ?NewSIMD (ι LANES ⊗ ι m)
+  _⊗_ : ?NewSIMD s₁ → ?NewSIMD s₂ → ?NewSIMD (s₁ ⊗ s₂)
 
 --data Vec-AR : Shape → Set where
 --  vid : Vec-AR (ι LANES)
@@ -144,7 +147,7 @@ data SIMD-Stmt (V : Ty → Set) : Ty → Set where
 infixl 2 _>>>_
 data Stmt V where
   dft  : Stmt V (ar (ι 2 ⊗ ι n) R)
-  dft′  : Stmt V (ar (ι (n * LANES)) C′)
+  dft′  : Stmt V (ar (ι (n )) C′)
   write : Exp V τ → Stmt V τ
 
   view : View V τ σ → Stmt V σ → Stmt V τ
@@ -166,7 +169,7 @@ data Stmt V where
  
   copy : Copyable τ → (V (ar s τ) → Stmt V (ar s τ)) → Stmt V (ar s τ)
 
-  --simd : Stmt V (ar s τ) → Stmt V (ar (ι LANES) (ar s τ)) --- Ering towards this, below or 4 down
+  simd : Stmt V (ar s τ) → Stmt V (ar (ι LANES) (ar s τ)) --- Ering towards this, below or 4 down
   --simd : Stmt V (ar s τ) → Stmt V (ar (ι LANES ⊗ s) τ)
   --simd : (V (ix (ι LANES)) → Stmt V τ) → Stmt V (ar (ι LANES) τ)
   --simd : Stmt V (ar s τ) → Stmt V (ar (ι LANES ⊗ s) τ)
@@ -174,8 +177,9 @@ data Stmt V where
   --simd : (sub : ι LANES ⊂ s) → Stmt V (ar (inv-⊂ sub) τ) → Stmt V (ar s τ) -- Tried seeing if subshape makes life easier in anyway - it didn't help
   --simd : {prf : ?SIMD s} → Stmt V (ar s τ) → Stmt V (ar s τ) -- Sure i can "Add simd to anything" with this but it gives be 0 semantics...
   --simd-afor : (V τ × V (ix (s ⊗ ι LANES)) → Stmt V τ) → Stmt V (ar (s ⊗ ι LANES) τ)
-  simd : (m : ℕ) → Stmt V τ → Stmt V (ar (ι (m * LANES)) τ) -- Useless operator no. 9921
+  --simd : (m : ℕ) → Stmt V τ → Stmt V (ar (ι (m * LANES)) τ) -- Useless operator no. 9921
 
+  simd-imap : (V (ix (s ⊗ ι LANES)) → Stmt V τ) → Stmt V (ar (s ⊗ ι LANES) τ)
 twid′ : ∀ {V} → Stmt V (ar (ι 2 ⊗ (s ⊗ p)) R)
 --twid′ {s} {p} = view (subs (left idh)) (
 twid′ {s} {p} = view (nest ∙ resh swap) (
@@ -238,39 +242,48 @@ ufft′ {s₁ ⊗ s₂} ⦃ SIMD-s@(SIMD-s₁ ⊗ SIMD-s₂) ⦄ =
     _ : ?SIMD (s₁ ⊗ s₂)
     _ = SIMD-s
 
-c′-ufft′ : ⦃ SIMD-s : ?SIMD s ⦄ → ∀{V} → Stmt V (ar s C′)
-c′-ufft′ {ι .(m * LANES)} ⦃ ι m ⦄ = dft′ {n = m}
-c′-ufft′ {s₁ ⊗ s₂} ⦃ SIMD-s@(SIMD-s₁ ⊗ SIMD-s₂) ⦄ =
-      view (nest ∙ resh (swap)) (afor λ _ → c′-ufft′ {s₁})
-  >>> c′-twid′
-  >>> view (nest              ) (afor λ _ → c′-ufft′ {s₂})
-  where instance
-    _ : ?SIMD s₁
-    _ = SIMD-s₁
-    _ : ?SIMD s₂
-    _ = SIMD-s₂
-    _ : ?SIMD (s₁ ⊗ s₂)
-    _ = SIMD-s
-
--- How do I add simd here in a nice way without ecessive use of pattern matching????
-simd-c′-twid′ : ∀ {V} → (predicate : ?SIMD s) → Stmt V (ar ((s ⊗ p)) C′)
-simd-c′-twid′ {s} {p} pred = (
-   afor (λ (v , i) → write (var v 𝕔′* (ω′ (var i))))
- )
+--c′-ufft′ : ⦃ SIMD-s : ?SIMD s ⦄ → ∀{V} → Stmt V (ar s C′)
+--c′-ufft′ {ι .(m * LANES)} ⦃ ι m ⦄ = dft′ {n = m}
+--c′-ufft′ {s₁ ⊗ s₂} ⦃ SIMD-s@(SIMD-s₁ ⊗ SIMD-s₂) ⦄ =
+--      view (nest ∙ resh (swap)) (afor λ _ → c′-ufft′ {s₁})
+--  >>> c′-twid′
+--  >>> view (nest              ) (afor λ _ → c′-ufft′ {s₂})
+--  where instance
+--    _ : ?SIMD s₁
+--    _ = SIMD-s₁
+--    _ : ?SIMD s₂
+--    _ = SIMD-s₂
+--    _ : ?SIMD (s₁ ⊗ s₂)
+--    _ = SIMD-s
+--- How do I add simd here in a nice way without ecessive use of pattern matching????
+simd-c′-twid′ : ∀ {V} → (predicate : ?NewSIMD s) → Stmt V (ar ((s ⊗ p)) C′)
+simd-c′-twid′ {s} {p} pred = ?
+--simd-c′-twid′ {s} {p} pred = (
+--   afor (λ (v , i) → write (var v 𝕔′* (ω′ (var i))))
+-- )
 {-
 simd-c′-twid′ {s} {p} pred = (
     afor (λ (v , i) → write (var v 𝕔′* (ω′ (var i))))
   )
 -}
 
-simd-c′-ufft′ : ∀ {V} → (predicate : ?SIMD s) → Stmt V (ar s C′)
-simd-c′-ufft′ (ι m) = dft′ {n = m}
---simd-c′-ufft′ (ι m) = dft′ -- Assume dft′ to be simdified for now
+simd-c′-ufft′ : ∀ {V} → (predicate : ?NewSIMD s) → Stmt V (ar s C′)
+simd-c′-ufft′ (ι m) = 
+        view (nest ∙ resh swap) (?) -- Ideally this should be simdable
+    >>> c′-twid′                    -- As well as this...
+    >>> view nest (simd dft′)
 simd-c′-ufft′ (pred₁ ⊗ pred₂) =
         view (nest ∙ resh swap) (afor λ _ → simd-c′-ufft′ pred₁)
     >>> c′-twid′
     >>> view (nest) (afor λ _ → simd-c′-ufft′ pred₂)
 
+--simd-c′-ufft′ : ∀ {V} → (predicate : ?SIMD s) → Stmt V (ar s C′)
+--simd-c′-ufft′ (ι m) = dft′ {n = m}
+----simd-c′-ufft′ (ι m) = dft′ -- Assume dft′ to be simdified for now
+--simd-c′-ufft′ (pred₁ ⊗ pred₂) =
+--        view (nest ∙ resh swap) (afor λ _ → simd-c′-ufft′ pred₁)
+--    >>> c′-twid′
+--    >>> view (nest) (afor λ _ → simd-c′-ufft′ pred₂)
 --simd-ufft′ : ⦃ SIMD-s : ?SIMD′′′ s ⦄ → ∀{V} → Stmt V (ar (ι 2 ⊗ s) R)
 --simd-ufft′ {ι n} = dft 
 --simd-ufft′ {s₁ ⊗ s₂} ⦃ SIMD-s@(SIMD-s₁ ⊗ SIMD-s₂) ⦄ =

@@ -66,111 +66,99 @@ module FFT-Vec (cplx : Cplx) where
   V : ℕ
   V = 4
 
-  vtwid : Ar ((s ⊗ p) ⊗ ι V) ℂ 
-  vtwid {s} {p} ((i ⊗ j) ⊗ l) with nonZeroDec ((s ⊗ p) ⊗ ι V)
-  ... | no ¬nz = ⊥-elim (zs-nopos ¬nz ((i ⊗ j) ⊗ l))
-  ... | yes nz = -ω (length ((s ⊗ p) ⊗ ι V)) ⦃ nonZeroₛ-s⇒nonZero-s nz ⦄ (preoffset-prod (i ⊗ (j ⊗ l)))
+--First observation.  If we prevent inlining, we get exactly the pattern we wanted, i.e. applying dft over a dimension, and then doing the rest.  Here is a way to convince yourself:
 
-  vdft : Ar (ι N ⊗ ι V) ℂ → Ar (ι N ⊗ ι V) ℂ
-  vdft {N} _  _ with nonZero? N
-  vdft {_} _  (ι j ⊗ _) | no ¬nz = ⊥-elim (¬nz (fin-nz _ j))
-  vdft {N} xs (  j ⊗ l) | yes nz = sum (λ k → xs (k ⊗ l) * -ω N ⦃ nz ⦄ (iota k *ₙ iota j))
+  variable
+    n : ℕ
+    X Y : Set
+    q : Shape
 
-  vfft : Ar (s ⊗ ι V) ℂ → Ar (s ⊗ ι V) ℂ
-  vfft {ι x} = vdft
-  vfft {s ⊗ s₁} xs = let
-      b = (unnest ∘ (mapLeft (nest ∘ vfft ∘ unnest)) ∘ nest ∘ reshape (swap ⊕ eq)) xs
-      c = zipWith _*_ b vtwid
-      d = (unnest ∘ (mapLeft (nest ∘ vfft ∘ unnest)) ∘ nest ∘ reshape (swap ⊕ eq)) c
-    in d
+  postulate
+    M : Set → Set
+    _>>=_ : M X → (X → M Y) → M Y
+    return : X → M X
+    extract : M X → X
+    dft : Ar (ι n) ℂ → Ar (ι n) ℂ
+    twiddles′ : Ar (s ⊗ p) ℂ
 
+--The above extract is bullshit in general, it is just to introduce a sequence of binds that is not normalised by Agda.
+
+  mufft : ∀ {s} → Ar s ℂ → Ar s ℂ
+  mufft {ι n} a = (dft a)
+  mufft {s ⊗ p} a =
+    extract (do
+      b ← return (reshape swap (mapLeft mufft a))
+      c ← return (zipWith _*_ b twiddles′)
+      d ← return (reshape swap  (mapLeft mufft (c)))
+      return d)
 
   {-
-  data ?SIMD : Shape → Set where
-    ι : ?SIMD (ι V)
---    -⊗ : ?SIMD s → ?SIMD (s ⊗ p)
-    ⊗- : ?SIMD p → ?SIMD (s ⊗ p)
-
-  --- A plan should be a tree of simdifiable sub trees
-  data Plan : Shape → Set where
-    ⟱   : ?SIMD s     → Plan s -- When we do want to use SIMD
-    --⟱   : ((ι V) ⊂ s) → Plan s -- When we do want to use SIMD
-    --↓   :               Plan s -- When we don't
-    _⊗_ : Plan s → Plan p → Plan (s ⊗ p)
-    
-  -- With the above definition of Plan, there are allot of ways we can chose to 
-  --break down our subtrees, and once we are in a "SIMD Enviroment" we can't leave it
-  --_ : Plan ((ι V ⊗ ι 3) ⊗ (ι 2 ⊗ (ι 3 ⊗ ι V)))
-  -- SIMD on the left subtree, then no SIMD on the right, then SIMD on the right right subtree
-  --_ = ⟱ (left idh) ⊗ (↓ ⊗ ⟱ (right idh))
-  -- SIMD on the left subtree, and the right subtree
-  --_ = ⟱ (left idh) ⊗ ⟱ (right (srt (right idh)))
-  -- SIMD on the left subshape only
-  --_ = (⟱ (left idh)) ⊗ ↓
-  -- No SIMD at all:
-  --_ = ↓
-  -- SIMD Everywhere
-  --_ = ⟱ (left (srt (left idh)))
-  -- OR
-  --_ = ⟱ (right (srt (right (srt (right idh)))))
-
-  --tmp : (ιv⊂s : (ι V) ⊂ s) → Ar s ℂ → Ar ((inv-⊂ ιv⊂s) ⊗ ι V) ℂ
-  tmp₂ : (ιv⊂s : (ι V) ⊂ s) → Reshape s (inv-⊂ ιv⊂s ⊗ ι V)
-
-  offt : Plan s → Ar s ℂ → Ar s ℂ
-  offt {s} ↓ xs = ?
-  offt {s} (⟱ x) xs = ?
-  offt {.(_ ⊗ _)} (p ⊗ p₁) xs = ?
+  --Pick arbitrary array, and normalise mufft application to it, you will see the right pattern.
+  tmp : mufft {(ι 7 ⊗ ι V) ⊗ (ι 3 ⊗ ι 5)} ≡ ?
+  tmp = ?
   -}
 
 
-  data ?SIMD : Shape → Set where
-    ι : ?SIMD (ι V)
-    _⊗_ : ?SIMD p → ?SIMD (s ⊗ p)
-    _⊗₂_ : ?SIMD s → ?SIMD (s ⊗ p)
+  data SIMD : Shape → Set where
+    ι :  SIMD (ι V ⊗ s)
+    _⊗_ : SIMD s → SIMD p → SIMD (s ⊗ p)
 
-  data ?rSIMD : Shape → Set where
-    ι : ?rSIMD (s ⊗ ι V)
-    _⊗_ : ?rSIMD s → ?rSIMD p → ?rSIMD (s ⊗ p)
+  data S : Shape → Shape → Shape → Set where
+    ι : S (ι V) s (ι V ⊗ s)
+    left : S (ι V) s p → S (ι V) (q ⊗ s) (q ⊗ p)
+    right : S (ι V) s p → S (ι V) (s ⊗ q) (p ⊗ q)
 
-  private variable
-    s₁ s₂ : Shape
+  -- For a given shape s, which we know to hold the SIMD predicate
+  -- there exists a shape x which does not contain one instance of
+  -- the index (ι V)
+  rem : SIMD s → ∃ λ x → S (ι V) x s
+  rem {.(ι V ⊗ s)} (ι {s}) = s , ι
+  rem (_⊗_ {_} {p} SIMD-s _) with rem SIMD-s
+  ... | a , b = a ⊗ p , right b
 
-  foo : ?SIMD (s₁ ⊗ s₂) → ∃[ p ] Reshape (p ⊗ ι V) (s₁ ⊗ s₂)
-  foo {s₁} {s₂} (_⊗_ ι) = s₁ , eq
-  foo {s₁} {s₂} (_⊗_ (_⊗_ x)) = ?
+  S-resh : S (ι V) p s → Reshape s (ι V ⊗ p)
+  S-resh ι = eq
+  S-resh (left  x) = assoₗ ∙ (swap ⊕ eq) ∙ assoᵣ ∙ eq ⊕ (S-resh x)
+  S-resh (right x) = assoₗ ∙ (S-resh x) ⊕ eq
 
+  comp-resh : (pr : SIMD s) → Reshape s (ι V ⊗ rem pr .proj₁)
+  comp-resh = S-resh ∘ proj₂ ∘ rem
+  --comp-resh pr with rem pr
+  --comp-resh _ | _ , b = S-resh b
+  -- Brother.......... you silly billy
+  --comp-resh pr with rem pr
+  --comp-resh ι | _ , b = S-resh b
+  --comp-resh (SIMD-s ⊗ SIMD-p) | .(_ ⊗ _) , left  b =  S-resh (left b)
+  --comp-resh (SIMD-s ⊗ SIMD-p) | .(_ ⊗ _) , right b = ?
+  --comp-resh ι | ι _ , ι = eq
+  --comp-resh ι | (s ⊗ p) , ι = eq
+  --comp-resh ι | (.(ι V) ⊗ p) , left snd = ?
+  --comp-resh (SIMD-s ⊗ SIMD-p) | fst , snd = ?
+  
+  trans-copy : Ar (ι V ⊗ s) (Ar p ℂ) → Ar s (Ar p (Ar (ι V) ℂ))
+  trans-copy xs ps pp p4 = xs (p4 ⊗ ps) pp
+  
+  copy-trans : Ar s (Ar p (Ar (ι V) ℂ)) → Ar (ι V ⊗ s) (Ar p ℂ)
+  copy-trans xs (p4 ⊗ ps) pp = xs ps pp p4
 
-  data Plan : Shape → Set where
-    ⟱ : ?SIMD s → Plan s
-    _⊗_ : Plan s → Plan p → Plan (s ⊗ p)
+  ufft-vec : Ar s (Ar (ι V) ℂ) → Ar s (Ar (ι V) ℂ)
+  --ufft-vec xs ps pv = mufft ((nest $ reshape swap $ unnest xs) pv) ps
 
-  --offt : Plan s → Ar s ℂ → Ar s ℂ
-  --offt (⟱ q) = ?
-  --offt (p ⊗ p₁) xs i = ?
+  offt : ∀ {s} → SIMD s → Ar s ℂ → Ar s ℂ
 
-  otwid : Ar (s ⊗ p) ℂ 
-  otwid {s} {p} (i ⊗ j) with nonZeroDec (s ⊗ p)
-  ... | no ¬nz = ⊥-elim (zs-nopos ¬nz (i ⊗ j))
-  ... | yes nz = -ω (length (s ⊗ p)) ⦃ nonZeroₛ-s⇒nonZero-s nz ⦄ (preoffset-prod (i ⊗ j))
+  mapVec : SIMD (s ⊗ p) → Ar (s ⊗ p) ℂ → Ar (s ⊗ p) ℂ
+  mapVec (p ⊗ ι) a = let
+                        t = trans-copy (reshape (comp-resh p) (nest a))
+                        w = Matrix.map ufft-vec t
+                        q = reshape (rev (comp-resh p)) (copy-trans w)
+                     in Matrix.unnest q
+  mapVec (p ⊗ s@(s₁ ⊗ s₂)) a = mapLeft (offt s) a
 
-  offt : ?rSIMD s → Ar s ℂ → Ar s ℂ
-  offt ι = vfft
-  offt {s₁ ⊗ s₂} (p₁ ⊗ p₂) xs = let
-      b = (mapLeft (offt p₁) ∘ reshape swap) xs
-      c = zipWith _*_ b otwid
-      d = (mapLeft (offt p₂) ∘ reshape swap) c
-    in d
-
-  --vfft {s ⊗ s₁} xs = let
-  --    b = (unnest ∘ (mapLeft (nest ∘ vfft ∘ unnest)) ∘ nest ∘ reshape (swap ⊕ eq)) xs
-  --    c = zipWith _*_ b vtwid
-  --    d = (unnest ∘ (mapLeft (nest ∘ vfft ∘ unnest)) ∘ nest ∘ reshape (swap ⊕ eq)) c
-  --  in d
-
-
-
-
-
-
+  offt (ι ) a = reshape ♯ (dft (reshape ♭ a)) -- non-vectorised fft, whatever it is
+  offt (s ⊗ p) a =
+    extract (do
+      b ← return (reshape swap (mapVec (s ⊗ p) a))
+      c ← return (zipWith _*_ b twiddles′)
+      d ← return (reshape swap  (mapVec (p ⊗ s) c))
+      return d)
 
