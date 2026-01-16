@@ -5,7 +5,10 @@ open import Complex using (Cplx)
 import Algebra.Structures as AlgebraStructures
 
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_)
+open Eq
+open Eq.≡-Reasoning
+
+
 
 module FFT-Vec (cplx : Cplx) where
   open Cplx cplx
@@ -25,76 +28,132 @@ module FFT-Vec (cplx : Cplx) where
   open import Matrix.Sum _+_ 0ℂ +-isCommutativeMonoid using (sum)
   open import Matrix.Reshape 
   open import Matrix.NonZero 
-  open import Matrix.SubShape
+  open import Matrix.Equality
 
   open import Function
 
-  private
-    variable
-      N : ℕ
-      s p : Shape
-    
-  --- NonZero helpers
+  open import FFT cplx 
 
-  fin-nz : (N : ℕ) → Fin N → NonZero N
-  fin-nz (suc n) i = _
+  V : ℕ
+  V = 4
 
-  pos⇒nz : Position s → NonZeroₛ s
-  pos⇒nz (ι i) = ι (fin-nz _ i)
-  pos⇒nz (i ⊗ i₁) = pos⇒nz i ⊗ pos⇒nz i₁
+  variable
+    n : ℕ
+    X Y : Set
+    q s₁ s₂ : Shape
 
-  zs-nopos : ¬ NonZeroₛ s → Position s → ⊥
-  zs-nopos ¬nz-s (ι {suc n} i) = ¬nz-s (ι (fin-nz _ i))
-  zs-nopos ¬nz-s (i ⊗ i₁) = ¬nz-s (pos⇒nz (i ⊗ i₁)) 
 
   ------------------------------------
   --- DFT and FFT helper functions ---
   ------------------------------------
 
-  iota : Ar (ι N) ℕ
-  iota (ι i) = toℕ i
-
 ---- XXX: Here is where we compute twiddles differently!
+-- I want to investigate this further, for current tests ufft′ works with both 
+-- versions of preoffset-prod, however, I feel that this may be a case of not 
+-- trying at high enough dimensions
+
+  offset-prod′ : Position (s ⊗ p) → ℕ
+  offset-prod′ (k ⊗ j) = iota (k ⟨ ♯ ⟩) *ₙ iota (j ⟨ ♯ ⟩)
+
   preoffset-prod : Position (s ⊗ p) → ℕ
   preoffset-prod (k ⊗ j) = iota (k ⟨ ♯ ⟩) *ₙ iota (j ⟨ rev recursive-transposeᵣ ∙ ♯ ⟩)
+
+  preoffset-prod′ : Position (s ⊗ p) → ℕ
+  preoffset-prod′ (k ⊗ j) = iota (k ⟨ rev recursive-transposeᵣ ∙ ♯ ⟩) *ₙ iota (j ⟨ ♯ ⟩)
+
+  pretwiddles :  Ar (s ⊗ p) ℂ
+  pretwiddles {s} {p} i with nonZeroDec (s ⊗ p)
+  ... | no ¬nz = ⊥-elim (zs-nopos ¬nz i)
+  ... | yes nz = -ω (length (s ⊗ p)) ⦃ nonZeroₛ-s⇒nonZero-s nz ⦄ (preoffset-prod i)
 
   pretwiddles′ :  Ar (s ⊗ p) ℂ
   pretwiddles′ {s} {p} i with nonZeroDec (s ⊗ p)
   ... | no ¬nz = ⊥-elim (zs-nopos ¬nz i)
   ... | yes nz = -ω (length (s ⊗ p)) ⦃ nonZeroₛ-s⇒nonZero-s nz ⦄ (preoffset-prod i)
 
-  V : ℕ
-  V = 4
+  twiddles′ : Ar (s ⊗ p) ℂ
+  twiddles′ {s} {p} i with nonZeroDec (s ⊗ p)
+  ... | no ¬nz = ⊥-elim (zs-nopos ¬nz i)
+  ... | yes nz = -ω (length (s ⊗ p)) ⦃ nonZeroₛ-s⇒nonZero-s nz ⦄ (offset-prod i)
 
 --First observation.  If we prevent inlining, we get exactly the pattern we wanted, i.e. applying dft over a dimension, and then doing the rest.  Here is a way to convince yourself:
 
-  variable
-    n : ℕ
-    X Y : Set
-    q : Shape
-
+  {-
   postulate
     M : Set → Set
     _>>=_ : M X → (X → M Y) → M Y
     return : X → M X
     extract : M X → X
-    dft : Ar (ι n) ℂ → Ar (ι n) ℂ
-    twiddles′ : Ar (s ⊗ p) ℂ
 
 --The above extract is bullshit in general, it is just to introduce a sequence of binds that is not normalised by Agda.
 
   mufft : ∀ {s} → Ar s ℂ → Ar s ℂ
-  mufft {ι n} a = (dft a)
+  mufft {ι n} a = (DFT a)
   mufft {s ⊗ p} a =
     extract (do
       b ← return (reshape swap (mapLeft mufft a))
       c ← return (zipWith _*_ b twiddles′)
       d ← return (reshape swap  (mapLeft mufft (c)))
       return d)
+  -}
+  
+  ufft-helper : Ar s ℂ → Ar s ℂ
+  ufft-helper {ι x} a = DFT a
+  ufft-helper {s ⊗ s₁} a = let
+      b = mapLeft ufft-helper $ reshape swap a
+      c = zipWith _*_ b pretwiddles
+      d = mapLeft ufft-helper $ reshape swap c
+    in d
 
+  ufft : Ar s ℂ → Ar s ℂ
+  ufft {s} a = reshape (♯ ∙ reindex (sym (|s|≡|sᵗ| {s})) ∙ ♭ ∙ recursive-transposeᵣ) (ufft-helper a)
+  
+  ufft′-helper : Ar s ℂ → Ar s ℂ
+  ufft′-helper {ι x} a = DFT a
+  ufft′-helper {s ⊗ s₁} a = let
+      b = reshape swap $ mapLeft ufft′-helper a
+      c = zipWith _*_ b pretwiddles′
+      d = reshape swap $ mapLeft ufft′-helper c
+    in d
+
+  ufft′ : Ar s ℂ → Ar s ℂ
+  ufft′ {s} a = ufft-helper (reshape (♯ ∙ reindex (sym (|s|≡|sᵗ| {s})) ∙ ♭ ∙ recursive-transposeᵣ) a)
+
+  
+  nz≡nzₛ : ∀ {n : ℕ} → ∀ (nz-n : NonZero n) → ∀ (nzₛ-n : NonZeroₛ (ι n)) → (ι nz-n) ≡ nzₛ-n
+  nz≡nzₛ {suc n} nz-n (ι x) = refl
+  
+  {-
+  lemma₁ : ∀ {a : Ar s ℂ} → ufft  a ≅ (reshape (♯ ∙ reindex (sym (|s|≡|sᵗ| {s})) ∙ ♭) $ FFT a)
+  lemma₁ {(ι n)} {a} (ι x) with nonZero? n | nonZeroDec (ι n)
+  ... | no ¬a | no ¬a₁ = refl
+  ... | no ¬nz-n | yes (ι nz-n) = ⊥-elim (¬nz-n nz-n)
+  ... | yes nz-n | no ¬nz-n = ⊥-elim (¬nz-n (ι nz-n))
+  ... | yes nz-n | yes nzₛ-n = cong (λ nz → FFT′ {ι n} ⦃ nz ⦄ _ _) (nz≡nzₛ nz-n nzₛ-n )
+  lemma₁ {s₁ ⊗ s₂} {a} (i₁ ⊗ i₂) with nonZeroDec (s₁ ⊗ s₂) 
+  ... | no ¬a = ?
+  ... | yes (nz-s₁ ⊗ nz-s₂) = ?
+
+  lemma₂ : ∀ {a : Ar s ℂ} → ufft′ a ≅ (reshape (♯ ∙ reindex (sym (|s|≡|sᵗ| {s})) ∙ ♭) $ FFT a)
+  lemma₂ {(ι n)} {a} (ι x) with nonZero? n | nonZeroDec (ι n)
+  ... | no ¬a | no ¬a₁ = refl
+  ... | no ¬nz-n | yes (ι nz-n) = ⊥-elim (¬nz-n nz-n)
+  ... | yes nz-n | no ¬nz-n = ⊥-elim (¬nz-n (ι nz-n))
+  ... | yes nz-n | yes nzₛ-n = cong (λ nz → FFT′ ⦃ nz ⦄ _ _) (nz≡nzₛ nz-n nzₛ-n )
+  lemma₂ {.(_ ⊗ _)} {a} (i ⊗ i₁) = ?
+
+  prf : ∀ {a : Ar s ℂ} → ufft a ≅ ufft′ a
+  prf {ι x} {a} i = refl
+  prf {s₁ ⊗ s₂} {a} (i₁ ⊗ i₂) = ?
+    --begin 
+    --_ ≡⟨ lemma₁ {s₁ ⊗ s₂} {a} (i₁ ⊗ i₂) ⟩
+    --_ ≡⟨ sym (lemma₂ (i₁ ⊗ i₂)) ⟩
+    --_ ∎
+  -}
+    
   {-
   --Pick arbitrary array, and normalise mufft application to it, you will see the right pattern.
-  tmp : mufft {(ι 7 ⊗ ι V) ⊗ (ι 3 ⊗ ι 5)} ≡ ?
+  tmp : mufft {(ι 7 ) ⊗ (ι 3 ⊗ ι 5)} ≡ ?
   tmp = ?
   -}
 
@@ -123,17 +182,6 @@ module FFT-Vec (cplx : Cplx) where
 
   comp-resh : (pr : SIMD s) → Reshape s (ι V ⊗ rem pr .proj₁)
   comp-resh = S-resh ∘ proj₂ ∘ rem
-  --comp-resh pr with rem pr
-  --comp-resh _ | _ , b = S-resh b
-  -- Brother.......... you silly billy
-  --comp-resh pr with rem pr
-  --comp-resh ι | _ , b = S-resh b
-  --comp-resh (SIMD-s ⊗ SIMD-p) | .(_ ⊗ _) , left  b =  S-resh (left b)
-  --comp-resh (SIMD-s ⊗ SIMD-p) | .(_ ⊗ _) , right b = ?
-  --comp-resh ι | ι _ , ι = eq
-  --comp-resh ι | (s ⊗ p) , ι = eq
-  --comp-resh ι | (.(ι V) ⊗ p) , left snd = ?
-  --comp-resh (SIMD-s ⊗ SIMD-p) | fst , snd = ?
   
   trans-copy : Ar (ι V ⊗ s) (Ar p ℂ) → Ar s (Ar p (Ar (ι V) ℂ))
   trans-copy xs ps pp p4 = xs (p4 ⊗ ps) pp
@@ -142,23 +190,47 @@ module FFT-Vec (cplx : Cplx) where
   copy-trans xs (p4 ⊗ ps) pp = xs ps pp p4
 
   ufft-vec : Ar s (Ar (ι V) ℂ) → Ar s (Ar (ι V) ℂ)
+  ufft-vec xs ps pv = ufft′ ((nest $ reshape swap $ unnest xs) pv) ps
   --ufft-vec xs ps pv = mufft ((nest $ reshape swap $ unnest xs) pv) ps
+  
+  --twid-vec : Position s₁ → Ar s₂ (Ar (ι V) ℂ) → Ar s₂ (Ar (ι V) ℂ)
+  --twid-vec ps₁ xs ps₂ pv = _*_ (xs ps₂ pv) (twiddles′ ?)
+  --
+  --
+  --twid-vec′ : SIMD (s ⊗ p) → ?
 
   offt : ∀ {s} → SIMD s → Ar s ℂ → Ar s ℂ
 
   mapVec : SIMD (s ⊗ p) → Ar (s ⊗ p) ℂ → Ar (s ⊗ p) ℂ
+  mapVec ι a = let
+                  t = (nest ∘ reshape swap) a
+                  w = ufft-vec t
+                  q = (reshape swap ∘ unnest) w
+                in q
   mapVec (p ⊗ ι) a = let
                         t = trans-copy (reshape (comp-resh p) (nest a))
                         w = Matrix.map ufft-vec t
+                        --x , y = rem p
+                        --a = Matrix.imap (?) w
                         q = reshape (rev (comp-resh p)) (copy-trans w)
                      in Matrix.unnest q
   mapVec (p ⊗ s@(s₁ ⊗ s₂)) a = mapLeft (offt s) a
 
-  offt (ι ) a = reshape ♯ (dft (reshape ♭ a)) -- non-vectorised fft, whatever it is
-  offt (s ⊗ p) a =
-    extract (do
-      b ← return (reshape swap (mapVec (s ⊗ p) a))
-      c ← return (zipWith _*_ b twiddles′)
-      d ← return (reshape swap  (mapVec (p ⊗ s) c))
-      return d)
+  offt (ι ) a = reshape ♯ (DFT (reshape ♭ a)) -- non-vectorised fft, whatever it is
+  offt (s ⊗ p) a = let
+      b = (reshape swap (mapVec (s ⊗ p) a))
+      c = (zipWith _*_ b twiddles′)
+      d = (reshape swap  (mapVec (p ⊗ s) c))
+      in d
+  --offt (s ⊗ p) a =
+  --  extract (do
+  --    b ← return (reshape swap (mapVec (s ⊗ p) a))
+  --    c ← return (zipWith _*_ b twiddles′)
+  --    d ← return (reshape swap  (mapVec (p ⊗ s) c))
+  --    return d)
+
+
+
+
+
 

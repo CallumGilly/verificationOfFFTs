@@ -16,6 +16,7 @@ module FFT (cplx : Cplx) where
   open import Data.Nat.Base using (ℕ; zero; suc; NonZero) renaming (_+_ to _+ₙ_; _*_ to _*ₙ_)
   open import Data.Nat.Properties using (nonZero?; *-comm)
   open import Relation.Nullary
+  open import Data.Empty
 
   open import Matrix using (Ar; Shape; Position; ι; _⊗_; zipWith; mapLeft; length; nest; unnest; map)
   open import Matrix.Sum _+_ 0ℂ +-isCommutativeMonoid using (sum)
@@ -24,11 +25,24 @@ module FFT (cplx : Cplx) where
 
   open import Function
 
-  private
-    variable
-      N : ℕ
-      s p : Shape
+  variable
+    N : ℕ
+    s p : Shape
 
+  --------------------------------
+  --- NonZero helper functions ---
+  --------------------------------
+
+  fin-nz : (N : ℕ) → Fin N → NonZero N
+  fin-nz (suc n) i = _
+
+  pos⇒nz : Position s → NonZeroₛ s
+  pos⇒nz (ι i) = ι (fin-nz _ i)
+  pos⇒nz (i ⊗ i₁) = pos⇒nz i ⊗ pos⇒nz i₁
+
+  zs-nopos : ¬ NonZeroₛ s → Position s → ⊥
+  zs-nopos ¬nz-s (ι {suc n} i) = ¬nz-s (ι (fin-nz _ i))
+  zs-nopos ¬nz-s (i ⊗ i₁) = ¬nz-s (pos⇒nz (i ⊗ i₁)) 
   ------------------------------------
   --- DFT and FFT helper functions ---
   ------------------------------------
@@ -47,53 +61,14 @@ module FFT (cplx : Cplx) where
   --- DFT and FFT ---
   -------------------
 
+
+  --DFT : ∀ {N} → Ar (ι N) ℂ → Ar (ι N) ℂ
+  --DFT {N} xs with nonZero? N
+  --... | no ¬nz = λ { (ι j) → ⊥-elim (¬nz (fin-nz _ j)) }
+  --... | yes nz = λ j → sum (λ k → xs k * -ω N ⦃ nz ⦄ (iota k *ₙ iota j))
+
   DFT′ : ∀ {N : ℕ} → ⦃ nonZero-N : NonZero N ⦄ → Ar (ι N) ℂ → Ar (ι N) ℂ
   DFT′ {N} ⦃ nonZero-N ⦄ xs j = sum (λ k → xs k * -ω N ⦃ nonZero-N ⦄ (iota k *ₙ iota j))
-
-  FFT-mixed-swap : ∀ {s : Shape} → ⦃ nonZero-s : NonZeroₛ s ⦄ → Ar s ℂ → Ar (recursive-transpose s) ℂ
-  FFT-mixed-swap {ι N} ⦃ ι nonZero-N ⦄ arr = DFT′ ⦃ nonZero-N ⦄ arr
-  FFT-mixed-swap {r₁ ⊗ r₂} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ arr = 
-      let 
-          innerDFTapplied       = reshape swap (mapLeft FFT-mixed-swap (reshape swap arr))
-          twiddleFactorsApplied = reshape swap (zipWith _*_   (reshape swap innerDFTapplied) twiddles)
-          outerDFTapplied       = reshape swap (mapLeft FFT-mixed-swap twiddleFactorsApplied)
-      in  outerDFTapplied
-      where
-        instance
-          _ : NonZeroₛ r₁
-          _ = nonZero-r₁
-          _ : NonZeroₛ r₂
-          _ = nonZero-r₂
-          _ : NonZeroₛ (r₂ ⊗ (recursive-transpose r₁))
-          _ = nonZero-r₂ ⊗ (nonZeroₛ-s⇒nonZeroₛ-sᵗ nonZero-r₁)
-
-  {-
-  `ffti : NonZeroₛ s → Inp (ar s C) (ar s C)
-  `ffti (ι nz)      = dft nz
-  `ffti (_⊗_ {p = p} nzs nzp) = 
-    part-col (`ffti nzs) eq
-    >>> twid ⦃ nzs ⊗ nzp ⦄
-    >>> part-row (`ffti nzp) eq 
-    >>> copy (♯ ∙ reindex (*-comm (size p) _) ∙ ♭ ∙ swap) -- TODO: check whether this is correct
-  -}
-  FFT′′ : ∀ {s : Shape} → ⦃ nonZero-s : NonZeroₛ s ⦄ → Ar s ℂ → Ar s ℂ
-  FFT′′ {ι N} ⦃ ι nonZero-N ⦄ arr = DFT′ ⦃ nonZero-N ⦄ arr
-  FFT′′ {r₁ ⊗ r₂} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ arr =
-    let 
-      innerDFTApplied = reshape swap $ mapLeft FFT′′ $ reshape swap $ arr
-      twiddlesApplied = zipWith _*_ innerDFTApplied twiddles
-      outerDFTApplied = mapLeft FFT′′ $ twiddlesApplied
-    in reshape (♯ ∙ reindex (*-comm (length r₂) _) ∙ ♭ ∙ swap) outerDFTApplied
-    where
-      instance
-        _ : NonZeroₛ r₁
-        _ = nonZero-r₁
-        _ : NonZeroₛ r₂
-        _ = nonZero-r₂
-        _ : NonZeroₛ (r₂ ⊗ (recursive-transpose r₁))
-        _ = nonZero-r₂ ⊗ (nonZeroₛ-s⇒nonZeroₛ-sᵗ nonZero-r₁)
-        _ : NonZeroₛ (r₁ ⊗ r₂)
-        _ = nonZero-r₁ ⊗ nonZero-r₂
 
   FFT′ : ∀ {s : Shape} → ⦃ nonZero-s : NonZeroₛ s ⦄ → Ar s ℂ → Ar (recursive-transpose s) ℂ
   FFT′ {ι N} ⦃ ι nonZero-N ⦄ arr = DFT′ ⦃ nonZero-N ⦄ arr

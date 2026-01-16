@@ -42,6 +42,9 @@ length (s ⊗ s₁) = length s * length s₁
 map : (X → Y) → Ar s X → Ar s Y
 map f ar i = f (ar i)
 
+imap : ((Position s) → X → Y) → Ar s X → Ar s Y
+imap f ar i = (f i) (ar i)
+
 nest : Ar (s ⊗ p) X → Ar s (Ar p X)
 nest a i j = a (i ⊗ j)
 
