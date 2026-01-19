@@ -119,6 +119,9 @@ module FFT-Vec (cplx : Cplx) where
   ufft′ : Ar s ℂ → Ar s ℂ
   ufft′ {s} a = ufft-helper (reshape (♯ ∙ reindex (sym (|s|≡|sᵗ| {s})) ∙ ♭ ∙ recursive-transposeᵣ) a)
 
+  --ufft′′ : Ar s ℂ → Ar s ℂ
+  --ufft′′ {s} a = ufft-helper (reshape (♯ ∙ reindex (sym (|s|≡|sᵗ| {s})) ∙ ♭ ) a)
+
   
   nz≡nzₛ : ∀ {n : ℕ} → ∀ (nz-n : NonZero n) → ∀ (nzₛ-n : NonZeroₛ (ι n)) → (ι nz-n) ≡ nzₛ-n
   nz≡nzₛ {suc n} nz-n (ι x) = refl
@@ -157,9 +160,9 @@ module FFT-Vec (cplx : Cplx) where
   tmp = ?
   -}
 
-
   data SIMD : Shape → Set where
     ι :  SIMD (ι V ⊗ s)
+    --ι :  SIMD (ι (V *ₙ n))
     _⊗_ : SIMD s → SIMD p → SIMD (s ⊗ p)
 
   data S : Shape → Shape → Shape → Set where
@@ -174,7 +177,7 @@ module FFT-Vec (cplx : Cplx) where
   rem {.(ι V ⊗ s)} (ι {s}) = s , ι
   rem (_⊗_ {_} {p} SIMD-s _) with rem SIMD-s
   ... | a , b = a ⊗ p , right b
-
+  
   S-resh : S (ι V) p s → Reshape s (ι V ⊗ p)
   S-resh ι = eq
   S-resh (left  x) = assoₗ ∙ (swap ⊕ eq) ∙ assoᵣ ∙ eq ⊕ (S-resh x)
@@ -189,12 +192,27 @@ module FFT-Vec (cplx : Cplx) where
   copy-trans : Ar s (Ar p (Ar (ι V) ℂ)) → Ar (ι V ⊗ s) (Ar p ℂ)
   copy-trans xs (p4 ⊗ ps) pp = xs ps pp p4
 
+  -- 4fft 
+
   ufft-vec : Ar s (Ar (ι V) ℂ) → Ar s (Ar (ι V) ℂ)
-  ufft-vec xs ps pv = ufft′ ((nest $ reshape swap $ unnest xs) pv) ps
+  ufft-vec xs = let
+                  a = nest (reshape swap (unnest xs))
+                  -- This was a big issue as DFT does not permute
+                  --b = map (reshape ♯ ∘ (DFT ∘ (reshape ♭))) a
+                  b = map ufft-helper a 
+                  c = nest (reshape swap (unnest b))
+                in c
+  --(reshape ♯ (DFT (reshape ♭ ()))) ?
+    --ufft′ {?} ((nest $ reshape swap $ unnest xs) pv) ps
   --ufft-vec xs ps pv = mufft ((nest $ reshape swap $ unnest xs) pv) ps
   
-  --twid-vec : Position s₁ → Ar s₂ (Ar (ι V) ℂ) → Ar s₂ (Ar (ι V) ℂ)
-  --twid-vec ps₁ xs ps₂ pv = _*_ (xs ps₂ pv) (twiddles′ ?)
+  --variable
+  --  a b : Shape
+  --twid-vec : S (ι V) p s → Position a → Ar b (Ar (ι V) ℂ) → Ar b (Ar (ι V) ℂ)
+  --twid-vec ι ps₁ xs ps₂ pv = (xs ps₂ pv) *  (pretwiddles ((pv ⊗ ?) ⟨ rev (S-resh ι) ⟩ ))
+  --twid-vec (left s) ps₁ xs ps₂ pv = ?
+  --twid-vec (right s) ps₁ xs ps₂ pv = ?
+  --_*_ (xs ps₂ pv) (pretwiddles (? ⟨ rev (S-resh s) ⟩ ))
   --
   --
   --twid-vec′ : SIMD (s ⊗ p) → ?
@@ -207,21 +225,99 @@ module FFT-Vec (cplx : Cplx) where
                   w = ufft-vec t
                   q = (reshape swap ∘ unnest) w
                 in q
-  mapVec (p ⊗ ι) a = let
+  mapVec (p ⊗ ι {s₁}) a = let
                         t = trans-copy (reshape (comp-resh p) (nest a))
                         w = Matrix.map ufft-vec t
-                        --x , y = rem p
-                        --a = Matrix.imap (?) w
                         q = reshape (rev (comp-resh p)) (copy-trans w)
                      in Matrix.unnest q
+  -- TODO: Below line is unhit with current tests so may be incorrect, need to do proof as too many dimensions to compile (4*3*3 min to avoid symmetry)
   mapVec (p ⊗ s@(s₁ ⊗ s₂)) a = mapLeft (offt s) a
 
-  offt (ι ) a = reshape ♯ (DFT (reshape ♭ a)) -- non-vectorised fft, whatever it is
-  offt (s ⊗ p) a = let
-      b = (reshape swap (mapVec (s ⊗ p) a))
-      c = (zipWith _*_ b twiddles′)
-      d = (reshape swap  (mapVec (p ⊗ s) c))
-      in d
+  {-
+  vecTwid  : (p : SIMD s) → (w : Ar (rem p .proj₁) (Ar (ι V ⊗ s₁) (Ar (ι V) ℂ))) → Ar (s ⊗ (ι V ⊗ s₁)) ℂ 
+  vecTwid p w = zipWith _*_ (unnest (reshape (rev (comp-resh p)) (copy-trans w))) pretwiddles
+  vecTwid′ : (p : SIMD s) → (w : Ar (rem p .proj₁) (Ar (ι V ⊗ s₁) (Ar (ι V) ℂ))) → Ar (s ⊗ (ι V ⊗ s₁)) ℂ 
+  vecTwid′ p w = zipWith _*_ (unnest (reshape (rev (comp-resh p)) (copy-trans w))) pretwiddles
+
+  vecTwid≅ : ∀ (p : SIMD s) → (w : Ar (rem p .proj₁) (Ar (ι V ⊗ s₁) (Ar (ι V) ℂ))) → vecTwid p w ≅ vecTwid′ p w
+  vecTwid≅ p w i = begin
+      (zipWith _*_ (unnest (reshape (rev (comp-resh p)) (copy-trans w))) pretwiddles) i
+    ≡⟨ ? ⟩
+    --  (zipWith _*_ ((reshape (rev (comp-resh p)) (copy-trans w))) (nest pretwiddles) i
+    --≡⟨ ? ⟩
+      ?
+    ∎
+  -}
+
+  mapVecTwid : SIMD (s ⊗ p) → Ar (s ⊗ p) ℂ → Ar (s ⊗ p) ℂ
+  mapVecTwid ι a = let
+                  t = (nest ∘ reshape swap) a
+                  w = ufft-vec t
+                  q = (reshape swap ∘ unnest) w
+                  p = zipWith _*_ q pretwiddles
+                in p
+  mapVecTwid (p ⊗ ι {s₁}) a = let
+                        t = trans-copy (reshape (comp-resh p) (nest a))
+                        w = Matrix.map ufft-vec t
+                        x = zipWith _*_ (unnest (reshape (rev (comp-resh p)) (copy-trans w))) pretwiddles
+                     in x --Matrix.unnest p
+  -- TODO: Below line is unhit with current tests so may be incorrect, need to do proof as too many dimensions to compile (4*3*3 min to avoid symmetry), also need to consider need for twid
+  mapVecTwid (p ⊗ s@(s₁ ⊗ s₂)) a = let
+                                    w = mapLeft (offt s) a
+                                    x = zipWith _*_ w pretwiddles
+                                  in x
+  
+  -- SIMD Guided reshape
+  SIMD-transpose : SIMD s → ∃ λ p → (Reshape s p × length s ≡ length p)
+  SIMD-transpose {(ι V ⊗ s)} ι = (s ⊗ ι V) , (swap , |s|≡|sᵗ| {ι V ⊗ ι (length s)})
+  SIMD-transpose {(s₁ ⊗ s₂) ⊗ s₃} (simd₁ ⊗ simd₂) with SIMD-transpose simd₁ | SIMD-transpose simd₂
+  ... | s₁′ , (rshp₁ , prf₁) | s₂′ , (rshp₂ , prf₂) = 
+          s₂′ ⊗ s₁′ 
+        , (swap ∙ rshp₁ ⊕ rshp₂ 
+        , trans (cong₂ _*ₙ_ prf₁ prf₂) (*-comm (length s₁′) (length s₂′)) )
+
+  SIMD-transpose-reindex : SIMD s → Reshape s s
+  SIMD-transpose-reindex simd with SIMD-transpose simd
+  ... | s′ , (rshp , prf) = ♯ ∙ reindex (sym prf) ∙ ♭ ∙ rshp
+
+  offt (ι ) a = ufft-helper a
+  offt {s₁ ⊗ p₁} (s ⊗ p) a = let
+      b = (mapVecTwid (p ⊗ s) (reshape swap a))
+      c = (mapVec (s ⊗ p) (reshape swap b))
+      in c
+  
+  nofft : ∀ {s} → SIMD s → Ar s ℂ → Ar s ℂ
+  nofft {s} simd a = reshape (♯ ∙ reindex (sym (|s|≡|sᵗ| {s})) ∙ ♭ ∙ recursive-transposeᵣ) (offt simd a)
+
+  {-
+  _ : mapLeft ufft′-helper ≡ ?
+  _ = ?
+
+  reshape-cong : ∀ {xs ys : Ar s ℂ} → (r : Reshape s p) → xs ≅ ys → reshape r xs ≅ reshape r ys
+  reshape-cong {xs} {ys} r prf i = ?
+
+  ufft-helper⇒offt-helper : (simd : SIMD s) → ∀ (a : Ar s ℂ) → ufft-helper a ≅ offt simd a
+  ufft-helper⇒offt-helper ι a i = refl
+  ufft-helper⇒offt-helper {.((ι V ⊗ _) ⊗ (_ ⊗ _))} (ι ⊗ simd₁) a ((i₁ ⊗ i₂) ⊗ (i₃ ⊗ i₄)) = ?
+  ufft-helper⇒offt-helper {.((_ ⊗ _) ⊗ (_ ⊗ _))} ((simd ⊗ simd₂) ⊗ simd₁) a ((i₁ ⊗ i₂) ⊗ (i₃ ⊗ i₄)) = ?
+
+  ufft⇒offt : (simd : SIMD s) → ∀ (a : Ar s ℂ) → ufft a ≅ nofft simd a
+  ufft⇒offt {s} simd a i =
+    (reshape-cong
+      {s}
+      {_} 
+      {ufft-helper a}
+      {offt simd a}
+      (♯ ∙ reindex (sym (|s|≡|sᵗ| {s})) ∙ ♭ ∙ recursive-transposeᵣ)
+      (λ j → ufft-helper⇒offt-helper simd a j)
+    ) i
+  -}
+
+  --cong (_ (i ⟨ ♯ ∙ reindex (sym (|s|≡|sᵗ| {s})) ∙ ♭ ∙ recursive-transposeᵣ ⟩ )) ?
+
+  --ufft′ {s} a = ufft-helper (reshape (♯ ∙ reindex (sym (|s|≡|sᵗ| {s})) ∙ ♭ ∙ recursive-transposeᵣ) a)
+  
+
   --offt (s ⊗ p) a =
   --  extract (do
   --    b ← return (reshape swap (mapVec (s ⊗ p) a))
