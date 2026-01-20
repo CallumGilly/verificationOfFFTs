@@ -294,9 +294,11 @@ open import Implementations.VeryLargeShapeAuto
 --  SIMD-demo-vec : Ar (ι 240) ℂ
 
 SIMD-Shape : Shape
-SIMD-Shape = (((ι V ⊗ ι 3) ⊗ (ι V ⊗ ι 5)))
+--SIMD-Shape = (((ι V ⊗ ι 3) ⊗ (ι V ⊗ ι 5)))
+SIMD-Shape = (((ι V ) ⊗ ((ι 3 ⊗ ι V) ⊗ ι 5)))
 SIMD-demo : Ar SIMD-Shape ℂ
-SIMD-demo = reshape (split ⊕ split ∙ split) SIMD-demo-vec
+--SIMD-demo = reshape (split ⊕ split ∙ split) SIMD-demo-vec
+SIMD-demo = reshape ( eq ⊕ ((split ⊕ eq) ∙ split) ∙ split) SIMD-demo-vec
 
 show-arr                  : Ar s ℂ → IO {a} ⊤
 show-flat-arr             : Ar s ℂ → IO {a} ⊤
@@ -331,7 +333,7 @@ CSVStack xs     (ι (+ (+ z)) ⊗ x₁) = reshape ♭ (ufft xs) x₁
 OFFTStack : Ar (ι 3 ⊗ ι (length SIMD-Shape)) ℂ
 OFFTStack (ι z ⊗ x₁)         = (reshape ♭ SIMD-demo) x₁
 OFFTStack (ι (+ z) ⊗ x₁)     = (DFT (reshape flatten-reindex SIMD-demo)) x₁
-OFFTStack (ι (+ (+ z)) ⊗ x₁) = (reshape (♭) (nofft (ι ⊗ ι) SIMD-demo)) x₁
+OFFTStack (ι (+ (+ z)) ⊗ x₁) = (reshape (♭) (nofft (ι) SIMD-demo)) x₁
 
 --CSVStack xs (ι (+ (+ z)) ⊗ x₁) = reshape ♭ (offt ? ?) x₁
 

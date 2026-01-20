@@ -14,7 +14,7 @@ module FFT-Vec (cplx : Cplx) where
   open Cplx cplx
 
   open AlgebraStructures  {A = ℂ} _≡_
-  open IsCommutativeRing +-*-isCommutativeRing using (+-isCommutativeMonoid)
+  open IsCommutativeRing +-*-isCommutativeRing using (+-isCommutativeMonoid) renaming (*-comm to 𝕔*-comm)
 
   open import Data.Fin.Base using (Fin; toℕ) renaming (zero to fzero; suc to fsuc)
   open import Data.Nat.Base renaming (_+_ to _+ₙ_; _*_ to _*ₙ_)
@@ -43,6 +43,10 @@ module FFT-Vec (cplx : Cplx) where
     X Y : Set
     q s₁ s₂ : Shape
 
+  reshape-cong : ∀ {xs ys : Ar s ℂ} → (r : Reshape s p) → xs ≅ ys → reshape r xs ≅ reshape r ys
+  reshape-cong {xs} {ys} r prf i = ?
+
+  reshape-cong′ : ∀ {xs : Ar s ℂ} → {r₁ r₂ : Reshape s p} → r₁ ≡ r₂ → reshape r₁ xs ≅ reshape r₂ xs
 
   ------------------------------------
   --- DFT and FFT helper functions ---
@@ -77,27 +81,10 @@ module FFT-Vec (cplx : Cplx) where
   ... | no ¬nz = ⊥-elim (zs-nopos ¬nz i)
   ... | yes nz = -ω (length (s ⊗ p)) ⦃ nonZeroₛ-s⇒nonZero-s nz ⦄ (offset-prod i)
 
---First observation.  If we prevent inlining, we get exactly the pattern we wanted, i.e. applying dft over a dimension, and then doing the rest.  Here is a way to convince yourself:
+  --------------------------
+  ---- UFFT definitions ----
+  --------------------------
 
-  {-
-  postulate
-    M : Set → Set
-    _>>=_ : M X → (X → M Y) → M Y
-    return : X → M X
-    extract : M X → X
-
---The above extract is bullshit in general, it is just to introduce a sequence of binds that is not normalised by Agda.
-
-  mufft : ∀ {s} → Ar s ℂ → Ar s ℂ
-  mufft {ι n} a = (DFT a)
-  mufft {s ⊗ p} a =
-    extract (do
-      b ← return (reshape swap (mapLeft mufft a))
-      c ← return (zipWith _*_ b twiddles′)
-      d ← return (reshape swap  (mapLeft mufft (c)))
-      return d)
-  -}
-  
   ufft-helper : Ar s ℂ → Ar s ℂ
   ufft-helper {ι x} a = DFT a
   ufft-helper {s ⊗ s₁} a = let
@@ -120,46 +107,65 @@ module FFT-Vec (cplx : Cplx) where
   ufft′ : Ar s ℂ → Ar s ℂ
   ufft′ {s} a = ufft-helper (reshape (♯ ∙ reindex (sym (|s|≡|sᵗ| {s})) ∙ ♭ ∙ recursive-transposeᵣ) a)
 
-  --ufft′′ : Ar s ℂ → Ar s ℂ
-  --ufft′′ {s} a = ufft-helper (reshape (♯ ∙ reindex (sym (|s|≡|sᵗ| {s})) ∙ ♭ ) a)
+  -- Proofs on ufft and ufft′
 
-  
-  nz≡nzₛ : ∀ {n : ℕ} → ∀ (nz-n : NonZero n) → ∀ (nzₛ-n : NonZeroₛ (ι n)) → (ι nz-n) ≡ nzₛ-n
-  nz≡nzₛ {suc n} nz-n (ι x) = refl
-  
-  {-
-  lemma₁ : ∀ {a : Ar s ℂ} → ufft  a ≅ (reshape (♯ ∙ reindex (sym (|s|≡|sᵗ| {s})) ∙ ♭) $ FFT a)
-  lemma₁ {(ι n)} {a} (ι x) with nonZero? n | nonZeroDec (ι n)
+  ufft≅fft : ∀ {a : Ar s ℂ} → ufft  a ≅ (reshape (♯ ∙ reindex (sym (|s|≡|sᵗ| {s})) ∙ ♭) $ FFT a)
+  ufft≅fft {(ι n)} {a} (ι x) with nonZero? n | nonZeroDec (ι n)
   ... | no ¬a | no ¬a₁ = refl
   ... | no ¬nz-n | yes (ι nz-n) = ⊥-elim (¬nz-n nz-n)
   ... | yes nz-n | no ¬nz-n = ⊥-elim (¬nz-n (ι nz-n))
   ... | yes nz-n | yes nzₛ-n = cong (λ nz → FFT′ {ι n} ⦃ nz ⦄ _ _) (nz≡nzₛ nz-n nzₛ-n )
-  lemma₁ {s₁ ⊗ s₂} {a} (i₁ ⊗ i₂) with nonZeroDec (s₁ ⊗ s₂) 
+  ufft≅fft {s₁ ⊗ s₂} {a} (i₁ ⊗ i₂) with nonZeroDec (s₁ ⊗ s₂) 
   ... | no ¬a = ?
   ... | yes (nz-s₁ ⊗ nz-s₂) = ?
 
-  lemma₂ : ∀ {a : Ar s ℂ} → ufft′ a ≅ (reshape (♯ ∙ reindex (sym (|s|≡|sᵗ| {s})) ∙ ♭) $ FFT a)
-  lemma₂ {(ι n)} {a} (ι x) with nonZero? n | nonZeroDec (ι n)
+  ufft′≅fft : ∀ {a : Ar s ℂ} → ufft′ a ≅ (reshape (♯ ∙ reindex (sym (|s|≡|sᵗ| {s})) ∙ ♭) $ FFT a)
+  ufft′≅fft {(ι n)} {a} (ι x) with nonZero? n | nonZeroDec (ι n)
   ... | no ¬a | no ¬a₁ = refl
   ... | no ¬nz-n | yes (ι nz-n) = ⊥-elim (¬nz-n nz-n)
   ... | yes nz-n | no ¬nz-n = ⊥-elim (¬nz-n (ι nz-n))
-  ... | yes nz-n | yes nzₛ-n = cong (λ nz → FFT′ ⦃ nz ⦄ _ _) (nz≡nzₛ nz-n nzₛ-n )
-  lemma₂ {.(_ ⊗ _)} {a} (i ⊗ i₁) = ?
+  ... | yes nz-n | yes nzₛ-n = ? --cong (λ nz → FFT′ {?} ⦃ nz ⦄ _ _) (nz≡nzₛ nz-n nzₛ-n )
+  ufft′≅fft {.(_ ⊗ _)} {a} (i ⊗ i₁) = ?
 
-  prf : ∀ {a : Ar s ℂ} → ufft a ≅ ufft′ a
-  prf {ι x} {a} i = refl
-  prf {s₁ ⊗ s₂} {a} (i₁ ⊗ i₂) = ?
-    --begin 
-    --_ ≡⟨ lemma₁ {s₁ ⊗ s₂} {a} (i₁ ⊗ i₂) ⟩
-    --_ ≡⟨ sym (lemma₂ (i₁ ⊗ i₂)) ⟩
-    --_ ∎
-  -}
-    
-  {-
-  --Pick arbitrary array, and normalise mufft application to it, you will see the right pattern.
-  tmp : mufft {(ι 7 ) ⊗ (ι 3 ⊗ ι 5)} ≡ ?
-  tmp = ?
-  -}
+  ufft≅ufft′ : ∀ {a : Ar s ℂ} → ufft a ≅ ufft′ a
+  ufft≅ufft′ {ι x} {a} i = ?
+  ufft≅ufft′ {s₁ ⊗ s₂} {a} (i₁ ⊗ i₂) = ?
+
+  ufft-helper-cong : ∀ {s : Shape} {xs ys : Ar s ℂ} → xs ≅ ys → ufft-helper xs ≅ ufft-helper ys
+  -------------------------------------
+  ---- UFFT with embedded twiddles ----
+  -------------------------------------
+
+  ufftₑ-helper : Ar s ℂ → Ar s ℂ
+  ufftₑ-helper {ι x} a = DFT a
+  ufftₑ-helper {s₁ ⊗ s₂} a = let
+      b = unnest ∘ imap (λ i → zipWith _*_ ((nest $ pretwiddles {s₂} {s₁}) i) ∘ ufftₑ-helper) ∘ nest $ reshape swap a
+      d = mapLeft ufftₑ-helper $ reshape swap b
+    in d
+
+  ufftₑ : Ar s ℂ → Ar s ℂ
+  ufftₑ {s} a = reshape (♯ ∙ reindex (sym (|s|≡|sᵗ| {s})) ∙ ♭ ∙ recursive-transposeᵣ) (ufftₑ-helper a)
+
+  ufftₑ-helper-cong : ∀ {s : Shape} {xs ys : Ar s ℂ} → xs ≅ ys → ufftₑ-helper xs ≅ ufftₑ-helper ys
+  
+  ufftₑ-helper≅ufft-helper : ∀ (a : Ar s ℂ) → ufftₑ-helper a ≅ ufft-helper a
+  ufftₑ-helper≅ufft-helper {ι x} a i = refl
+  ufftₑ-helper≅ufft-helper {s₁ ⊗ s₂} a (i₁ ⊗ i₂) = 
+      begin 
+      _ ≡⟨ ufftₑ-helper-cong (λ i → 𝕔*-comm _ _) i₂ ⟩
+      _ ≡⟨ ufftₑ-helper≅ufft-helper _ i₂ ⟩
+      _ ≡⟨ ufft-helper-cong (λ i → cong₂ _*_ (ufftₑ-helper≅ufft-helper _ i₁ ) refl) (i₂)  ⟩
+      _ ∎
+
+  ufftₑ≅ufft : ∀ (a : Ar s ℂ) → ufftₑ a ≅ ufft a
+  ufftₑ≅ufft {s} a i = reshape-cong 
+        (♯ ∙ reindex (sym (|s|≡|sᵗ| {s})) ∙ ♭ ∙ recursive-transposeᵣ)
+        (ufftₑ-helper≅ufft-helper a)
+        i
+  
+  -------------------------
+  ---- SIMD Guided FFT ----
+  -------------------------
 
   data SIMD : Shape → Set where
     ι :  SIMD (ι V ⊗ s)
@@ -195,28 +201,43 @@ module FFT-Vec (cplx : Cplx) where
   ufft-vec : Ar s (Ar (ι V) ℂ) → Ar s (Ar (ι V) ℂ)
   ufft-vec xs = let
                   a = nest (reshape swap (unnest xs))
-                  b = map ufft a 
+                  b = map ufftₑ a 
                   c = nest (reshape swap (unnest b))
                 in c
 
   -- SIMD Guided reshape
 
   -- This implementation could end up being a nightmare when it comes to proof, rewrite in a nicer way (with the same effect)
-  SIMD-transpose : ∀ {s : Shape} → SIMD s → ∃ λ p → (Reshape s p × length s ≡ length p)
-  SIMD-transpose {(ι V ⊗ s)} ι = (ι V ⊗ s) , (eq , refl) --(s ⊗ ι V) , (swap , |s|≡|sᵗ| {ι V ⊗ ι (length s)})
-  SIMD-transpose {(s₁ ⊗ s₂) ⊗ s₃} (simd₁ ⊗ simd₂) with SIMD-transpose simd₁ | SIMD-transpose simd₂
-  ... | s₁′ , (rshp₁ , prf₁) | s₂′ , (rshp₂ , prf₂) = 
-          s₂′ ⊗ s₁′ 
-        , (swap ∙ rshp₁ ⊕ rshp₂ 
-        , trans (cong₂ _*ₙ_ prf₁ prf₂) (*-comm (length s₁′) (length s₂′)) )
+  --SIMD-transpose′ : ∀ {s : Shape} → SIMD s → ∃ λ p → (Reshape s p × length s ≡ length p)
+  --SIMD-transpose′ {(ι V ⊗ s)} ι = (ι V ⊗ s) , (eq , refl) --(s ⊗ ι V) , (swap , |s|≡|sᵗ| {ι V ⊗ ι (length s)})
+  --SIMD-transpose′ {(s₁ ⊗ s₂) ⊗ s₃} (simd₁ ⊗ simd₂) with SIMD-transpose′ simd₁ | SIMD-transpose′ simd₂
+  --... | s₁′ , (rshp₁ , prf₁) | s₂′ , (rshp₂ , prf₂) = 
+  --        s₂′ ⊗ s₁′ 
+  --      , (swap ∙ rshp₁ ⊕ rshp₂ 
+  --      , trans (cong₂ _*ₙ_ prf₁ prf₂) (*-comm (length s₁′) (length s₂′)) )
+
+  SIMD-transpose : SIMD s → Shape
+  SIMD-transpose {ι x} ()
+  SIMD-transpose {.(ι V) ⊗ s} ι = ι V ⊗ s
+  SIMD-transpose (simd-s₁ ⊗ simd-s₂) = (SIMD-transpose simd-s₂) ⊗ (SIMD-transpose simd-s₁)
+  
+  SIMD-transposeᵣ : (simd-s : SIMD s) → Reshape s (SIMD-transpose simd-s)
+  SIMD-transposeᵣ ι = eq
+  SIMD-transposeᵣ (simd-s ⊗ simd-s₁) = swap ∙ SIMD-transposeᵣ simd-s ⊕ SIMD-transposeᵣ simd-s₁
+
+  SIMD-transposeₗ : (simd-s : SIMD s) → length (SIMD-transpose simd-s) ≡ length s
+  SIMD-transposeₗ ι = refl
+  SIMD-transposeₗ {(s₁ ⊗ s₂)} (simd-s₁ ⊗ simd-s₂) = 
+        trans 
+          (cong₂ _*ₙ_ (SIMD-transposeₗ simd-s₂) (SIMD-transposeₗ simd-s₁))
+          (*-comm (length (s₂)) (length (s₁)))
 
   SIMD-transpose-reindex : SIMD s → Reshape s s
-  SIMD-transpose-reindex simd with SIMD-transpose simd
-  ... | s′ , (rshp , prf) = ♯ ∙ reindex (sym prf) ∙ ♭ ∙ rshp
+  SIMD-transpose-reindex simd-s = ♯ ∙ reindex (SIMD-transposeₗ simd-s) ∙ ♭ ∙ (SIMD-transposeᵣ simd-s)
   
   -- SIMD Guided twiddles
   SIMD-preoffset-prod : SIMD p → Position (s ⊗ p) → ℕ
-  SIMD-preoffset-prod simd-p (k ⊗ j) = iota (k ⟨ ♯ ⟩) *ₙ iota (j ⟨ rev (SIMD-transpose simd-p .proj₂ .proj₁) ∙ ♯ ⟩)
+  SIMD-preoffset-prod simd-p (k ⊗ j) = iota (k ⟨ ♯ ⟩) *ₙ iota (j ⟨ rev (SIMD-transposeᵣ simd-p) ∙ ♯ ⟩)
 
   SIMD-pretwiddles : ∀ {s p : Shape} → SIMD p → Ar (s ⊗ p) ℂ
   SIMD-pretwiddles {s} {p} simd-p i with nonZeroDec (s ⊗ p)
@@ -235,31 +256,34 @@ module FFT-Vec (cplx : Cplx) where
   mapVec′ ι true  a = let
                   t = (nest ∘ reshape swap) a
                   w = ufft-vec t
-                  q = (reshape swap ∘ unnest) w
-                  p = zipWith _*_ q pretwiddles
-                in p
+                  z = imap (λ i → zipWith _*_ (nest pretwiddles i)) w
+                  q = (reshape swap ∘ unnest) z
+                  --p = zipWith _*_ q pretwiddles
+                in q
   mapVec′ (simd-s ⊗ ι) false a = let
                   t = trans-copy (reshape (comp-resh simd-s) (nest a))
                   w = Matrix.map ufft-vec t
                   q = reshape (rev (comp-resh simd-s)) (copy-trans w)
                in Matrix.unnest q
                -- TODO: Confirm following line is correct
-  mapVec′ (simd-s ⊗ s@(simd-p ⊗ simd-p₁)) false = mapLeft (offt s)
-  mapVec′ (simd-s ⊗ ι {s₁}) true a = let
-                        t = trans-copy (reshape (comp-resh simd-s) (nest a))
-                        w = Matrix.map ufft-vec t
-                        x = zipWith _*_ (unnest (reshape (rev (comp-resh simd-s)) (copy-trans w))) (SIMD-pretwiddles ι)
-                     in x 
-  -- TODO: Below line is not hit with current tests so may be incorrect, need to do proof as too many dimensions to compile (4*3*3 min to avoid symmetry), also need to consider need for twid
-  -- id used to make it clear this is skipped as will produce massive error
-  mapVec′ (simd-s ⊗ (simd-p ⊗ simd-p₁)) true a = id a -- TODO
-                                  --let
-                                  --  w = mapLeft (offt s) a
-                                  --  --x = zipWith _*_ w pretwiddles
-                                  --  x = zipWith _*_ w (SIMD-pretwiddles (s₁ ⊗ s₂))
-                                  --in x
+  mapVec′ (_ ⊗ simd-p@(_ ⊗ _)) false = mapLeft (offt simd-p)
+  mapVec′ {s₁ ⊗ s₂} {.(ι V ⊗ s)} (simd-s ⊗ ι {s}) true a = let
+                      t = trans-copy (reshape (comp-resh simd-s) (nest a))
+                      w = Matrix.map ufft-vec t
+                      twids  = SIMD-pretwiddles {s₁ ⊗ s₂} {ι V ⊗ s} ι
+                      x = imap {s₁ ⊗ s₂} (λ i → zipWith _*_ 
+                                        ((copy-trans w) (i ⟨ (rev (comp-resh simd-s)) ⟩ )) 
+                                        (nest twids i)
+                                )
+                      y = unnest (reshape (rev (comp-resh simd-s)) (copy-trans w))
+                   in y 
+  -- TODO: Below line is not hit with current tests so may be incorrect, need to do proof as too many dimensions to compile (4*3*3 min to avoid symmetry)
+  mapVec′ (_ ⊗ simd-p@(_ ⊗ _)) true a = let
+                                    w = mapLeft (offt simd-p) a
+                                    x = zipWith _*_ w (SIMD-pretwiddles simd-p)
+                                  in x
 
-  offt (ι ) a = ufft-helper a
+  offt (ι ) a = ufftₑ a
   offt {s₁ ⊗ p₁} (s ⊗ p) a = let
       b = (mapVec′ (p ⊗ s) true  (reshape swap a))
       c = (mapVec′ (s ⊗ p) false (reshape swap b))
@@ -271,19 +295,95 @@ module FFT-Vec (cplx : Cplx) where
   nofft : ∀ {s} → SIMD s → Ar s ℂ → Ar s ℂ
   nofft {s} simd a = reshape (SIMD-transpose-reindex simd) (offt simd a)
 
-  _ : mapLeft ufft′-helper ≡ ?
-  _ = ?
+  offt-cong : ∀ {s : Shape} {xs ys : Ar s ℂ} → (simd-s : SIMD s) → xs ≅ ys → offt simd-s xs ≅ offt simd-s ys
 
-  reshape-cong : ∀ {xs ys : Ar s ℂ} → (r : Reshape s p) → xs ≅ ys → reshape r xs ≅ reshape r ys
-  reshape-cong {xs} {ys} r prf i = ?
+  lemma₁ : ∀ {s : Shape} → (SIMD s) → (eq ⊕ rev ♭ ∙ split ∙ subst (λ t → Reshape (ι (length (recursive-transpose s) *ₙ 4)) (ι t)) (sym (|s|≡|sᵗ| {ι V ⊗ s})) eq ∙ (flat {length $ recursive-transpose s}) ∙ ♭ ⊕ eq ∙ swap ∙ (_⊕_ {ι V} {ι V} {s} eq  recursive-transposeᵣ)) ≡ (eq ⊕ rev ♭ ∙ split {V} {length s} ∙ flat {V} {length  s} ∙ _⊕_ {ι V} {ι V} {s} eq ♭ ∙ eq ⊕ rev ♭ ∙ split ∙ subst (λ t → Reshape (ι (length (recursive-transpose s) *ₙ 4)) (ι t)) (sym (|s|≡|sᵗ| {ι V ⊗ s})) eq ∙ flat ∙ ♭ ⊕ eq ∙ swap ∙ eq ⊕ recursive-transposeᵣ)
+  lemma₁ {s} simd-s = ?
 
-  ufft-helper⇒offt-helper : (simd : SIMD s) → ∀ (a : Ar s ℂ) → ufft-helper a ≅ offt simd a
-  ufft-helper⇒offt-helper ι a i = refl
-  ufft-helper⇒offt-helper {.((ι V ⊗ _) ⊗ (_ ⊗ _))} (ι ⊗ simd₁) a ((i₁ ⊗ i₂) ⊗ (i₃ ⊗ i₄)) = ?
-  ufft-helper⇒offt-helper {.((_ ⊗ _) ⊗ (_ ⊗ _))} ((simd ⊗ simd₂) ⊗ simd₁) a ((i₁ ⊗ i₂) ⊗ (i₃ ⊗ i₄)) = ?
+  ufftₑ⇒offt : (simd : SIMD s) → ∀ (a : Ar s ℂ) → ufftₑ a ≅ nofft simd a
+  -- Current big hole - ?9 doesn't seem to be fillable without making a contradiction.........
+  ufftₑ⇒offt {(ι V ⊗ s)} (ι {.(s)}) a i = (reshape-cong′ {?} {?} {?} {?} {?} (lemma₁ (ι {s}))) (?)
+  {-
+    begin 
+      reshape (eq ⊕ rev ♭ ∙ split ∙ subst (λ t → Reshape (ι (length (recursive-transpose s) *ₙ 4)) (ι t)) (sym (|s|≡|sᵗ| {ι 4 ⊗ s})) eq ∙ (flat {length $ recursive-transpose s}) ∙ ♭ ⊕ eq ∙ swap ∙ (_⊕_ {ι 4} {ι 4} {s} eq recursive-transposeᵣ)) (unnest 
+        (λ i₁ → ufftₑ-helper (λ j → (pretwiddles (j ⊗ i₁)) * (a (ι fzero ⊗ j) * -ω 4 0 + (a (ι (fsuc fzero) ⊗ j) * -ω 4 (iota i₁ +ₙ 0) + (a (ι (fsuc (fsuc fzero)) ⊗ j) * -ω 4 (iota i₁ +ₙ (iota i₁ +ₙ 0)) + (a (ι (fsuc (fsuc (fsuc fzero))) ⊗ j) * -ω 4 (iota i₁ +ₙ (iota i₁ +ₙ (iota i₁ +ₙ 0))) + 0ℂ))))))
+       ) i
+    ≡⟨ (reshape-cong′ {?} {?} {?} {?} {?} (lemma₁ (ι {?}))) i ⟩
+      reshape (eq ⊕ rev ♭ ∙ split {V} {length s} ∙ flat {V} {length  s} ∙ _⊕_ {ι V} {ι V} {s} eq ♭ ∙ eq ⊕ rev ♭ ∙ split ∙ subst (λ t → Reshape (ι (length (recursive-transpose s) *ₙ 4)) (ι t)) (sym (|s|≡|sᵗ| {ι V ⊗ s})) eq ∙ flat ∙ ♭ ⊕ eq ∙ swap ∙ eq ⊕ recursive-transposeᵣ)
+        (unnest
+              (λ i₁ → ufftₑ-helper (λ j → (pretwiddles (j ⊗ i₁)) * (a (ι fzero ⊗ j) * -ω 4 0 + (a (ι (fsuc fzero) ⊗ j) * -ω 4 (iota i₁ +ₙ 0) + (a (ι (fsuc (fsuc fzero)) ⊗ j) * -ω 4 (iota i₁ +ₙ (iota i₁ +ₙ 0)) + (a (ι (fsuc (fsuc (fsuc fzero))) ⊗ j) * -ω 4 (iota i₁ +ₙ (iota i₁ +ₙ (iota i₁ +ₙ 0))) + 0ℂ))))))
+         )   ( i )
+      ∎
+  -}
+
+
+--         eq ⊕ rev ♭ ∙ split {V} {length s} ∙ flat {V} {length  s} ∙ _⊕_ {ι V} {ι V} {s} eq ♭ ∙ eq ⊕ rev ♭ ∙ split ∙ subst (λ t → Reshape (ι (length (recursive-transpose s) *ₙ 4)) (ι t)) (sym (|s|≡|sᵗ| {ι V ⊗ s})) eq ∙ flat ∙ ♭ ⊕ eq ∙ swap ∙ eq ⊕ recursive-transposeᵣ 
+
+
+    --(((((((i ⟨ eq ⊕ rev ♭ ⟩) ⟨ split ⟩) ⟨ subst (λ t → Reshape (ι (length (recursive-transpose s) *ₙ 4)) (ι t)) (sym |s|≡|sᵗ|) eq ⟩) ⟨ flat ⟩) ⟨ ♭ ⊕ eq ⟩) ⟨ swap ⟩) ⟨ eq ⊕ recursive-transposeᵣ ⟩)
+  ufftₑ⇒offt {.(_ ⊗ _)} (simd-s ⊗ simd-s₁) a i = ?
+  {-
+  --ufft-helper⇒offt-helper : (simd : SIMD s) → ∀ (a : Ar s ℂ) → ufft-helper a ≅ offt simd a
+  lemma₁ : 
+        (x : Fin V) 
+      → (i₁ : Position s)
+      →
+      (((((((ι x ⊗ (i₁ ⟨ rev ♭ ⟩)) ⟨ split ⟩) ⟨ subst (λ t → Reshape (ι (length (recursive-transpose s) *ₙ 4)) (ι t)) (sym (|s|≡|sᵗ| {ι 4 ⊗ s})) eq ⟩) ⟨ flat {length (recursive-transpose s)} ⟩) ⟨ (♭ {recursive-transpose s}) ⊕ eq ⟩) ⟨ swap ⟩) ⟨ eq ⊕ recursive-transposeᵣ ⟩)
+      ≡
+      (((((((((((ι x ⊗ (i₁ ⟨ rev ♭ ⟩)) ⟨ split ⟩) ⟨ flat {?} ⟩) ⟨ eq ⊕ ♭ ⟩) ⟨ eq ⊕ rev ♭ ⟩) ⟨ split ⟩) ⟨ subst (λ t → Reshape (ι (length (recursive-transpose s) *ₙ 4)) (ι t)) (sym (|s|≡|sᵗ| {ι V ⊗ s})) eq ⟩) ⟨ flat ⟩) ⟨ ♭ ⊕ eq ⟩) ⟨ swap ⟩) ⟨ eq ⊕ recursive-transposeᵣ ⟩)
 
   ufft⇒offt : (simd : SIMD s) → ∀ (a : Ar s ℂ) → ufft a ≅ nofft simd a
-  ufft⇒offt {s} simd a i =
+  ufft⇒offt {ι .V ⊗ s} ι a (ι x ⊗ i₁) =
+      unnest
+            (λ i →
+               ufft-helper
+               (λ j →
+                  (a (ι fzero ⊗ j) * -ω 4 0 +
+                   (a (ι (fsuc fzero) ⊗ j) * -ω 4 (iota i +ₙ 0) +
+                    (a (ι (fsuc (fsuc fzero)) ⊗ j) * -ω 4 (iota i +ₙ (iota i +ₙ 0)) +
+                     (a (ι (fsuc (fsuc (fsuc fzero))) ⊗ j) *
+                      -ω 4 (iota i +ₙ (iota i +ₙ (iota i +ₙ 0)))
+                      + 0ℂ))))
+                  *
+                  (pretwiddles (j ⊗ i))))
+            (((((((ι x ⊗ (i₁ ⟨ rev ♭ ⟩)) ⟨ split ⟩) ⟨
+                 subst
+                 (λ t → Reshape (ι (length (recursive-transpose s) *ₙ 4)) (ι t))
+                 (sym (|s|≡|sᵗ| {ι 4 ⊗ s})) eq
+                 ⟩)
+                ⟨ flat ⟩)
+               ⟨ ♭ ⊕ eq ⟩)
+              ⟨ swap ⟩)
+             ⟨ eq ⊕ recursive-transposeᵣ ⟩)
+      ≡⟨ cong (unnest (λ i → ufft-helper (λ j → (a (ι fzero ⊗ j) * -ω 4 0 + (a (ι (fsuc fzero) ⊗ j) * -ω 4 (iota i +ₙ 0) + (a (ι (fsuc (fsuc fzero)) ⊗ j) * -ω 4 (iota i +ₙ (iota i +ₙ 0)) + (a (ι (fsuc (fsuc (fsuc fzero))) ⊗ j) * -ω 4 (iota i +ₙ (iota i +ₙ (iota i +ₙ 0))) + 0ℂ)))) * (pretwiddles (j ⊗ i))))) ? ⟩
+        unnest
+            (λ i →
+               ufft-helper
+               (λ j →
+                  (a (ι fzero ⊗ j) * -ω 4 0 +
+                   (a (ι (fsuc fzero) ⊗ j) * -ω 4 (iota i +ₙ 0) +
+                    (a (ι (fsuc (fsuc fzero)) ⊗ j) * -ω 4 (iota i +ₙ (iota i +ₙ 0)) +
+                     (a (ι (fsuc (fsuc (fsuc fzero))) ⊗ j) *
+                      -ω 4 (iota i +ₙ (iota i +ₙ (iota i +ₙ 0)))
+                      + 0ℂ))))
+                  *
+                  (pretwiddles (j ⊗ i))))
+            (((((((((((ι x ⊗ (i₁ ⟨ rev ♭ ⟩)) ⟨ split ⟩) ⟨ flat {?} ⟩) ⟨ eq ⊕ ♭ ⟩) ⟨
+                   eq ⊕ rev ♭ ⟩)
+                  ⟨ split ⟩)
+                 ⟨
+                 subst
+                 (λ t → Reshape (ι (length (recursive-transpose s) *ₙ 4)) (ι t))
+                 (sym (|s|≡|sᵗ| {ι V ⊗ s})) eq
+                 ⟩)
+                ⟨ flat ⟩)
+               ⟨ ♭ ⊕ eq ⟩)
+              ⟨ swap ⟩)
+             ⟨ eq ⊕ recursive-transposeᵣ ⟩)
+      ∎
+  ufft⇒offt {.(_ ⊗ _)} (simd ⊗ simd₁) a i = ?
+  -}
+
     --(reshape-cong
     --  {s}
     --  {_} 

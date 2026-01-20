@@ -128,3 +128,6 @@ Fin0⇒⊥ ()
 ¬nonZero-N⇒PosN-irrelevant : ¬ NonZero N → ∀ (i j : Position (ι N)) → i ≡ j
 ¬nonZero-N⇒PosN-irrelevant ¬nz-N (ι i) (ι j) = cong ι (¬nonZero-N⇒FinN-irrelevant ¬nz-N i j)
 
+nz≡nzₛ : ∀ {n : ℕ} → ∀ (nz-n : NonZero n) → ∀ (nzₛ-n : NonZeroₛ (ι n)) → (ι nz-n) ≡ nzₛ-n
+nz≡nzₛ {suc n} nz-n (ι x) = refl
+  

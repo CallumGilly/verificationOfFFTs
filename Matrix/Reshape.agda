@@ -146,13 +146,14 @@ recursive-transpose-invᵣ {ι x} = eq
 recursive-transpose-invᵣ {s ⊗ s₁} = recursive-transpose-invᵣ ⊕ recursive-transpose-invᵣ
 
 --- The cardinality of a shape, and the cardinality of its recursive transposition are equal
-|s|≡|sᵗ| : length s ≡ length (recursive-transpose s)
-|s|≡|sᵗ| {ι x} = refl
-|s|≡|sᵗ| {s ⊗ r} rewrite
-    *-comm (length s) (length r)
-  | |s|≡|sᵗ| {s} 
-  | |s|≡|sᵗ| {r} 
-  = refl
+opaque 
+  |s|≡|sᵗ| : length s ≡ length (recursive-transpose s)
+  |s|≡|sᵗ| {ι x} = refl
+  |s|≡|sᵗ| {s ⊗ r} rewrite
+      *-comm (length s) (length r)
+    | |s|≡|sᵗ| {s} 
+    | |s|≡|sᵗ| {r} 
+    = refl
 
 -----------------------------
 --- Flatten and unflatten ---
