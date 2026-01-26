@@ -297,7 +297,9 @@ module FFT-Vec (cplx : Cplx) where
 
   offt-cong : ∀ {s : Shape} {xs ys : Ar s ℂ} → (simd-s : SIMD s) → xs ≅ ys → offt simd-s xs ≅ offt simd-s ys
 
-  lemma₁ : ∀ {s : Shape} → (SIMD s) → (eq ⊕ rev ♭ ∙ split ∙ subst (λ t → Reshape (ι (length (recursive-transpose s) *ₙ 4)) (ι t)) (sym (|s|≡|sᵗ| {ι V ⊗ s})) eq ∙ (flat {length $ recursive-transpose s}) ∙ ♭ ⊕ eq ∙ swap ∙ (_⊕_ {ι V} {ι V} {s} eq  recursive-transposeᵣ)) ≡ (eq ⊕ rev ♭ ∙ split {V} {length s} ∙ flat {V} {length  s} ∙ _⊕_ {ι V} {ι V} {s} eq ♭ ∙ eq ⊕ rev ♭ ∙ split ∙ subst (λ t → Reshape (ι (length (recursive-transpose s) *ₙ 4)) (ι t)) (sym (|s|≡|sᵗ| {ι V ⊗ s})) eq ∙ flat ∙ ♭ ⊕ eq ∙ swap ∙ eq ⊕ recursive-transposeᵣ)
+  lemma₁ : ∀ {s : Shape} → (SIMD s) → 
+        (eq ⊕ rev ♭ ∙ split ∙ subst (λ t → Reshape (ι (length (recursive-transpose s) *ₙ 4)) (ι t)) (sym (|s|≡|sᵗ| {ι V ⊗ s})) eq ∙ (flat {length $ recursive-transpose s}) ∙ ♭ ⊕ eq ∙ swap ∙ (_⊕_ {ι V} {ι V} {s} eq  recursive-transposeᵣ)) 
+      ≡ (eq ⊕ rev ♭ ∙ split {V} {length s} ∙ flat {V} {length  s} ∙ _⊕_ {ι V} {ι V} {s} eq ♭ ∙ eq ⊕ rev ♭ ∙ split ∙ subst (λ t → Reshape (ι (length (recursive-transpose s) *ₙ 4)) (ι t)) (sym (|s|≡|sᵗ| {ι V ⊗ s})) eq ∙ flat ∙ ♭ ⊕ eq ∙ swap ∙ eq ⊕ recursive-transposeᵣ)
   lemma₁ {s} simd-s = ?
 
   ufftₑ⇒offt : (simd : SIMD s) → ∀ (a : Ar s ℂ) → ufftₑ a ≅ nofft simd a

@@ -9,7 +9,7 @@ open import Data.Empty
 open import Function.Base using (_$_)
 
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; refl; cong)
+open Eq using (_≡_; refl; cong; cong₂)
 
 --- Shorthands for length and recursive transpose, and variables, for use in this file only
 private
@@ -130,4 +130,12 @@ Fin0⇒⊥ ()
 
 nz≡nzₛ : ∀ {n : ℕ} → ∀ (nz-n : NonZero n) → ∀ (nzₛ-n : NonZeroₛ (ι n)) → (ι nz-n) ≡ nzₛ-n
 nz≡nzₛ {suc n} nz-n (ι x) = refl
+
+nz≡nz : ∀ {n : ℕ} → ∀ (nz-a nz-b : NonZero n) → nz-a ≡ nz-b
+nz≡nz {suc n} record { nonZero = tt } record { nonZero = tt } = refl
+
+nzₛ≡nzₛ : ∀ {s : Shape} → ∀ (nz-a nz-b : NonZeroₛ s) → nz-a ≡ nz-b
+nzₛ≡nzₛ (ι a) (ι b) = cong ι (nz≡nz a b)
+nzₛ≡nzₛ (nz-a₁ ⊗ nz-a₂) (nz-b₁ ⊗ nz-b₂) = cong₂ _⊗_ (nzₛ≡nzₛ nz-a₁ nz-b₁) (nzₛ≡nzₛ nz-a₂ nz-b₂)
+
   
