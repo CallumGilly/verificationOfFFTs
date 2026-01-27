@@ -7,6 +7,7 @@ open Eq.≡-Reasoning
 open import Function
 
 open import Data.Unit
+-- This gives a warn on older versions of Agda when Product doesnt have a zipWith method
 open import Data.Product hiding (swap; map; zipWith)
 
 open import Complex using (Cplx)
@@ -325,17 +326,6 @@ module T (U : Set) (El : U → Set) where
   fft₂ : ∀ {s} → _ → _
   fft₂ {s} = F₂.fft {s} dft₂ twid₂
   
-  --thm′ : ∀ {s} (a : Ar₂ s ℂ) 
-  --    → ∀ i → flat-ar (fft₂ a) i ≡ (fft₁ (flat-ar a)) i
-  --thm′ = ?
-
-  -- This is not a possible relation, as we cannot transpose a flattened shape 
-  -- (ι (n × n)) transposes to (ι (n × m)) while (ι n ⊗ ι m) transposes to (ι m ⊗ ι n)
-  --tmp : ∀ {s : A.S S₁ P₁} → flat-shp (A.transp S₁ P₁ s) ≡ A.transp U El (flat-shp s)
-  --tmp {A.ι (A.ι x)} = refl
-  --tmp {A.ι (s A.⊗ s₁)} = ? --cong₂ A._⊗_ ? ?
-  --tmp {s A.⊗ s₁} = cong₂ A._⊗_ (tmp {s₁}) (tmp {s})
-  
   thm : ∀ {s} (a : Ar₂ s ℂ) 
       → ∀ i → flat-ar (ufft₂ a) i ≡ (ufft₁ (flat-ar a)) i
   thm {A.ι n} a (A.ι x) = refl
@@ -351,33 +341,6 @@ module T (U : Set) (El : U → Set) where
                      (cong₂ twid₁ (flat-pos-pos' {p} k)
                                   (flat-pos-pos' {s} i))
                      (thm (λ j₂ → a (j₂ A.⊗ flat-pos' k)) i)) j
-  {-
-      rewrite thm (λ j₁ →
-               twid₁ 
-                 (flat-pos j₁)
-                 (flat-pos ((S₁ A.⟨ P₁ ⟩) {s} (flat-pos' i) (A.transpᵣ S₁ P₁)))
-               *ᶜ
-               F.ufft S₁ P₁
-               (λ a₁ → lift-ar (F₁.ufft dft₁ twid₁ (λ i₁ → a₁ (A.ι i₁))))
-               (λ i₁ j₂ → twid₁ (flat-pos i₁) (flat-pos j₂))
-               (λ j₂ → a (j₂ A.⊗ j₁)) (flat-pos' i))
-              j
-    = ufft₁-cong
-        _ _ 
-        (λ k → cong₂ _*ᶜ_ 
-                        (trans
-                          (cong (λ s → twid₁ {flat-shp p} {s} _ _) ?) -- I think this ends up absurd because we 
-                          (cong₂ twid₁ (flat-pos-pos' {p} k) (?))
-                        )
-                        (thm (λ j₂ → a (j₂ A.⊗ flat-pos' k)) i)
-        )
-        j
-        --(λ k → cong₂ _*ᶜ_ 
-        --             (cong₂ twid₁ (flat-pos-pos' {p} k)
-        --                          (flat-pos-pos' {s} i))
-        --             (thm (λ j₂ → a (j₂ A.⊗ flat-pos' k)) i))
-        -}
-
 
 module B where
   
@@ -433,10 +396,6 @@ module B where
                                         s₂-inv = S-inv₁ {s₂ , nzs}
                                         p₂-inv = S-inv₁ {p₂ , nzp}
                                       in S₂≡S₂-helper (cong₂ M._⊗_ (cong proj₁ s₂-inv) (cong proj₁ p₂-inv)) 
-                                      --Σ-≡-intro ( (cong₂ M._⊗_ (cong proj₁ s₂-inv) (cong proj₁ p₂-inv)) , ? )
-                                       --in trans (cong (_ ,_) (cong₂ _⊗_ (?) (cong proj₂ ?))) (cong (_, (?)) ?) --(cong₂ M._⊗_ (cong proj₁ s₂-inv) (cong proj₁ p₂-inv))) 
-                                       --in trans (cong (_, _) (cong₂ M._⊗_ (cong proj₁ s₂-inv) (cong proj₁ p₂-inv))) (cong (_ ,_) (cong₂ _⊗_ (cong proj₂ ?) (cong proj₂ ?)))
-  --S-inv₁ {(s₂ M.⊗ p₂) , (nzs ⊗ nzp)} rewrite S-inv₁ {s₂ , nzs} | S-inv₁ {p₂ , nzp} = refl
 
   S-inv₂ : S₁-from-S₂ (S₁-to-S₂ s₁) ≡ s₁
   S-inv₂ {A.ι x} = refl
@@ -503,10 +462,6 @@ module B where
   --proj₁ (inverse Ar₁↔Ar₂) refl = Ar-inv₁
   --proj₂ (inverse Ar₁↔Ar₂) refl = Ar-inv₂
 
-  ---- Think I should be able to do this with _⟨$⟩_ maybe...
-  f→f′ : (Ar₂ (proj₁ $ S₁-to-S₂ s₁) X → Ar₂ (proj₁ $ S₁-to-S₂ p₁) X) → (Ar₁ s₁ X → Ar₁ p₁ X)
-  f→f′ f = Ar₁-from-Ar₂ ∘ f ∘ Ar₁-to-Ar₂
-
 module P where
   
   open import FFT cplx as OLDFFT
@@ -514,18 +469,38 @@ module P where
   import Matrix as M
   import Matrix.Reshape as R
   import Matrix.NonZero as NZ
+
+  open Cplx cplx using (+-*-isCommutativeRing)
+  open import Algebra.Structures as AlgebraStructures
+  open AlgebraStructures {A = ℂ} _≡_
+  open AlgebraStructures.IsCommutativeRing +-*-isCommutativeRing using (+-isCommutativeMonoid) renaming (*-comm to *𝕔-comm)
+
   module NEWFFT = F ℕ (Fin ∘ suc)
   module A′ = A ℕ (Fin ∘ suc)
   open B
+  
+  FFT′-cong : ∀ (xs ys : Ar₂ (proj₁ s₂) ℂ) 
+              → (∀ j → xs j ≡ ys j) 
+              → (∀ i → FFT′ {{ proj₂ s₂ }} xs i ≡ FFT′ {{ proj₂ s₂ }} ys i)
+  FFT′-cong {_ , nz-s} _ _ = Pr.FFT′-cong ⦃ nz-s ⦄
 
   newTwid : ∀ {s p : A′.S} → A′.P s → A′.P p → ℂ
   newTwid {s} {p} i j = OLDFFT.twiddles 
                           {{ proj₂ (S₁-to-S₂ s) NZ.⊗ proj₂ (S₁-to-S₂ p) }} 
                           ((P₁-to-P₂ i) M.⊗ (P₁-to-P₂ j))
 
-  FFT′-cong : ∀ (xs ys : Ar₂ (proj₁ s₂) ℂ) 
-              → (∀ i → xs i ≡ ys i) 
-              → (∀ i → FFT′ {{ proj₂ s₂ }} xs i ≡ FFT′ {{ proj₂ s₂ }} ys i)
+  Rtrans≡Atrans : (R.recursive-transpose $ proj₁ (S₁-to-S₂ s₁)) ≡ proj₁ (S₁-to-S₂ (A′.transp s₁))
+  Rtrans≡Atrans {A.ι _} = refl
+  Rtrans≡Atrans {s₁ A.⊗ s₂} = cong₂ M._⊗_ (Rtrans≡Atrans {s₂}) (Rtrans≡Atrans {s₁})
+
+  helper : iota 
+            ((P₁-to-P₂ i₁ R.⟨ R.rev R.recursive-transposeᵣ ⟩) R.⟨ R.rev R.♭ ⟩) 
+            ≡ 
+           iota 
+            (P₁-to-P₂ (i₁ A′.⟨ A′.transpᵣ ⟩) R.⟨ R.rev R.♭ ⟩)
+  helper {A.ι _} {A.ι _} = refl
+  helper {s₁ A.⊗ s₂} {i₁ A.⊗ i₂} = ?
+  
 
   prf : ∀ (xs : Ar₁ s₁ ℂ) (i : P₁ (s₁)) → 
         OLDFFT.FFT′ 
@@ -538,35 +513,13 @@ module P where
           xs 
           (A′._⟨_⟩ i A′.transpᵣ)
   
-  --l₁ : ∀ (i A′.P s₁) → (P₁-to-P₂ i R.⟨ R.rev R.recursive-transposeᵣ ⟩)
-  --                     ≡
-  --                     (i A′.⟨ A′.transpᵣ ⟩)
-
   open import Relation.Nullary
   open import Data.Empty
-  open Cplx cplx using (+-*-isCommutativeRing)
-  open import Algebra.Structures as AlgebraStructures
-  open AlgebraStructures {A = ℂ} _≡_
-  open AlgebraStructures.IsCommutativeRing +-*-isCommutativeRing using () renaming (*-comm to *𝕔-comm)
-
   prf {A.ι _} _ (A.ι _) = refl
   prf {s₁ A.⊗ s₂} xs (i₁ A.⊗ i₂) with NZ.nonZeroDec (proj₁ (S₁-to-S₂ s₁) M.⊗ proj₁ (S₁-to-S₂ s₂))
   ... | no ¬a = ⊥-elim (¬a $ proj₂ (S₁-to-S₂ s₁) NZ.⊗ proj₂ (S₁-to-S₂ s₂))
   ... | yes (nz-s₁ NZ.⊗ nz-s₂) =
     trans 
-      --(prf {s₂} (λ j →
-      --         Cplx.-ω cplx
-      --         (M.length (proj₁ (S₁-to-S₂ s₂)) *
-      --          M.length (proj₁ (S₁-to-S₂ (A′.transp s₁))))
-      --         {{ ? }}
-      --         (iota (P₁-to-P₂ j R.⟨ R.rev R.♭ ⟩) *
-      --          iota (P₁-to-P₂ (i₁ A′.⟨ A′.transpᵣ ⟩) R.⟨ R.rev R.♭ ⟩))
-      --         *ᶜ
-      --         NEWFFT.fft
-      --            (Ar₁-from-Ar₂ ∘ OLDFFT.DFT ∘ Ar₁-to-Ar₂)
-      --            newTwid
-      --         (λ j₁ → xs (j₁ A′.⊗ j)) (i₁ A′.⟨ A′.transpᵣ ⟩)) i₂)
-      --(Pr.FFT′-cong {{ ? }} (λ j → ?) ?)
       (FFT′-cong 
           _
           _ 
@@ -577,8 +530,24 @@ module P where
                   (Pr.-ω-cong₂ 
                     {{ NZ.nonZeroₛ-s⇒nonZero-s (nz-s₂ NZ.⊗ (NZ.nonZeroₛ-s⇒nonZeroₛ-sᵗ nz-s₁)) }} 
                     {{ NZ.nonZeroₛ-s⇒nonZero-s (nz-s₂ NZ.⊗ (proj₂ $ S₁-to-S₂ (A′.transp s₁))) }} 
-                    ?
-                    ? --(cong₂ _*_ ? ?)
+                    (cong₂ _*_ 
+                        {M.length (proj₁ (S₁-to-S₂ s₂))} 
+                        {M.length (proj₁ (S₁-to-S₂ s₂))} 
+                        {M.length (R.recursive-transpose $ proj₁ (S₁-to-S₂ s₁))} 
+                        {M.length (proj₁ (S₁-to-S₂ (A′.transp s₁)))} 
+                        refl 
+                        (cong M.length (Rtrans≡Atrans {s₁}))
+                    )
+                    (cong₂ _*_ 
+                        (cong 
+                            iota 
+                            (cong 
+                                (λ f → R._⟨_⟩ f (R.rev R.♭)) 
+                                (sym (P-inv₁ {s₂} {j} {nz-s₂}))
+                            )
+                        )
+                        (helper {s₁} {i₁})
+                    )
                   )
                   (prf (λ j₁ → _) i₁)
               )
@@ -594,16 +563,4 @@ module P where
               newTwid
               (λ j₁ → xs (j₁ A′.⊗ j)) (i₁ A′.⟨ A′.transpᵣ ⟩)
           ) i₂)
-
-  --with proj₁ (S₁-to-S₂ s₁) | proj₂ (S₁-to-S₂ s₁)
-  --... | t | t₁ = ?
-    --let s₁-s , s₁-nz = S₁-to-S₂ s₁ 
-    --    s₂-s , s₂-nz = S₁-to-S₂ s₂ 
-    --in ?
-
-
-  --prf : ∀ (xs : Ar₁ s₁ ℂ) (i : P₁ s₁) → 
-  --      (R.reshape (R.♯ R.∙ R.reindex (sym $ R.|s|≡|sᵗ| {proj₁ $ S₁-to-S₂ s₁}) R.∙ R.♭) (OLDFFT.FFT (Ar₁-to-Ar₂ xs))) (P₁-to-P₂ i) 
-  --    ≡ NEWFFT.fft ? ? xs ?
-
 

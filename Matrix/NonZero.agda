@@ -7,6 +7,7 @@ open import Matrix.Reshape using (recursive-transpose)
 open import Relation.Nullary
 open import Data.Empty
 open import Function.Base using (_$_)
+open import Agda.Builtin.Unit using (tt)
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; cong₂)
