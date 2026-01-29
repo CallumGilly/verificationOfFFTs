@@ -1,6 +1,7 @@
 open import Data.Nat as Nat
 open import Data.Nat.Properties
 open import Data.Fin as Fin
+open import Data.Bool
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; trans; sym; cong₂; subst; cong-app; cong′; icong)
 open Eq.≡-Reasoning
@@ -49,7 +50,7 @@ module A (U : Set) (El : U → Set) where
     _⊗_ : S → S → S
 
   variable
-    s p q r V : S
+    s p q q₁ q₂ r V : S
     m n k : U
     X Y Z : Set
 
@@ -150,33 +151,10 @@ module F (U : Set) (El : U → Set) where
       -- c = unnest (λ i → zipWith _*ᶜ_ (twid i) (b i)) 
       -- Localising twiddling:
       c = unnest $ imap 
-          (λ i → zipWith _*ᶜ_ (twid i) ∘ ufft dft twid) 
+          (λ i → zipWith _*ᶜ_ (twid i) ∘ ufft {s} dft twid) 
         (nest (reshape swap a))
-      d = map (ufft dft twid) (nest (reshape swap c))
+      d = map (ufft {p} dft twid) (nest (reshape swap c))
     in (unnest d)
-
-  {-
-  -- The version shown here IS correct IF the twiddles parsed to it are equal 
-  -- to the twiddles parsed to the FFT
-  ufft : (dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ)
-         (twid : ∀ {s p} → P s → P p → ℂ)
-       → Ar s ℂ → Ar s ℂ
-  ufft {A.ι n} dft twid = dft
-  ufft {s A.⊗ p} dft twid a =
-    let 
-      -- b = map (ufft dft twid) (nest (reshape swap a))
-      -- c = unnest (λ i → zipWith _*ᶜ_ (twid i) (b i)) 
-      -- Localising twiddling:
-      c = unnest $ imap 
-          (λ i → zipWith 
-                    _*ᶜ_ 
-                    (λ j → twid {p} {transp s} i (j ⟨ transpᵣ ⟩) ) 
-                 ∘ ufft dft twid
-          ) 
-        (nest (reshape swap a))
-      d = map (ufft dft twid) (nest (reshape swap c))
-    in (unnest d)
-  -}
 
   -- Vectorisable shape components
   -- [m , n] => ∃ k . kv = m
@@ -188,23 +166,62 @@ module F (U : Set) (El : U → Set) where
 
   -- [m,n] => [n,m] => [n/4,[4,m]]
 
+  -- Special case as I know I can make this exploit SIMD more
+  ufft₄ : ∀ {s₁ : S} 
+        → (dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ)
+        → (twid : ∀ {s p} → P s → P p → ℂ)
+           → (Ar (V ⊗ s₁) ℂ) → (Ar (V ⊗ s₁) ℂ)
+  ufft₄ {s₁} {V} dft twid a = let 
+      -- This c is working over LANE many elements, and so should be SIMD-able 
+      c = unnest $ imap {s = V}
+                    (λ i → zipWith _*ᶜ_ (twid i) ∘ ufft {s₁} dft twid) 
+                    (nest (reshape swap a))
+      d = map {s = s₁} (ufft {V} dft twid) (nest (reshape swap c))
+      in unnest d
+
+
   -- Some more work is needed here
   ufft-vec : (dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ)
              (twid : ∀ {s p} → P s → P p → ℂ)
              (vec : VEC V s)
            → Ar s ℂ → Ar s ℂ
-  ufft-vec dft twid (ι x) a = dft a
-  ufft-vec dft twid (v ⊗ ι r) a =
-    let
-      b = nest (reshape (assocr ∙ r ⊕ eq ∙ swap) a)
-      c = map (λ x → unnest ({- vectorised ufft -} map (ufft dft twid) (nest x))) b 
-      d = imap (λ i z →  unnest $ {- vec-twiddling -} imap (λ j x → zipWith _*ᶜ_ (twid ((i ⊗ j) ⟨ r ⟩)) x) (nest z)) c
-      e = reshape (rev r ⊕ eq ∙ assocl) (unnest d)
-      
-      -- The same as above (e.g. the second call to mapVec)
-      --f = map (ufft-vec dft twid ?) (nest (reshape swap e))
-    in ?
-  ufft-vec dft twid (v ⊗ (w ⊗ w₁)) a = ?
+  ufft-vec dft twid (ι r) a = let
+      b = reshape (swap ∙ r) a
+      c = ufft₄ dft twid b
+    in ufft dft twid a --reshape (rev r ∙ swap) c
+  ufft-vec {V} {s₁ ⊗ ι n} dft twid (v ⊗ ι {s = s} r) a = let
+    appr = assocr {s} {V} {s₁} ∙ r ⊕ eq ∙ swap
+    b = nest (reshape (assocr {s} {V} {s₁} ∙ r ⊕ eq ∙ swap) a)
+    c = imap {s} (λ i x → 
+                    -- Twiddle, making sure we adjust to the position we are in
+                    -- This is, however, horrible to reason upon when it comes to proof
+                    zipWith _*ᶜ_ (λ j → unnest (twid {ι n} {s₁}) ((i ⊗ j) ⟨ assocr {s} {V} {s₁} ∙ r ⊕ eq ⟩)) 
+                    -- Apply the fft
+                    (ufft₄ {V} {s₁} dft twid x)
+                 ) b
+    e = nest $ reshape (rev (assocr {s} {V} {s₁} ∙ r ⊕ eq ∙ swap)) $ unnest c
+    f = map (ufft-vec {V} {ι n} dft twid (ι r)) e
+    in unnest f
+  ufft-vec {V} {s₁ ⊗ (s₂ ⊗ s₃)} dft twid (v₁ ⊗ (v₂ ⊗ v₃)) a = let
+    b = nest (reshape swap a)
+    c = imap (λ i x → 
+                    zipWith _*ᶜ_ (λ j → twid {s₂ ⊗ s₃} {s₁} i j)
+                    (ufft-vec {V} {s₁} dft twid v₁ x)
+             ) b
+    e = nest $ reshape swap $ unnest c
+    f = imap (λ i → ufft-vec {V} {s₂ ⊗ s₃} dft twid (v₂ ⊗ v₃)) e
+    in unnest f
+    {-
+    b = nest (reshape swap a)
+    c = imap (λ i x → 
+                    zipWith _*ᶜ_ (λ j → twid {s₂ ⊗ s₃} {s₁} i j)
+                    (ufft-vec dft twid v₁ x)
+             ) b
+    e = nest $ reshape swap $ unnest c
+    f = map (ufft-vec dft twid (v₂ ⊗ v₃)) e
+    in unnest f
+
+    -}
 
   ufft-cong : {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
               {twid : ∀ {s p} → P s → P p → ℂ}
@@ -253,6 +270,74 @@ module F (U : Set) (El : U → Set) where
     trans 
       (ufft-cong dft-cong _ _ (λ i₂ → cong₂ _*ᶜ_ refl (ufft≡fft dft-cong _ i₁)) j₁)
       (ufft≡fft dft-cong _ j₁)
+
+  ufft₄≡ufft :  ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
+             → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
+             → (dft-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
+                         → ∀ i → dft {n} a i ≡ dft b i)
+             → ∀ (xs : Ar (s ⊗ V) ℂ)
+             → ∀ (i : P (s ⊗ V)) 
+             →  ufft₄ dft twid xs i
+                ≡ 
+                ufft  dft twid xs i
+  ufft₄≡ufft dft-cong xs i = refl
+
+  lemma₁ : 
+       ∀ {twid : ∀ {s p} → P s → P p → ℂ}
+     → ∀ {i : P s} {j : P p} 
+     → ∀ (r : Reshape (s ⊗ p) (q₁ ⊗ q₂))
+     → twid i j ≡ unnest (λ i′ j′ → (unnest twid) ((i′ ⊗ j′) ⟨ r ⟩)) ((i ⊗ j) ⟨ rev r ⟩ )
+  lemma₁ r = ?
+
+  ufft-vec≡ufft :    ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
+                   → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
+                   →   (dft-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
+                               → ∀ i → dft {n} a i ≡ dft b i)
+                   → ∀ (xs : Ar s ℂ)
+                   → ∀ (v : VEC V s)
+                   → ∀ (i : P s) 
+                   → ufft-vec dft twid v xs i ≡ ufft dft twid xs i
+  ufft-vec≡ufft {.(ι _)} dft-cong xs (ι r) (A.ι x) = refl
+  ufft-vec≡ufft {(x₁ ⊗ ι n)} {V} {dft} {twid} dft-cong xs (v ⊗ ι r) (i₁ A.⊗ A.ι x) =
+      trans
+      -- This currently actually does nothing as ufft-vec's basecase is ufft, but
+      -- This will likely change and so this line will remain to make that change easier
+        (ufft-vec≡ufft  {ι n} {V} {dft} {twid} dft-cong _ (ι r) (ι x)) 
+        (dft-cong _ _ (λ i₂ → 
+          ?
+        ) (ι x))
+      --where
+        --lemma₁ : ∀ (i₂ : P (ι n)) → (unnest
+        --          (λ i i₃ →
+        --             unnest (twid {ι n} {x₁})
+        --             (((((i ⊗ i₃) ⟨ assocr ⟩) ⟨ r ⊕ eq ⟩) ⟨ swap ⟩) ⟨ swap ⟩)
+        --             *ᶜ
+        --             unnest
+        --             (λ i₄ →
+        --                ufft dft twid
+        --                (λ j →
+        --                   twid j i₄ *ᶜ ufft dft twid (λ j₁ → xs (j ⊗ ((i ⊗ j₁) ⟨ r ⟩))) i₄))
+        --             i₃)
+        --          ((i₁ ⊗ i₂) ⟨ rev (assocr ∙ (r ⊕ eq) ∙ swap) ⟩)
+        --          ≡ twid {ι n} {x₁} i₂ i₁ *ᶜ ufft dft twid (λ j → xs (j ⊗ i₂)) i₁)
+        --lemma₁ i₂ with ((i₁ ⊗ i₂) ⟨ rev (assocr ∙ (r ⊕ eq) ∙ swap) ⟩)
+        --... | tmp  A.⊗ tmp₁ with (((((tmp ⊗ tmp₁) ⟨ assocr ⟩) ⟨ r ⊕ eq ⟩) ⟨ swap ⟩) ⟨ swap ⟩)
+        --... | tmp₂ A.⊗ tmp₃ = cong₂ _*ᶜ_ ? ? --(ufft-vec≡ufft {?} {?} {dft} {twid} dft-cong ? (?) ?)
+  ufft-vec≡ufft {.(_ ⊗ (_ ⊗ _))} {_} {dft} {twid} dft-cong xs (v₁ ⊗ (v₂ ⊗ v₃)) (i₁ A.⊗ (i₂ A.⊗ i₃)) =
+      trans
+        (ufft-vec≡ufft dft-cong _ (v₂ ⊗ v₃) (i₂ ⊗ i₃))
+        (ufft-cong dft-cong _ _ (λ _ → 
+            cong₂ 
+              _*ᶜ_ 
+              refl 
+              (ufft-cong dft-cong _ _ (λ _ → 
+                cong₂ 
+                  _*ᶜ_ 
+                  refl 
+                  (ufft-vec≡ufft dft-cong _ v₁ i₁)
+              ) i₂)
+          ) i₃
+        )
   
 
 module T (U : Set) (El : U → Set) where
@@ -499,8 +584,7 @@ module P where
            iota 
             (P₁-to-P₂ (i₁ A′.⟨ A′.transpᵣ ⟩) R.⟨ R.rev R.♭ ⟩)
   helper {A.ι _} {A.ι _} = refl
-  helper {s₁ A.⊗ s₂} {i₁ A.⊗ i₂} = ?
-  
+  helper {s₁ A.⊗ s₂} {i₁ A.⊗ i₂} = cong iota ? --cong (λ f → iota (f R.⟨ R.split ⟩)) ?
 
   prf : ∀ (xs : Ar₁ s₁ ℂ) (i : P₁ (s₁)) → 
         OLDFFT.FFT′ 
