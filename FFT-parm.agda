@@ -151,7 +151,7 @@ module F (U : Set) (El : U → Set) where
       -- c = unnest (λ i → zipWith _*ᶜ_ (twid i) (b i)) 
       -- Localising twiddling:
       c = unnest $ imap 
-          (λ i → zipWith _*ᶜ_ (twid i) ∘ ufft {s} dft twid) 
+          (λ i → zipWith _*ᶜ_ (twid {p} {s} i) ∘ ufft {s} dft twid) 
         (nest (reshape swap a))
       d = map (ufft {p} dft twid) (nest (reshape swap c))
     in (unnest d)
@@ -163,7 +163,34 @@ module F (U : Set) (El : U → Set) where
     -- XXX: probably ok, but we need more powerful reshape
     ι : Reshape (ι n) (s ⊗ V) → VEC V (ι n)
     _⊗_ : VEC V s → VEC V p → VEC V (s ⊗ p)
+
+  data VEC′′′ (V : S) : S → Set where
+    ι : Reshape (ι n) (ι m ⊗ V) → VEC′′′ V (ι n)
+    _⊗_ : VEC′′′ V s → VEC′′′ V p → VEC′′′ V (s ⊗ p)
+
+  ufft-vec-v12 : 
+          (dft  : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ)
+        → (twid : ∀ {s p} → P s → P p → ℂ)
+        → VEC′′′ V s
+        → Ar s ℂ → Ar s ℂ
+  ufft-vec-v12 {s = .(ι _)} dft twid (ι r) = reshape (rev r ∙ swap) ∘ unnest ∘ map dft ∘ nest ∘ reshape (swap ∙ r)
+  ufft-vec-v12 {s = .(_ ⊗ ι _)} dft twid (vec₁ ⊗ ι r) xs = let
+            b = nest (reshape (assocr ∙ r ⊕ eq ∙ swap) xs)
+            c = map (λ x → unnest (map (ufft dft twid) (nest x))) b
+            d = imap (?) c
+          in ?
+  ufft-vec-v12 {s = .(_ ⊗ (_ ⊗ _))} dft twid (vec₁ ⊗ (vec₂ ⊗ vec₃)) xs = ?
   
+  --ufft-vec-v12 {s = .(ι _ ⊗ _)} dft→ dft twid ι xs = dft→ xs
+ 
+  --ufft-vec-v12 {s = s A.⊗ .(ι _ ⊗ _)} dft→ dft twid (vec₁ ⊗ ι) xs = let
+  --    --b = nest (reshape (assocr ∙ r ⊕ eq ∙ swap) a)
+  --    c = map (λ x → unnest ({- vectorised ufft -} map (ufft) (nest x))) (nest xs) 
+  --    --d = imap (λ i z →  unnest $ {- vec-twiddling -} imap (λ j x → zipWith _*ᶜ_ (twid ((i ⊗ j) ⟨ r ⟩)) x) (nest z)) c
+  --    --e = reshape (rev r ⊕ eq ∙ assocl) (unnest d)
+
+  --  in ?
+  --ufft-vec-v12 {s = s A.⊗ .(_ ⊗ _)} dft→ dft twid (vec₁ ⊗ (vec₂ ⊗ vec₃)) xs = ?
   mapVec : VEC V s → (f : P s → X → Y) → Ar s X → Ar s Y
   mapVec {V} {.(ι _)} (ι {s = s} r) f = 
       reshape (rev r) ∘ unnest ∘ imap {s} (λ i → imap {V} λ j → f ((i ⊗ j) ⟨ r ⟩)) ∘ nest ∘ reshape r
@@ -237,6 +264,41 @@ module F (U : Set) (El : U → Set) where
                 c = mapVec′ (vec₂ ⊗ vec₁) (λ i → (unnest twid) i *ᶜ_) (unnest b)
                 d = mapVec′ vec₁ (λ _ → ufft-vec′′′ dft twid vec₂) (nest (reshape swap c ))
                 in unnest d
+
+  -- The issue with doing ufft at the leafs by reshaping the leafs with R is that
+  -- the ufft would leave the result in a permuted order, which would not be fixed
+  -- as tranp stops at the leafs...
+
+  data VEC′′ (V : S) : S → Set where
+    --ι : VEC′′ V ((ι m) ⊗ V)
+    ι : VEC′′ V (s ⊗ V)
+    _⊗_ : VEC′′ V s → VEC′′ V p → Reshape (s ⊗ p) (q ⊗ V) → VEC′′ V (s ⊗ p)
+
+  -- This is the case we can optimise for specific V's, much like Thomas does 
+  -- with fft4 in fft_small.
+  ufftᵥ : (dft  : ∀ {n  } → Ar (ι n) ℂ → Ar (ι n) ℂ)
+          (twid : ∀ {s p} → P s → P p → ℂ)
+        → Ar V ℂ → Ar V ℂ
+  ufftᵥ = ufft
+  {-
+  ufft-vec-p₁ : (dft  : ∀ {n  } → Ar (ι n) ℂ → Ar (ι n) ℂ)
+                 (twid : ∀ {s p} → P s → P p → ℂ)
+               → (vec : VEC′′ V s)
+               → Ar s ℂ → Ar s ℂ
+  ufft-vec-p₁ {V} {s ⊗ V} dft twid ι xs = let
+      c = unnest $ imap {V} 
+          (λ i → zipWith _*ᶜ_ (twid i) ∘ ufft {s} dft twid) 
+        (nest (reshape swap xs))
+      d = map (ufft {V} dft twid) (nest (reshape swap c))
+      in unnest d
+  ufft-vec-p₁ {V} {(s ⊗ p)} dft twid (_⊗_ vec₁ vec₂ r) xs = let  
+      a = map (ufft-vec-p₁ dft twid vec₁) $ nest $ reshape swap xs
+      b = reshape (swap ∙ rev r ∙ swap) $ unnest $ imap {V} 
+              (λ i → zipWith _*ᶜ_ (λ j → (unnest $ twid {p} {s}) ((i ⊗ j) ⟨ swap ∙ (r ∙ swap) ⟩) )) 
+              (nest $ reshape (swap ∙ r ∙ swap) $ unnest a)
+      c = map (ufft-vec-p₁ dft twid vec₂) $ nest $ reshape swap b
+      in unnest c
+      -}
 
   {-
   ufft-vec′′′ dft twid (vec₁ ⊗ vec₂) xs = let
@@ -437,6 +499,17 @@ module F (U : Set) (El : U → Set) where
                    → ∀ (v : VEC′ V s)
                    → ∀ (i : P s) 
                    → ufft-vec′′′ dft twid v xs i ≡ ufft dft twid xs i
+{-
+  ufft⇒ufft-vec-p₁ :   ∀ {dft  : ∀ {n  } → Ar (ι n) ℂ → Ar (ι n) ℂ}
+                     → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
+                     →   (dft-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
+                                 → ∀ i → dft {n} a i ≡ dft b i)
+                     → ∀ (xs : Ar s ℂ)
+                     → ∀ (vec : VEC′′ V s)
+                     → ∀ (i : P s)
+                     → ufft-vec-p₁ dft twid vec xs i ≡ ufft dft twid xs i
+  ufft⇒ufft-vec-p₁ dft-cong xs vec i = ?
+  -}
   
 
 module T (U : Set) (El : U → Set) where
