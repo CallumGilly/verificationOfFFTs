@@ -163,6 +163,12 @@ module F (U : Set) (El : U → Set) where
     -- XXX: probably ok, but we need more powerful reshape
     ι : Reshape (ι n) (s ⊗ V) → VEC V (ι n)
     _⊗_ : VEC V s → VEC V p → VEC V (s ⊗ p)
+  
+  mapVec : VEC V s → (f : P s → X → Y) → Ar s X → Ar s Y
+  mapVec {V} {.(ι _)} (ι {s = s} r) f = 
+      reshape (rev r) ∘ unnest ∘ imap {s} (λ i → imap {V} λ j → f ((i ⊗ j) ⟨ r ⟩)) ∘ nest ∘ reshape r
+      --reshape (rev r) ∘ unnest ∘ imap {s} (λ i → imap {V} λ j → f ((i ⊗ j) ⟨ r ⟩)) ∘ nest ∘ reshape r
+  mapVec (vec ⊗ vec₁) f = unnest ∘ imap (λ i → mapVec vec₁ $ f ∘ (_⊗_ i)) ∘ nest
 
   -- [m,n] => [n,m] => [n/4,[4,m]]
 
@@ -179,7 +185,89 @@ module F (U : Set) (El : U → Set) where
       d = map {s = s₁} (ufft {V} dft twid) (nest (reshape swap c))
       in unnest d
 
+  ufft′ : (dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ)
+         (twid : ∀ {s p} → P s → P p → ℂ)
+       → Ar s ℂ → Ar s ℂ
+  ufft′ {A.ι x} dft twid xs = dft xs
+  ufft′ {s A.⊗ A.ι x} dft twid xs = let
+      b = map (ufft′ dft twid) (nest (reshape swap xs))
+      c = (zipWith _*ᶜ_ (unnest twid)) (unnest b)
+      d = map dft (nest (reshape swap c))
+      in unnest d
+  ufft′ {s₁ A.⊗ (s₂ A.⊗ s₃)} dft twid xs = let
+      b = map (ufft′ dft twid) (nest (reshape swap xs))
+      c = (zipWith _*ᶜ_ (unnest twid)) (unnest b)
+      d = map (ufft′ dft twid) (nest (reshape swap c))
+      in unnest d
 
+  ufft-vec′ : (dft→ : ∀ {s} → Ar (s ⊗ V) ℂ → Ar (s ⊗ V) ℂ)
+              (twid : ∀ {s p} → P s → P p → ℂ)
+            → (vec : VEC V s)
+            → Ar s ℂ → Ar s ℂ
+  ufft-vec′ {V} {(ι n)} dft→ twid (ι r) xs = reshape (rev r) (dft→ (reshape r xs))
+  ufft-vec′ {V} {s₁ A.⊗ A.ι n} dft→ twid (v₁ ⊗ ι r) xs = let
+          b = map (ufft-vec′ dft→ twid v₁) (nest (reshape swap xs))
+          c = (zipWith _*ᶜ_ (unnest twid)) (unnest b) 
+          d = map (reshape (rev r) ∘ dft→ ∘ (reshape r)) (nest (reshape swap c))
+          in unnest d
+  ufft-vec′ {V} {s₁ A.⊗ (s₂ A.⊗ s₃)} dft→ twid (v₁ ⊗ (v₂ ⊗ v₃)) xs = let
+          b = map (ufft-vec′ dft→ twid v₁) (nest (reshape swap xs))
+          c = (zipWith _*ᶜ_ (unnest twid)) (unnest b)
+          d = map (ufft-vec′ dft→ twid (v₂ ⊗ v₃)) (nest (reshape swap c))
+          in unnest d
+
+  data VEC′ (V : S) : S → Set where
+    -- XXX: probably ok, but we need more powerful reshape
+    ι : Reshape (ι n) (ι m ⊗ V) → VEC′ V (ι n)
+    _⊗_ : VEC′ V s → VEC′ V p → VEC′ V (s ⊗ p)
+
+  mapVec′ : VEC′ V s → (f : P s → X → Y) → Ar s X → Ar s Y
+  mapVec′ (ι r) f = reshape (rev r) ∘ unnest ∘ imap (λ i → imap λ j → f ((i ⊗ j) ⟨ r ⟩)) ∘ nest ∘ reshape r
+  mapVec′ (vec ⊗ vec₁) f = unnest ∘ imap (λ i → mapVec′ vec₁ $ f ∘ (_⊗_ i)) ∘ nest
+
+  thm : ∀ (vec : VEC′ V s) → ∀ (f : P s → X → Y) → (xs : Ar s X) → mapVec′ vec f xs ≡ imap f xs
+
+  ufft-vec′′′ : (dft  : ∀ {n  } → Ar (ι n) ℂ → Ar (ι n) ℂ)
+                (twid : ∀ {s p} → P s → P p → ℂ)
+              → (vec : VEC′ V s)
+              → Ar s ℂ → Ar s ℂ
+  ufft-vec′′′ dft twid (ι x) xs = dft xs
+  ufft-vec′′′ dft twid (vec₁ ⊗ vec₂) xs = let
+                b = mapVec′ vec₂ (λ _ → ufft-vec′′′ dft twid vec₁) (nest (reshape swap xs))
+                c = mapVec′ (vec₂ ⊗ vec₁) (λ i → (unnest twid) i *ᶜ_) (unnest b)
+                d = mapVec′ vec₁ (λ _ → ufft-vec′′′ dft twid vec₂) (nest (reshape swap c ))
+                in unnest d
+
+  {-
+  ufft-vec′′′ dft twid (vec₁ ⊗ vec₂) xs = let
+                b = mapVec′ vec₂ (λ _ → ufft-vec′′′ dft twid vec₁) (nest (reshape swap xs))
+                c = mapVec′ (vec₂ ⊗ vec₁) (λ i → (unnest twid) i *ᶜ_) (unnest b)
+                d = mapVec′ vec₁ (λ _ → ufft-vec′′′ dft twid vec₂) (nest (reshape swap c ))
+                in unnest d
+  -}
+  -- Base case is straight up wrong
+  ufft-vec′′ :  (dft→ : ∀ {n  } → Ar (ι n ⊗ V) ℂ → Ar (ι n ⊗ V) ℂ)
+                (twid : ∀ {s p} → P s → P p → ℂ)
+              → (vec : VEC′ V s)
+              → Ar s ℂ → Ar s ℂ
+  ufft-vec′′ dft→ twid (ι r) = reshape (rev r) ∘ dft→ ∘ reshape r
+  ufft-vec′′ dft→ twid (v₁ ⊗ ι r) xs = let 
+                b = map (ufft-vec′′ dft→ twid v₁) (nest $ reshape swap xs)
+                c = (zipWith _*ᶜ_ (unnest twid)) (unnest b)
+                d = map (reshape (rev r) ∘ dft→ ∘ reshape r) (nest $ reshape swap c)
+                in unnest d
+  ufft-vec′′ dft→ twid (v₁ ⊗ (v₂ ⊗ v₃)) xs = let
+              b = map (ufft-vec′′ dft→ twid v₁) (nest $ reshape swap xs)
+              c = (zipWith _*ᶜ_ (unnest twid)) (unnest b)
+              d = map (ufft-vec′′ dft→ twid (v₂ ⊗ v₃)) (nest $ reshape swap c)
+              in unnest d
+
+  --pull : ∀ (s : S) → ∃ 
+  --Ar (s ⊗ V) X → Ar () X
+  --tmp : {s s′ : S} → VEC V s → Reshape s (s′ ⊗ V)
+  --tmp (ι x) = ?
+  --tmp (vec ⊗ vec₁) = ?
+  
   -- Some more work is needed here
   ufft-vec : (dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ)
              (twid : ∀ {s p} → P s → P p → ℂ)
@@ -189,19 +277,21 @@ module F (U : Set) (El : U → Set) where
       b = reshape (swap ∙ r) a
       c = ufft₄ dft twid b
     in ufft dft twid a --reshape (rev r ∙ swap) c
-  ufft-vec {V} {s₁ ⊗ ι n} dft twid (v ⊗ ι {s = s} r) a = let
-    appr = assocr {s} {V} {s₁} ∙ r ⊕ eq ∙ swap
-    b = nest (reshape (assocr {s} {V} {s₁} ∙ r ⊕ eq ∙ swap) a)
-    c = imap {s} (λ i x → 
-                    -- Twiddle, making sure we adjust to the position we are in
-                    -- This is, however, horrible to reason upon when it comes to proof
-                    zipWith _*ᶜ_ (λ j → unnest (twid {ι n} {s₁}) ((i ⊗ j) ⟨ assocr {s} {V} {s₁} ∙ r ⊕ eq ⟩)) 
-                    -- Apply the fft
-                    (ufft₄ {V} {s₁} dft twid x)
-                 ) b
-    e = nest $ reshape (rev (assocr {s} {V} {s₁} ∙ r ⊕ eq ∙ swap)) $ unnest c
-    f = map (ufft-vec {V} {ι n} dft twid (ι r)) e
-    in unnest f
+  ufft-vec {V} {s ⊗ ι n} dft twid (v ⊗ ι r) a = let
+    b = ?
+    in ? 
+    --assocr {s} {V} {s₁} ∙ r ⊕ eq ∙ swap
+    --b = nest (reshape (assocr {s} {V} {s₁} ∙ r ⊕ eq ∙ swap) a)
+    --c = imap {s} (λ i x → 
+    --                -- Twiddle, making sure we adjust to the position we are in
+    --                -- This is, however, horrible to reason upon when it comes to proof
+    --                zipWith _*ᶜ_ (λ j → unnest (twid {ι n} {s₁}) ((i ⊗ j) ⟨ assocr {s} {V} {s₁} ∙ r ⊕ eq ⟩)) 
+    --                -- Apply the fft
+    --                (ufft₄ {V} {s₁} dft twid x)
+    --             ) b
+    --e = nest $ reshape (rev (assocr {s} {V} {s₁} ∙ r ⊕ eq ∙ swap)) $ unnest c
+    --f = map (ufft-vec {V} {ι n} dft twid (ι r)) e
+    --in unnest f
   ufft-vec {V} {s₁ ⊗ (s₂ ⊗ s₃)} dft twid (v₁ ⊗ (v₂ ⊗ v₃)) a = let
     b = nest (reshape swap a)
     c = imap (λ i x → 
@@ -338,6 +428,15 @@ module F (U : Set) (El : U → Set) where
               ) i₂)
           ) i₃
         )
+
+  ufft-vec′′′≡ufft : ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
+                   → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
+                   →   (dft-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
+                               → ∀ i → dft {n} a i ≡ dft b i)
+                   → ∀ (xs : Ar s ℂ)
+                   → ∀ (v : VEC′ V s)
+                   → ∀ (i : P s) 
+                   → ufft-vec′′′ dft twid v xs i ≡ ufft dft twid xs i
   
 
 module T (U : Set) (El : U → Set) where
