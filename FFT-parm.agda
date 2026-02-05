@@ -6,6 +6,7 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; trans; sym; cong₂; subst; cong-app; cong′; icong)
 open Eq.≡-Reasoning
 open import Function
+open import Algebra.Definitions
 
 open import Data.Unit
 -- This gives a warn on older versions of Agda when Product doesnt have a zipWith method
@@ -21,6 +22,9 @@ open Cplx cplx using (ℂ) renaming (_*_ to _*ᶜ_)
 --  ℂ : Set
 --  _*ᶜ_ : ℂ → ℂ → ℂ
 
+infixl 4 _⊡_
+_⊡_ = trans
+
 
 record Mon : Set₁ where
   field
@@ -31,18 +35,35 @@ record Mon : Set₁ where
     _⊗_ : U → U → U
 
     unit-law : El ι ↔ ⊤
-    pair-law : ∀ a b → El (a ⊗ b) ↔ El a × El b
+    -- The bracketing on the left hand side here is VERY important, otherwise
+    -- we have a pair where the left is an isomorhism... that took me too long
+    pair-law : ∀ a b → El (a ⊗ b) ↔ (El a × El b)
 
-    flat : ?
+    comm : ∀ a b → a ⊗ b ≡ b ⊗ a
 
+{-
 record Uops (U : Set) (El : U → Set) : Set where
   field
     sum : ∀ u → (El u → ℂ) → ℂ
     -ω : U → ℂ → ℂ
+-}
 
-module A (U : Set) (El : U → Set) where
---module A (M : Mon) where
---  open Mon M using (U; El)
+record Uops (M : Mon) : Set where
+  open Mon M 
+
+  field
+    sum : ∀ u → (El u → ℂ) → ℂ
+    -ω : U → ℂ → ℂ
+
+--module A (U : Set) (El : U → Set) where
+module A (M : Mon) where
+  open Mon M using (U; El; pair-law) renaming (ι to ι′; _⊗_ to _⊗′_; comm to ⊗′-comm)
+
+  open import Function.Properties.Inverse using (toFunction; fromFunction)
+
+  private
+    to : ∀ (a b : U) → (El (a ⊗′ b)) → (El a × El b)
+    to a b = Inverse.to $ pair-law a b
 
   infixl 15 _⊗_
   data S : Set where
@@ -70,6 +91,9 @@ module A (U : Set) (El : U → Set) where
     assocl : Reshape (s ⊗ (p ⊗ q)) ((s ⊗ p) ⊗ q)
     assocr : Reshape ((s ⊗ p) ⊗ q) (s ⊗ (p ⊗ q))
 
+    flat : Reshape (ι m ⊗ ι n) (ι (m ⊗′ n)) 
+    unflat : Reshape (ι (m ⊗′ n)) (ι m ⊗ ι n)
+
   _⟨_⟩ : P s → Reshape p s → P p
   i ⟨ eq ⟩ = i
   (i ⊗ i₁) ⟨ r ⊕ r₁ ⟩ = (i ⟨ r ⟩) ⊗ (i₁ ⟨ r₁ ⟩)
@@ -77,6 +101,9 @@ module A (U : Set) (El : U → Set) where
   (i ⊗ i₁) ⟨ swap ⟩ = i₁ ⊗ i
   ((i ⊗ j) ⊗ k) ⟨ assocl ⟩ = i ⊗ (j ⊗ k)
   (i ⊗ (j ⊗ k)) ⟨ assocr ⟩ = (i ⊗ j) ⊗ k
+
+  ι x ⟨ flat ⟩ = let a = (Inverse.to $ pair-law _ _) x in ι (proj₁ a) ⊗ ι (proj₂ a)
+  (ι x₁ ⊗ ι x₂) ⟨ unflat ⟩ = ι ((Inverse.from $ pair-law _ _) (x₁ , x₂))
 
   rev : Reshape s p → Reshape p s
   rev eq = eq
@@ -86,6 +113,9 @@ module A (U : Set) (El : U → Set) where
   rev assocl = assocr
   rev assocr = assocl
 
+  rev unflat = flat
+  rev flat = unflat
+
   rev-rev : ∀ (r : Reshape s p) (i : P p) →  i ⟨ r ∙ rev r ⟩ ≡ i
   rev-rev eq i = refl
   rev-rev (r₁ ⊕ r₂) (i₁ ⊗ i₂) rewrite rev-rev r₁ i₁ | rev-rev r₂ i₂ = refl
@@ -93,6 +123,14 @@ module A (U : Set) (El : U → Set) where
   rev-rev swap (i₁ ⊗ i₂) = refl
   rev-rev assocl (i₁ ⊗ i₂ ⊗ i₃) = refl
   rev-rev assocr (i₁ ⊗ (i₂ ⊗ i₃)) = refl
+  rev-rev unflat (ι {m} x₁ ⊗ ι {n} x₂) 
+    rewrite
+      (proj₁ ((Inverse.inverse (pair-law m n))) {x₁ , x₂}) refl 
+    = refl
+  rev-rev (flat {m} {n}) (ι x)
+    rewrite
+      (proj₂ ((Inverse.inverse (pair-law m n))) {x}) refl 
+    = refl
 
   rev-rev′ : ∀ (r : Reshape s p) (i : P s) →  i ⟨ rev r ∙ r ⟩ ≡ i
   rev-rev′ eq i = refl
@@ -101,9 +139,28 @@ module A (U : Set) (El : U → Set) where
   rev-rev′ swap (i₁ ⊗ i₂) = refl
   rev-rev′ assocl (i₁ ⊗ (i₂ ⊗ i₃)) = refl
   rev-rev′ assocr (i₁ ⊗ i₃ ⊗ i₂)   = refl
+  rev-rev′ (unflat {m} {n}) (ι x)
+    rewrite
+      (proj₂ ((Inverse.inverse (pair-law m n))) {x}) refl 
+    = refl
+  rev-rev′ (flat {m} {n}) (ι x₁ ⊗ ι x₂)
+    rewrite
+      (proj₁ ((Inverse.inverse (pair-law m n))) {x₁ , x₂}) refl 
+    = refl
+
+  --reindex : m ≡ n → Reshape (ι m) (ι n)
+  --reindex {m} {n} prf = subst (λ t → Reshape (ι m) (ι t)) prf eq
 
   reshape : Reshape s p → Ar s X → Ar p X
   reshape r a i = a (i ⟨ r ⟩)
+
+  size : S → U
+  size (ι x) = x
+  size (s₁ ⊗ s₂) = size s₁ ⊗′ size s₂
+
+  ♭ : Reshape s (ι (size s))
+  ♭ {ι x} = eq
+  ♭ {s₁ ⊗ s₂} = flat ∙ ♭ ⊕ ♭
 
   transp : S → S
   transp (ι n) = ι n
@@ -112,6 +169,14 @@ module A (U : Set) (El : U → Set) where
   transpᵣ : Reshape (transp s) s
   transpᵣ {ι x} = eq
   transpᵣ {s ⊗ s₁} = (transpᵣ ⊕ transpᵣ) ∙ swap
+
+  |s|≡|sᵗ| : ∀ s → size s ≡ size (transp s)
+  |s|≡|sᵗ| (ι x) = refl
+  |s|≡|sᵗ| (s₁ ⊗ s₂) rewrite
+      |s|≡|sᵗ| s₁
+    | |s|≡|sᵗ| s₂
+    | ⊗′-comm (size (transp s₁)) (size (transp s₂))
+    = refl
 
   map : (X → Y) → Ar s X → Ar s Y
   map f a i = f (a i)
@@ -156,9 +221,6 @@ module A (U : Set) (El : U → Set) where
                 → reshape r a i ≡ reshape r b i
   reshape-cong r x i = x (i ⟨ r ⟩)
 
-  infixl 4 _⊡_
-  _⊡_ = trans
-
   resh-rev : (r : Reshape s p) → ∀ i → i ⟨ rev r ⟩ ⟨ r ⟩ ≡ i
   resh-rev eq i = refl
   resh-rev (r ⊕ r₁) (i ⊗ j) rewrite resh-rev r i | resh-rev r₁ j = refl
@@ -170,16 +232,18 @@ module A (U : Set) (El : U → Set) where
   rev-fact : (r : Reshape s p) → ∀ i j → i ⟨ rev r ⟩ ≡ j → i ≡ j ⟨ r ⟩
   rev-fact r i j e = sym (resh-rev r i) ⊡ cong (_⟨ r ⟩) e
 
-module D (U : Set) (El : U → Set) where
-
-  open A U El
+--module D (U : Set) (El : U → Set) where
+module D (M : Mon)  where
+  open Mon M using (U; El)
+  open A M
 
   -- All of these should be defined through
   -- the corresponfing functions in U ◃ El universe
   sum : Ar s ℂ → ℂ
   -ω : U → ℂ → ℂ
   iota : P s → ℂ
-  size : S → U
+  --size : S → U
+
 
   dft : Ar (ι n) ℂ → Ar (ι n) ℂ
   dft {n} a j = sum (λ k → a k *ᶜ -ω n (iota k *ᶜ iota j))
@@ -188,9 +252,10 @@ module D (U : Set) (El : U → Set) where
   twiddles {s} {p} i j = -ω (size (s ⊗ p)) (iota i *ᶜ iota j)
 
 
-module F (U : Set) (El : U → Set) where
-
-  open A U El
+--module F (U : Set) (El : U → Set) where
+module F (M : Mon)  where
+  open Mon M using (U; El)
+  open A M
 
   -- Parametrised (u)ffts
   fft : (dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ)
@@ -273,6 +338,9 @@ module F (U : Set) (El : U → Set) where
   id₁ = λ _ → id
 
 
+  -- We want to trainsition away from copying this out in the form
+  -- V ⊗ s, and instead copy out sᵗ ⊗ V
+  -- First step -- 
   dftVec :  (dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ) 
             → Ar (V ⊗ ι n) ℂ
             → Ar (V ⊗ ι n) ℂ
@@ -433,7 +501,7 @@ module F (U : Set) (El : U → Set) where
              → ∀ (i : P s) 
              →  ufft dft (λ i j → twid i (j ⟨ transpᵣ ⟩)) xs i
                 ≡ 
-                fft  dft twid xs ((A._⟨_⟩ U El i (A.transpᵣ U El)))
+                fft  dft twid xs ((A._⟨_⟩ M i (A.transpᵣ M)))
   ufft≡fft _ _ (A.ι _) = refl
   ufft≡fft dft-cong xs (i₁ A.⊗ j₁) = 
       (ufft-cong dft-cong _ _ (λ i₂ → cong₂ _*ᶜ_ refl (ufft≡fft dft-cong _ i₁)) j₁)
@@ -624,20 +692,52 @@ module F (U : Set) (El : U → Set) where
       map-vec₃≡map-vec₂ dft-cong true (vec₂ ⊗ vec₁) (reshape swap xs) (j₂ ⊗ j₁)
     }) (i₁ ⊗ i₂)
 
+
+module MM (M₁ : Mon) where
+  private
+    variable
+      X Y : Set
+    S₁ = A.S M₁
+    P₁ = A.P M₁
+
+  mk-M₂ : Mon
+  mk-M₂ = record {
+      U    = S₁
+    ; El   = P₁
+    ; ι    = A.ι   (Mon.ι M₁)
+    ; _⊗_  = ?
+    ; unit-law  = ?
+    ; pair-law  = ?
+    ; flat = ?
+    ; comm = ?
+    }
     
 
-module T (U : Set) (El : U → Set) where
+module T (M₁ : Mon) where
+  open Mon M₁ using (U; El)
+  --open A M₁
 
   private variable
     X Y : Set
 
-  S₁ = A.S U El
-  P₁ = A.P U El
-  Ar₁ = A.Ar U El
- 
-  S₂ = A.S S₁ P₁
-  P₂ = A.P S₁ P₁
-  Ar₂ = A.Ar S₁ P₁
+  S₁ = A.S M₁
+  P₁ = A.P M₁
+  Ar₁ = A.Ar M₁
+
+  M₂ : Mon
+  M₂ = record {
+      U    = S₁
+    ; El   = P₁
+    --; ι    = ?
+    --; _⊗_  = ?
+    --; unit-law  = ?
+    --; pair-law  = ?
+    --; flat = ?
+    }
+
+  S₂  = A.S  M₂
+  P₂  = A.P  M₂
+  Ar₂ = A.Ar M₂
 
   flat-shp : S₂ → S₁
   flat-shp (A.ι x) = x
@@ -671,7 +771,7 @@ module T (U : Set) (El : U → Set) where
   dft₁-cong : ∀ {n} a b → (∀ i → a i ≡ b i)
           → ∀ i → dft₁ {n} a i ≡ dft₁ b i
 
-  module F₁ = F U El
+  module F₁ = F M₁
 
   ufft₁ : ∀ {s} → _ → _
   ufft₁ {s} = F₁.ufft {s} dft₁ twid₁
@@ -689,7 +789,7 @@ module T (U : Set) (El : U → Set) where
   twid₂ : ∀ {s p} → P₂ s → P₂ p → ℂ
   twid₂ i j = twid₁ (flat-pos i) (flat-pos j)
 
-  module F₂ = F S₁ P₁
+  module F₂ = F M₂
 
   ufft₂ : ∀ {s} → _ → _
   ufft₂ {s} = F₂.ufft {s} dft₂ twid₂
@@ -704,7 +804,7 @@ module T (U : Set) (El : U → Set) where
   thm {s A.⊗ p} a (i A.⊗ j) 
       rewrite thm (λ j₁ →
                twid₁ (flat-pos j₁) (flat-pos {s} (flat-pos' i)) *ᶜ
-               F.ufft (A.S U El) (A.P U El)
+               F.ufft M₂ --(A.S M₁) (A.P M₁)
                (λ a₁ → lift-ar (F₁.ufft dft₁ twid₁ (λ i₁ → a₁ (A.ι i₁))))
                (λ i₁ j₂ → twid₁ (flat-pos i₁) (flat-pos j₂))
                (λ j₂ → a (j₂ A.⊗ j₁)) (flat-pos' i)) j
@@ -722,9 +822,42 @@ module B where
   open import Function.Bundles
   open Inverse
 
-  S₁  = A.S  ℕ (Fin ∘ suc)
-  P₁  = A.P  ℕ (Fin ∘ suc)
-  Ar₁ = A.Ar ℕ (Fin ∘ suc)
+  inv₁ : {x : ⊤} → tt ≡ x
+  inv₁ {tt} = refl
+
+  inv₂ : {x : Fin 1} → Fin.zero ≡ x
+  inv₂ {zero} = refl
+
+  ℕ-Mon : Mon
+  ℕ-Mon = record {
+      U    = ℕ
+    ; El   = Fin ∘ suc
+    -- This being 0 feels wrong, as it should be an identity element and zero 
+    -- is not identity for multiplication, but I believe the suc above fixes 
+    -- this issue?
+    ; ι    = 0
+    ; _⊗_  = _*_
+    ; unit-law  = record 
+                  { to        = λ _ → tt
+                  ; from      = λ _ → Fin.zero
+                  ; to-cong   = λ _ → refl
+                  ; from-cong = λ _ → refl
+                  ; inverse   = (λ _ → inv₁) , (λ _ → inv₂)
+                  }
+    ; pair-law  = λ a b → record 
+                  { to        = ?
+                  ; from      = ?
+                  ; to-cong   = ?
+                  ; from-cong = ?
+                  ; inverse   = ?
+                  }
+    ; flat = ?
+    ; comm = ?
+    }
+
+  S₁ = A.S ℕ-Mon
+  P₁ = A.P ℕ-Mon
+  Ar₁ = A.Ar ℕ-Mon
 
   S₂ = Σ M.Shape (λ s₂ → NonZeroₛ s₂)
   P₂ = M.Position
@@ -833,6 +966,8 @@ module B where
   --proj₁ (inverse Ar₁↔Ar₂) refl = Ar-inv₁
   --proj₂ (inverse Ar₁↔Ar₂) refl = Ar-inv₂
 
+
+    
 module P where
   
   open import FFT cplx as OLDFFT
@@ -841,15 +976,18 @@ module P where
   import Matrix.Reshape as R
   import Matrix.NonZero as NZ
 
+  open import Relation.Nullary
+  open import Data.Empty
+
   open Cplx cplx using (+-*-isCommutativeRing)
   open import Algebra.Structures as AlgebraStructures
   open AlgebraStructures {A = ℂ} _≡_
   open AlgebraStructures.IsCommutativeRing +-*-isCommutativeRing using (+-isCommutativeMonoid) renaming (*-comm to *𝕔-comm)
 
-  module NEWFFT = F ℕ (Fin ∘ suc)
-  module A′ = A ℕ (Fin ∘ suc)
   open B
-  
+  module NEWFFT = F ℕ-Mon
+  module A′ = A ℕ-Mon  
+
   FFT′-cong : ∀ (xs ys : Ar₂ (proj₁ s₂) ℂ) 
               → (∀ j → xs j ≡ ys j) 
               → (∀ i → FFT′ {{ proj₂ s₂ }} xs i ≡ FFT′ {{ proj₂ s₂ }} ys i)
@@ -870,7 +1008,21 @@ module P where
            iota 
             (P₁-to-P₂ (i₁ A′.⟨ A′.transpᵣ ⟩) R.⟨ R.rev R.♭ ⟩)
   lemma₁ {A.ι _} {A.ι _} = refl
-  lemma₁ {s₁ A.⊗ s₂} {i₁ A.⊗ i₂} = ? --cong (λ f → iota (f R.⟨ R.split ⟩)) ?
+  lemma₁ {s₁ A.⊗ s₂} {i₁ A.⊗ i₂} =
+      Pr.iota-split 
+              {R.recursive-transpose $ proj₁ $ S₁-to-S₂ s₁} 
+              {R.recursive-transpose $ proj₁ $ S₁-to-S₂ s₂} 
+              ((P₁-to-P₂ i₁ R.⟨ R.rev R.recursive-transposeᵣ ⟩) R.⟨ R.rev R.♭ ⟩)
+              ((P₁-to-P₂ i₂ R.⟨ R.rev R.recursive-transposeᵣ ⟩) R.⟨ R.rev R.♭ ⟩)
+      -- Trivial from here, just "Spaner monkey" work from there
+      ⊡ ?
+      ⊡ (sym (Pr.iota-split 
+              {proj₁ $ S₁-to-S₂ (A′.transp s₁)} 
+              {proj₁ $ S₁-to-S₂ (A′.transp s₂)}
+              (P₁-to-P₂ (i₁ A′.⟨ A′.transpᵣ ⟩) R.⟨ R.rev R.♭ ⟩)
+              (P₁-to-P₂ (i₂ A′.⟨ A′.transpᵣ ⟩) R.⟨ R.rev R.♭ ⟩)
+      ))
+  --cong (λ f → iota (f R.⟨ R.split ⟩)) ?
 
   prf : ∀ (xs : Ar₁ s₁ ℂ) (i : P₁ (s₁)) → 
         OLDFFT.FFT′ 
@@ -882,9 +1034,6 @@ module P where
           newTwid
           xs 
           (A′._⟨_⟩ i A′.transpᵣ)
-  
-  open import Relation.Nullary
-  open import Data.Empty
   prf {A.ι _} _ (A.ι _) = refl
   prf {s₁ A.⊗ s₂} xs (i₁ A.⊗ i₂) with NZ.nonZeroDec (proj₁ (S₁-to-S₂ s₁) M.⊗ proj₁ (S₁-to-S₂ s₂))
   ... | no ¬a = ⊥-elim (¬a $ proj₂ (S₁-to-S₂ s₁) NZ.⊗ proj₂ (S₁-to-S₂ s₂))
@@ -935,3 +1084,65 @@ module P where
           ) i₂)
 
 
+record dft-fft (M : Mon) : Set₁ where
+  module FM = F M
+  open A M
+  open Mon M using (U)
+
+  field
+    -- dft implementation
+    dft      : ∀ {n : U} → Ar (ι n) ℂ → Ar (ι n) ℂ
+    twiddles : ∀ {s p : S} → P s → P p → ℂ
+
+    prf :   ∀ {s : S}
+          → ∀ (xs : Ar (ι (size s)) ℂ)
+          → ∀ (i : P (ι (size s))) 
+          → dft xs i
+            ≡ 
+            reshape (reindex (sym (|s|≡|sᵗ| s)) ∙ ♭) (FM.fft {s} dft twiddles (reshape (rev ♭) xs)) i
+            --reshape (rev ♭) (dft (reshape (reindex (|s|≡|sᵗ| s) ∙ ♭) xs)) i
+
+          --→ FM.fft dft twiddles xs i 
+          --  ≡ 
+          --  reshape (rev ♭) (dft (reshape (reindex (|s|≡|sᵗ| s) ∙ ♭) xs)) i
+
+module L (M₁ : Mon) (rel : dft-fft (MM.mk-M₂ M₁)) where
+
+  M₂ = MM.mk-M₂ M₁
+
+  open Mon M₁ using (U₁; El₁)
+  open Mon M₂ using (U₂; El₂)
+
+  open dft-fft rel
+
+  S₁ = A.S M₁
+  P₁ = A.P M₁
+  Ar₁ = A.Ar M₁
+
+  S₂ = A.S M₂
+  P₂ = A.P M₂
+  Ar₂ = A.Ar M₂
+
+  --M₂ : Mon
+  --M₂ = record {
+  --    U    = S₁
+  --  ; El   = P₁
+  --  --; ι    = ?
+  --  --; _⊗_  = ?
+  --  --; unit-law  = ?
+  --  --; pair-law  = ?
+  --  --; flat = ?
+  --  }
+
+
+  --module Lvl₁ = F M
+
+  --ufft-two-level : Ar s ℂ → Ar s ℂ
+  --ufft-two-level {A.ι n} xs = reshape (reindex (sym (|s|≡|sᵗ| ?)) ∙ ♭) (FM.fft {?} dft twiddles (reshape (rev ♭) xs))
+  --ufft-two-level {s A.⊗ p} a =
+  --  let 
+  --    c = unnest $ imap 
+  --        (λ i → zipWith _*ᶜ_ (twiddles {p} {s} i) ∘ ufft-two-level {s}) 
+  --      (nest (reshape swap a))
+  --    d = map (ufft-two-level {p} ) (nest (reshape swap c))
+  --  in (unnest d)
