@@ -519,20 +519,102 @@ module F (M : Mon)  where
   -- We know that this relation (or some variant of) exists, as this is exactly
   -- what thomases code does - transposing FIRST then doing ufft, while our above
   -- relation did the ufft THEN the transposition
+  ufft≡fft′′ :   ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
+             → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
+             → (dft-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
+                         → ∀ i → dft {n} a i ≡ dft b i)
+             → ∀ (xs : Ar s ℂ)
+             → ∀ (i : P s) 
+             →  reshape transpᵣ (ufft dft (λ i₁ j₁ → twid (i₁ ⟨ transpᵣ ⟩) j₁ ) (reshape (rev transpᵣ) xs)) i
+                ≡ 
+                reshape transpᵣ (fft  dft twid xs) i
+  ufft≡fft′′ {.(ι _)} dft-cong xs (A.ι x) = refl
+  ufft≡fft′′ {.(_ ⊗ _)} {dft} {twid} dft-cong xs (i₁ A.⊗ i₂) = ?
+                  --(ufft≡fft′′ 
+                  --    dft-cong 
+                  --    (λ j → 
+                  --        twid (j ⟨ transpᵣ ⟩) (i₂ ⟨ transpᵣ ⟩) 
+                  --        *ᶜ  
+                  --        ufft 
+                  --          dft ? 
+                  --        --  (λ i₃ → twid (i₃ ⟨ transpᵣ ⟩)) 
+                  --          (λ j₁ → xs ((j ⟨ rev transpᵣ ⟩) ⊗ (j₁ ⟨ rev transpᵣ ⟩))) 
+                  --          (i₂ ⟨ transpᵣ ⟩)
+                  --    )
+                  --    (?)
+                  --)
+                --  ?
+                --⊡ 
+                --  ?
+                --⊡ 
+                --  fft-cong dft-cong _ _ (λ j → cong₂ _*ᶜ_ refl (ufft≡fft′′ dft-cong _ i₁)) (i₂ ⟨ transpᵣ ⟩)
+
   ufft≡fft′ :   ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
              → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
              → (dft-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
                          → ∀ i → dft {n} a i ≡ dft b i)
              → ∀ (xs : Ar s ℂ)
              → ∀ (i : P (transp s)) 
-             →  (ufft dft (λ i j → twid (i ⟨ transpᵣ ⟩) j ) (reshape (A.rev M (A.transpᵣ M)) xs)) i
+             →  (ufft dft (λ i₁ j₁ → twid (i₁ ⟨ transpᵣ ⟩) j₁ ) (reshape (rev transpᵣ) xs)) i
                 ≡ 
                 (fft  dft twid xs) i
   ufft≡fft′ {A.ι _} _ _ (A.ι _) = refl
-  ufft≡fft′ {_ A.⊗ _} dft-cong _ (i₁ A.⊗ j₁) = 
-      ? --(ufft-cong dft-cong _ _ (?) i₁) --(ufft-cong dft-cong _ _ (λ i₂ → cong₂ _*ᶜ_ refl (ufft≡fft′ dft-cong _ i₁)) j₁)
-      ⊡
-      (ufft≡fft′ dft-cong _ i₁)
+  ufft≡fft′ {_ A.⊗ _} dft-cong xs (i₁ A.⊗ j₁) = ?
+      --(ufft-cong dft-cong _ _ (λ k → cong₂ _*ᶜ_ refl (ufft≡fft′ dft-cong _ i₁)) j₁) 
+      --(ufft-cong dft-cong _ _ (λ i₂ → cong₂ _*ᶜ_ refl (ufft≡fft′ dft-cong _ i₁)) j₁)
+      --  ?
+      --⊡
+      --  ?
+      --(ufft≡fft′ dft-cong _ i₁)
+
+  tmp :   ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
+             → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
+             → (dft-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
+                         → ∀ i → dft {n} a i ≡ dft b i)
+             → ∀ (xs : Ar (s ⊗ p) ℂ)
+             → ∀ (i₁ : P s) 
+             → ∀ (k₁ : P p) 
+             →
+            ufft dft (λ i₃ → twid (i₃ ⟨ transpᵣ ⟩))
+            (λ j →
+               twid (j ⟨ transpᵣ ⟩) (k₁ ⟨ transpᵣ ⟩) *ᶜ
+               ufft dft (λ i₃ → twid (i₃ ⟨ transpᵣ ⟩))
+               (λ j₁ → xs ((j ⟨ rev transpᵣ ⟩) ⊗ (j₁ ⟨ rev transpᵣ ⟩)))
+               (k₁ ⟨ transpᵣ ⟩))
+            (i₁ ⟨ transpᵣ ⟩)
+            ≡
+            ufft (λ {n} z z₁ → dft z z₁) (λ i₃ → twid (i₃ ⟨ transpᵣ ⟩))
+            (λ j →
+               twid (j ⟨ rev transpᵣ ⟩) (i₁ ⟨ transpᵣ ⟩) *ᶜ
+               ufft dft (λ i₃ → twid (i₃ ⟨ transpᵣ ⟩))
+               (λ i → xs ((i ⟨ rev transpᵣ ⟩) ⊗ (j ⟨ rev transpᵣ ⟩)))
+               (i₁ ⟨ transpᵣ ⟩))
+            (k₁ ⟨ transpᵣ ⟩)
+
+  tmp dft-cong xs (A.ι x) (A.ι y) = ?
+  tmp dft-cong xs (A.ι x) (i₂ A.⊗ i₃) = ?
+  tmp dft-cong xs (i₁ A.⊗ i₃) i₂ = ?
+
+  ufft≡ufft′ :   ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
+             → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
+             → (dft-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
+                         → ∀ i → dft {n} a i ≡ dft b i)
+             → ∀ (xs : Ar s ℂ)
+             → ∀ (i : P s) 
+             →  reshape transpᵣ (ufft dft (λ i₁ j₁ → twid (i₁ ⟨ transpᵣ ⟩) j₁ ) (reshape (rev transpᵣ) xs)) i
+                ≡ 
+                (ufft dft (λ i₁ j₁ → twid i₁ (j₁ ⟨ transpᵣ ⟩) ) xs) i
+  ufft≡ufft′ {.(ι _)  } dft-cong xs (A.ι x) = refl
+  ufft≡ufft′ {(s ⊗ p)} {dft} {twid} dft-cong xs (i₁ A.⊗ i₂) = 
+          tmp {_} {_} {_} {twid} dft-cong xs i₁ i₂
+        ⊡
+          ufft-cong dft-cong _ _ (λ j₁ → cong₂ _*ᶜ_ refl (ufft≡ufft′ {_} {dft} {twid} dft-cong _ i₁)) (i₂ ⟨ transpᵣ ⟩)
+        ⊡ 
+          ufft≡ufft′ {_} {_} {twid} dft-cong
+                (λ j →
+               twid j (i₁ ⟨ transpᵣ ⟩) *ᶜ
+               ufft dft (λ i₃ j₁ → twid i₃ (j₁ ⟨ transpᵣ ⟩)) (λ j₁ → xs (j₁ ⊗ j))
+               i₁) i₂
 
 
   mapVec₁ : (dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ)
@@ -1338,7 +1420,7 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
     in (unnest₂ d)
 
 
-  ufft-two-level≡ufft : ∀ {s : S₂} 
+  ufft-two-level≡ufft : ∀ {s : S₂} artem sinkavos
                       → ∀ (xs : Ar₂ s ℂ)
                       → ∀ (i  : P₂ s)
                       → ufft-two-level₂ (λ i j → twiddles i (j ⟨ transpᵣ₁ ⟩₁)) xs i 
@@ -1403,7 +1485,6 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
                     → (twid : ∀ {s p} → P₁ s → P₁ p → ℂ)
                     → Ar₂ s ℂ → Ar₂ s ℂ
   ufft-two-level₃ {ι₂ n} twid xs (ι₂ i) =
-        --reshape₁ change-major (FM.ufft dft (λ i j → twid (i ⟨ transpᵣ₁ ⟩₁) j) (reshape₁ (rev₁ transpᵣ₁) (lower-Ar xs))) i
         reshape₁ change-major (FM.ufft dft twid (reshape₁ (rev₁ transpᵣ₁) (lower-Ar xs))) i
   ufft-two-level₃ {s ⊗₂ p} twid a =
     let 
@@ -1428,6 +1509,7 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
     ⊡
       sym (prf (lower-Ar xs) x)
   ufft-two-level-transp {s₁ A.⊗ s₂} xs (i₁ A.⊗ i₂) = ?
+
   --ufft-two-level-transp {s₁ A.⊗ s₂} xs (i₁ A.⊗ i₂) with (( i₁ ⊗₂ i₂ ) ⟨ change-major₂ ⟩₂ ) 
   --... | a A.⊗ a₁ =
   --      ufft-two-level-transp _ a₁
