@@ -511,6 +511,21 @@ module F (M : Mon)  where
                         (λ l → a≡b (l ⊗ k))
                         i))
         j
+
+  pre-ufft-cong : {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
+              {twid : ∀ {s p} → P s → P p → ℂ}
+            → (dft-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
+                        → ∀ i → dft {n} a i ≡ dft b i)
+            → ∀ {s} a b → (∀ i → a i ≡ b i)
+            → ∀ i → pre-ufft {s} dft twid a i ≡ pre-ufft dft twid b i
+  pre-ufft-cong dft-cong a b prf i@(A.ι _) = dft-cong a b prf i
+  pre-ufft-cong dft-cong a b prf (i₁ A.⊗ i₂) =
+    pre-ufft-cong dft-cong _ _ 
+      (λ j₁ → 
+        cong₂ _*ᶜ_ 
+          refl 
+          (pre-ufft-cong dft-cong _ _ (λ j₂ → prf (j₁ ⊗ j₂)) i₂)
+      ) i₁
   
   ufft≡fft :   ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
              → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
@@ -527,28 +542,6 @@ module F (M : Mon)  where
       (ufft-cong dft-cong _ _ (λ i₂ → cong₂ _*ᶜ_ refl (ufft≡fft dft-cong _ i₁)) j₁)
       ⊡
       (ufft≡fft dft-cong _ j₁)
-
-  pre-ufft≡fft′′ :  ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
-                 → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
-                 --→ (transp-twid : ∀ {s p} → ∀ {i j} → twid ((i ⟨ transpᵣ ⟩) ⟨ transpᵣ ⟩) j ≡ twid {s} {p} i j)
-                 → (dft-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
-                             → ∀ i → dft {n} a i ≡ dft b i)
-                 → ∀ (xs : Ar s ℂ)
-                 → ∀ (ys : Ar (transp s) ℂ)
-                 → (prf : ∀ i → ys i ≡ xs (i ⟨ rev transpᵣ ⟩ ))
-                 → ∀ (i : P (transp s)) 
-                 →  (pre-ufft dft (λ i₁ j₁ → twid (i₁ ⟨ transpᵣ ⟩) j₁ ) ys) i
-                    ≡ 
-                    fft dft twid xs i
-  pre-ufft≡fft′′ {A.ι x} dft-cong xs ys prf  = ? --dft-cong ys xs prf ?
-  pre-ufft≡fft′′ {s₁ A.⊗ s₂} {_} {twid} dft-cong xs ys prf (i₁ A.⊗ i₂) =
-      pre-ufft≡fft′′ dft-cong _ _ 
-        (λ j₁ → 
-          cong₂ _*ᶜ_ 
-            ? --(cong₂ twid ? refl)
-            (pre-ufft≡fft′′ dft-cong _ _ (λ j₂ → prf (j₁ ⊗ j₂)) i₂)
-        )
-        i₁
 
   pre-ufft≡fft′ :  ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
                  → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
@@ -567,7 +560,7 @@ module F (M : Mon)  where
       pre-ufft≡fft′ transp-twid dft-cong _ _ 
         (λ j₁ → 
           cong₂ _*ᶜ_ 
-            ? --(cong₂ twid ? refl)
+            transp-twid --(cong₂ twid ? refl)
             (pre-ufft≡fft′ transp-twid dft-cong _ _ (λ j₂ → prf (j₂ ⊗ j₁)) i₂)
         )
         i₁
@@ -584,6 +577,29 @@ module F (M : Mon)  where
                 (fft  dft twid xs) i
   pre-ufft≡fft transp-twid dft-cong xs i = pre-ufft≡fft′ transp-twid dft-cong xs (reshape (rev transpᵣ) xs) (cong xs ∘ rev-rev transpᵣ) i
 
+  pre-ufft≡post-ufft :
+               ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
+             → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
+             → (transp-twid : ∀ {s p} → ∀ {i j} → twid ((i ⟨ transpᵣ ⟩) ⟨ transpᵣ ⟩) j ≡ twid {s} {p} i j)
+             → (dft-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
+                         → ∀ i → dft {n} a i ≡ dft b i)
+             → ∀ (xs : Ar s ℂ)
+             → ∀ (i : P (transp s)) 
+             → pre-ufft dft (λ j₁ j₂ → twid (j₁ ⟨ transpᵣ ⟩) j₂) (reshape (rev transpᵣ) xs) i
+                 ≡
+               reshape (rev transpᵣ) (ufft dft (λ j₁ j₂ → twid j₁ (j₂ ⟨ transpᵣ ⟩)) xs) i
+  pre-ufft≡post-ufft {s} {dft} {twid} transp-twid dft-cong xs i =
+      pre-ufft≡fft {_} {dft} {twid} transp-twid dft-cong xs i
+    ⊡ cong (fft dft twid xs) (sym (rev-rev′ transpᵣ i))
+    ⊡ sym (ufft≡fft {_} {dft} {twid} dft-cong xs (i ⟨ rev transpᵣ ⟩))
+
+            {-
+            FM.pre-ufft dft (λ j₁ → twiddles (j₁ ⟨ transpᵣ₁ ⟩₁))
+            (λ i → xs (ι₁ (i ⟨ rev₁ transpᵣ₁ ⟩₁))) (x ⟨ change-major ⟩₁)
+            ≡
+            FM.ufft dft (λ i j → twiddles i (j ⟨ transpᵣ₁ ⟩₁))
+            (λ i → ys (ι₁ i)) ((x ⟨ transpᵣ₁ ⟩₁) ⟨ rev₁ transpᵣ₁ ⟩₁)
+            -}
 
   mapVec₁ : (dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ)
            → (ufft-vec : VEC V p → Ar p ℂ → Ar p ℂ)
@@ -1233,6 +1249,7 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
     ; imap to imap₂
     ; zipWith to zipWith₂
     ; reshape to reshape₂
+    ; Reshape to Reshape₂
     ; swap to swap₂
     ; rev to rev₂
     ; map to map₂
@@ -1240,6 +1257,7 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
     ; transpᵣ to transpᵣ₂
     ; transp to transp₂
     ; eq to eq₂
+    ; _⊕_ to _⊕₂_
     )
 
   open A M₁ using () renaming
@@ -1262,12 +1280,18 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
     ; _∙_ to _∙₁_
     ; transp to transp₁
     ; eq to eq₁
+    ; _⊕_ to _⊕₁_
+    ; rev-rev′ to rev-rev′₁
     )
 
   lower-shp : S₂ → S₁
   lower-shp (A.ι x) = x
   lower-shp (s₁ ⊗₂ s₂) = lower-shp s₁ ⊗₁ lower-shp s₂
   
+  shp-map : S₂ → (S₁ → S₁) → S₂
+  shp-map (A.ι x) f = A.ι (f x)
+  shp-map (s₁ A.⊗ s₂) f = (shp-map s₁ f) A.⊗ (shp-map s₂ f)
+
   lower-P : ∀ {s : S₂} → P₂ s → P₁ (lower-shp s) 
   lower-P (A.ι x) = x
   lower-P (p₁ A.⊗ p₂) = lower-P p₁ ⊗₁ lower-P p₂ 
@@ -1275,6 +1299,16 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
   raise-P : ∀ {s : S₂} → P₁ (lower-shp s) → P₂ s
   raise-P {A.ι x} i = ι₂ i
   raise-P {s₁ A.⊗ s₂} (i₁ A.⊗ i₂) = (raise-P i₁) ⊗₂ (raise-P i₂)
+
+  {-
+  resh-map : ∀ {s : S₂} → P₂ s → {f : S₁ → S₁} → (∀ {s₁ : S₁} → P₁ s₁ → P₁ (f s₁)) → P₂ (shp-map s f)
+  resh-map (A.ι x)     g = A.ι (g x)
+  resh-map (i₁ A.⊗ i₂) g = (resh-map i₁ g) A.⊗ (resh-map i₂ g)
+  -}
+
+  resh-map : ∀ {s : S₂} → P₂ s → {f : S₁ → S₁} → (∀ {s₁ : S₁} → Reshape₁ (f s₁) s₁) → P₂ (shp-map s f)
+  resh-map (A.ι x)     r = A.ι (x ⟨ r ⟩₁)
+  resh-map (i₁ A.⊗ i₂) r = (resh-map i₁ r) A.⊗ (resh-map i₂ r)
 
   lower-P-raise-P-inv : ∀ {s : S₂} → ∀ {p : P₁ (lower-shp s)} → (lower-P {s} (raise-P p)) ≡ p
   lower-P-raise-P-inv {A.ι x} {p} = refl
@@ -1291,19 +1325,113 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
 
   open dft-fft rel
 
+  -- This performs a transposition on the outer shape at the end, and a 
+  -- transposition on the inner shape at each outer leaf
+  ufft-two-level : ∀ {s : S₂} 
+                    → Ar₂ s ℂ → Ar₂ s ℂ
+  ufft-two-level {ι₂ n} xs (ι₂ i) =
+        reshape₁ 
+            transpᵣ₁
+            --change-major 
+            (FM.pre-ufft 
+              dft 
+              (λ j₁ j₂ → twiddles (j₁ ⟨ transpᵣ₁ ⟩₁) j₂) 
+              (reshape₁ (rev₁ transpᵣ₁) (lower-Ar xs))
+            ) i
+  ufft-two-level {s ⊗₂ p} a =
+    let
+      c = unnest₂ $ imap₂ 
+          (λ i → 
+            zipWith₂ 
+              _*ᶜ_ 
+              (λ j → twiddles
+                  {lower-shp s} {transp₁ (lower-shp p)} (lower-P j) ((lower-P i) ⟨ transpᵣ₁ ⟩₁)
+              )
+            ∘ ufft-two-level {s} 
+          )
+        (nest₂ (reshape₂ swap₂ a))
+      d = map₂ (ufft-two-level {p}) (nest₂ (reshape₂ swap₂ c))
+    in (unnest₂ d)
+
+  ufft-two-level≡ufft : ∀ {s : S₂}
+                      → ∀ (xs : Ar₂ s ℂ)
+                      → ∀ (ys : Ar₂ s ℂ)
+                      → (∀ (i : P₂ s) → xs i ≡ ys i)
+                      → ∀ (i : P₂ s)
+                      → reshape₂ 
+                          (rev₂ transpᵣ₂) 
+                          (ufft-two-level xs) 
+                          (i ⟨ transpᵣ₂ ⟩₂)
+                      ≡
+                        reshape₁ 
+                          (rev₁ transpᵣ₁) 
+                          (FM.ufft dft (λ i j → twiddles i (j ⟨ transpᵣ₁ ⟩₁)) (lower-Ar ys))
+                          ((lower-P i) ⟨ transpᵣ₁ ⟩₁)
+  ufft-two-level≡ufft {A.ι n} xs ys prf (A.ι x) = FM.pre-ufft≡post-ufft ? ? ? ? --(x ⟨ transpᵣ₁ ₁)
+  ufft-two-level≡ufft {s A.⊗ s₁} xs ys prf (i A.⊗ i₁) = ?
+  
+
+  {-
   ufft-two-level₃ : ∀ {s : S₂} 
                     → (twid : ∀ {s p} → P₁ s → P₁ p → ℂ)
                     → Ar₂ s ℂ → Ar₂ s ℂ
   ufft-two-level₃ {ι₂ n} twid xs (ι₂ i) =
-        reshape₁ change-major (FM.pre-ufft dft twid (reshape₁ (rev₁ transpᵣ₁) (lower-Ar xs))) i
+        -- Change major feels more correct here, but transpᵣ₁ actually works...
+        reshape₁ transpᵣ₁ (FM.pre-ufft dft twid (reshape₁ (rev₁ transpᵣ₁) (lower-Ar xs))) i
+        --reshape₁ change-major (FM.pre-ufft dft twid (reshape₁ (rev₁ transpᵣ₁) (lower-Ar xs))) i
   ufft-two-level₃ {s ⊗₂ p} twid a =
     let 
       c = unnest₂ $ imap₂ 
-          (λ i → zipWith₂ _*ᶜ_ (λ j → twid {lower-shp s} {lower-shp p} (lower-P i) (lower-P j)) ∘ ufft-two-level₃ {p} twid) 
+          (λ i → 
+            zipWith₂ 
+              _*ᶜ_ 
+              (λ j → twid 
+                  --{(lower-shp (shp-map s transp₁))} 
+                  --{(lower-shp (shp-map p transp₁))} 
+                  ((lower-P (resh-map i transpᵣ₁)))
+                  ((lower-P (resh-map j transpᵣ₁)))
+              )
+            ∘ ufft-two-level₃ {p} twid
+          )
         (nest₂ a)
       d = map₂ (ufft-two-level₃ {s} twid) (nest₂ (reshape₂ swap₂ c))
     in reshape₂ swap₂ (unnest₂ d)
 
+  lemma₁ : ∀ {s} 
+         → ∀ (i : P₂ s) 
+         → lower-P (resh-map (i ⟨ transpᵣ₂ ⟩₂) transpᵣ₁) 
+          ≡ 
+           ? --(lower-P i) ⟨ transpᵣ₁ ⟩₁
+
+  -- I Think this version is the nicest, but I belive the relation between xs 
+  -- and ys is wrong
+  ufft-two-level-transp₃ : ∀ {s : S₂}
+                        → (twid : ∀ {s p} → P₁ s → P₁ p → ℂ)
+                        → ∀ (xs : Ar₂ (transp₂ s) ℂ)
+                        → ∀ (ys : Ar₁ (transp₁ (lower-shp s)) ℂ)
+                        → (∀ (i : P₂ s) → xs (i ⟨ transpᵣ₂ ⟩₂) ≡ ys ((lower-P i) ⟨ transpᵣ₁ ⟩₁))
+                        → ∀ (i : P₂ s)
+                        → (ufft-two-level₃ twid xs) (i ⟨ transpᵣ₂ ⟩₂)
+                        ≡ 
+                          (FM.pre-ufft dft twid ys) ((lower-P i) ⟨ transpᵣ₁ ⟩₁)
+  ufft-two-level-transp₃ {A.ι n} twid xs ys prf (A.ι x) =
+      FM.pre-ufft-cong dft-cong _ _ 
+        (λ i → prf (A.ι (i ⟨ rev₁ transpᵣ₁ ⟩₁)) ⊡ (cong ys (rev-rev′₁ transpᵣ₁ _))) (x ⟨ transpᵣ₁ ⟩₁)
+  ufft-two-level-transp₃ {s A.⊗ s₁} twid xs ys prf (i₁ A.⊗ i₂) =
+      ufft-two-level-transp₃ twid _ _ 
+        (λ j₁ → 
+          cong₂
+            _*ᶜ_
+            ? --(cong₂ twid ? ?)
+            (ufft-two-level-transp₃ twid _ _ 
+              (λ j₂ → 
+                prf (j₂ A.⊗ j₁)
+              ) 
+              i₁
+            )
+        ) i₂
+      
+  {-
   ufft-two-level-transp : ∀ {s : S₂}
                         → ∀ (xs : Ar₂ s ℂ)
                         → ∀ (i : P₂ s)
@@ -1317,8 +1445,27 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
       (FM₁.pre-ufft≡fft {_} {dft} {twiddles} transp-twid dft-cong (lower-Ar xs) (x ⟨ change-major ⟩₁))
     ⊡
       sym (prf (lower-Ar xs) x)
-  ufft-two-level-transp {s₁ A.⊗ s₂} xs (i₁ A.⊗ i₂) with lower-P (i₁ A.⊗ i₂)
-  ... | k₁ A.⊗ k₂ = ?
+  ufft-two-level-transp {s₁ A.⊗ s₂} xs (i₁ A.⊗ i₂) with 
+        ((lower-P (i₁ A.⊗ i₂)))  
+      | ((i₁ A.⊗ i₂) ⟨ change-major₂ ⟩₂ ⟨ swap₂ ⟩₂) --⟨ rev₂ change-major₂ ⊕₂ rev₂ change-major₂ ⟩₂)
+  ... | k₁ A.⊗ k₂ | j₁ A.⊗ j₂ =
+    begin
+      --_ ≡⟨ ufft-two-level-transp _  ⟩
+      _ ≡⟨ ? ⟩
+      _ ∎
+  -}
+
+  ufft-two-level-transp₂ : 
+      ∀ {s : S₂}
+    → ∀ (twid : ∀ {s p} → P₁ s → P₁ p → ℂ)
+    → ∀ (xs : Ar₂ s ℂ)
+    → ∀ (i : P₂ s)
+    → (ufft-two-level₃ twid (reshape₂ (rev₂ transpᵣ₂) xs)) (i ⟨ transpᵣ₂ ⟩₂)
+    ≡ 
+      (FM.pre-ufft dft twid (reshape₁ (rev₁ transpᵣ₁) (lower-Ar xs))) ((lower-P i) ⟨ transpᵣ₁ ⟩₁)
+  ufft-two-level-transp₂ {A.ι n} twid xs (A.ι x) = refl
+  ufft-two-level-transp₂ {s₁ A.⊗ s₂} twid xs (i₁ A.⊗ i₂) = ?
+
 
   --ufft-two-level-transp₁ : ∀ {s : S₂}
   --                      → ∀ (xs : Ar₂ (transp₂ s) ℂ)
@@ -1336,4 +1483,4 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
   --    ⊡ 
   --    sym (prf (lower-Ar xs) x)
   --ufft-two-level-transp₁ {s A.⊗ s₁} xs ys prf (i A.⊗ i₁) = ?
-
+-}
