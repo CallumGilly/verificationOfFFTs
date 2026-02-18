@@ -170,9 +170,6 @@ module A (M : Mon) where
   transpᵣ {ι x} = eq
   transpᵣ {s ⊗ s₁} = (transpᵣ ⊕ transpᵣ) ∙ swap
 
-  _ : ?
-  _ = ?
-
   --|s|≡|sᵗ| : ∀ s → size s ≡ size (transp s)
   --|s|≡|sᵗ| (ι x) = refl
   --|s|≡|sᵗ| (s₁ ⊗ s₂) rewrite
@@ -1258,6 +1255,8 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
     ; transp to transp₂
     ; eq to eq₂
     ; _⊕_ to _⊕₂_
+    ; rev-rev′ to rev-rev′₂
+    ; rev-rev to rev-rev₂
     )
 
   open A M₁ using () renaming
@@ -1282,6 +1281,7 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
     ; eq to eq₁
     ; _⊕_ to _⊕₁_
     ; rev-rev′ to rev-rev′₁
+    ; rev-rev to rev-rev₁
     )
 
   lower-shp : S₂ → S₁
@@ -1299,6 +1299,15 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
   raise-P : ∀ {s : S₂} → P₁ (lower-shp s) → P₂ s
   raise-P {A.ι x} i = ι₂ i
   raise-P {s₁ A.⊗ s₂} (i₁ A.⊗ i₂) = (raise-P i₁) ⊗₂ (raise-P i₂)
+  
+  raise-lower-P : 
+                  ∀ {s} 
+                → ∀ (i : P₁ (lower-shp s)) 
+                → lower-P {s} (raise-P i) ≡ i
+  raise-lower-P {A.ι x} i = refl
+  raise-lower-P {s₁ A.⊗ s₂} (i₁ A.⊗ i₂) rewrite
+      raise-lower-P {s₁} i₁
+    | raise-lower-P {s₂} i₂ = refl
 
   {-
   resh-map : ∀ {s : S₂} → P₂ s → {f : S₁ → S₁} → (∀ {s₁ : S₁} → P₁ s₁ → P₁ (f s₁)) → P₂ (shp-map s f)
@@ -1345,7 +1354,7 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
             zipWith₂ 
               _*ᶜ_ 
               (λ j → twiddles
-                  {lower-shp s} {transp₁ (lower-shp p)} (lower-P j) ((lower-P i) ⟨ transpᵣ₁ ⟩₁)
+                  {lower-shp p} {transp₁ (lower-shp s)} (lower-P i) ((lower-P j) ⟨ transpᵣ₁ ⟩₁)
               )
             ∘ ufft-two-level {s} 
           )
@@ -1367,8 +1376,37 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
                           (rev₁ transpᵣ₁) 
                           (FM.ufft dft (λ i j → twiddles i (j ⟨ transpᵣ₁ ⟩₁)) (lower-Ar ys))
                           ((lower-P i) ⟨ transpᵣ₁ ⟩₁)
-  ufft-two-level≡ufft {A.ι n} xs ys prf (A.ι x) = FM.pre-ufft≡post-ufft ? ? ? ? --(x ⟨ transpᵣ₁ ₁)
-  ufft-two-level≡ufft {s A.⊗ s₁} xs ys prf (i A.⊗ i₁) = ?
+  ufft-two-level≡ufft {A.ι n} xs ys prf (A.ι x) =
+      FM.pre-ufft≡post-ufft {_} {dft} {twiddles} transp-twid dft-cong (lower-Ar xs) (x ⟨ transpᵣ₁ ⟩₁) --(x ⟨ transpᵣ₁ ⟩₁)
+      ⊡ FM.ufft-cong dft-cong _ _ (λ j → prf (A.ι j)) (x ⟨ transpᵣ₁ ∙₁ rev₁ transpᵣ₁ ⟩₁)
+  ufft-two-level≡ufft {s₁ A.⊗ s₂} xs ys prf (i₁ A.⊗ i₂) =
+      ufft-two-level≡ufft 
+        _ 
+        _
+        (λ j₁ → 
+          cong₂   
+            _*ᶜ_
+            refl
+            (ufft-two-level≡ufft _ _ (λ j₂ → prf (j₂ ⊗₂ j₁)) i₁)
+        ) 
+        i₂
+    ⊡ 
+      FM.ufft-cong dft-cong 
+        _ 
+        _ 
+        (λ j → 
+          cong₂ _*ᶜ_ (
+            cong₂
+              twiddles 
+              (raise-lower-P {s₂} j) 
+              (cong _⟨ transpᵣ₁ ⟩₁ 
+                ( (cong (lower-P {s₁}) {((i₁ ⟨ transpᵣ₂ ⟩₂) ⟨ rev₂ transpᵣ₂ ⟩₂)} {i₁} (rev-rev₂ transpᵣ₂ i₁))
+                ⊡ (sym (rev-rev₁ transpᵣ₁ (lower-P i₁)))
+              ))
+          ) refl
+        ) 
+        ((lower-P i₂ ⟨ transpᵣ₁ ⟩₁) ⟨ rev₁ transpᵣ₁ ⟩₁)
+
   
 
   {-
