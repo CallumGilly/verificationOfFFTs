@@ -25,9 +25,10 @@ module FFT (cplx : Cplx) where
 
   open import Function
 
-  variable
-    N : ℕ
-    s p : Shape
+  private
+    variable
+      N : ℕ
+      s p : Shape
 
   --------------------------------
   --- NonZero helper functions ---
@@ -53,47 +54,25 @@ module FFT (cplx : Cplx) where
   offset-prod : Position (s ⊗ p) → ℕ
   offset-prod (k ⊗ j) = iota (k ⟨ ♯ ⟩) *ₙ iota (j ⟨ ♯ ⟩)
 
-  twiddles : ⦃ nonZeroₛ-s⊗p : NonZeroₛ (s ⊗ p) ⦄ → Ar (s ⊗ p) ℂ
-  twiddles {s} {p} ⦃ nonZeroₛ-s⊗p ⦄ i =
-    -ω (length (s ⊗ p)) ⦃ (nonZeroₛ-s⇒nonZero-s (nonZeroₛ-s⊗p)) ⦄ (offset-prod i)
+  twiddles : Ar (s ⊗ p) ℂ
+  twiddles {s} {p} i with nonZeroDec (s ⊗ p)
+  ... | no ¬nz = ⊥-elim (¬nz (pos⇒nz i))
+  ... | yes nz = -ω (length (s ⊗ p)) ⦃ nonZeroₛ-s⇒nonZero-s nz ⦄ (offset-prod i)
 
   -------------------
   --- DFT and FFT ---
   -------------------
 
-
-  --DFT : ∀ {N} → Ar (ι N) ℂ → Ar (ι N) ℂ
-  --DFT {N} xs with nonZero? N
-  --... | no ¬nz = λ { (ι j) → ⊥-elim (¬nz (fin-nz _ j)) }
-  --... | yes nz = λ j → sum (λ k → xs k * -ω N ⦃ nz ⦄ (iota k *ₙ iota j))
-
-  DFT′ : ∀ {N : ℕ} → ⦃ nonZero-N : NonZero N ⦄ → Ar (ι N) ℂ → Ar (ι N) ℂ
-  DFT′ {N} ⦃ nonZero-N ⦄ xs j = sum (λ k → xs k * -ω N ⦃ nonZero-N ⦄ (iota k *ₙ iota j))
-
-  FFT′ : ∀ {s : Shape} → ⦃ nonZero-s : NonZeroₛ s ⦄ → Ar s ℂ → Ar (recursive-transpose s) ℂ
-  FFT′ {ι N} ⦃ ι nonZero-N ⦄ arr = DFT′ ⦃ nonZero-N ⦄ arr
-  FFT′ {r₁ ⊗ r₂} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ arr = 
-      let 
-          innerDFTapplied       = mapLeft FFT′ (reshape swap arr)   
-          twiddleFactorsApplied = zipWith _*_   innerDFTapplied twiddles
-          outerDFTapplied       = mapLeft FFT′ (reshape swap twiddleFactorsApplied) 
-      in  reshape swap outerDFTapplied
-      where
-        instance
-          _ : NonZeroₛ r₁
-          _ = nonZero-r₁
-          _ : NonZeroₛ r₂
-          _ = nonZero-r₂
-          _ : NonZeroₛ (r₂ ⊗ (recursive-transpose r₁))
-          _ = nonZero-r₂ ⊗ (nonZeroₛ-s⇒nonZeroₛ-sᵗ nonZero-r₁)
-
-  DFT : ∀ {N : ℕ} → Ar (ι N) ℂ → Ar (ι N) ℂ
-  DFT {N} arr with nonZero? N
-  ... | no  ¬nonZero-s = arr
-  ... | yes  nonZero-s = DFT′ ⦃ nonZero-s ⦄ arr
+  DFT : ∀ {N} → Ar (ι N) ℂ → Ar (ι N) ℂ
+  DFT {N} xs with nonZero? N
+  ... | no ¬nz = λ { (ι j) → ⊥-elim (¬nz (fin-nz _ j)) }
+  ... | yes nz = λ j → sum (λ k → xs k * -ω N ⦃ nz ⦄ (iota k *ₙ iota j))
 
   FFT : ∀ {s : Shape} → Ar s ℂ → Ar (recursive-transpose s) ℂ
-  FFT {s} arr with nonZeroDec s
-  ... | no  ¬nonZero-s = reshape (recursive-transposeᵣ) arr
-  ... | yes  nonZero-s = FFT′ ⦃ nonZero-s ⦄ arr
-
+  FFT {ι N} arr = DFT arr
+  FFT {r₁ ⊗ r₂} arr = 
+      let 
+          innerDFTapplied       = mapLeft FFT (reshape swap arr)   
+          twiddleFactorsApplied = zipWith _*_   innerDFTapplied twiddles
+          outerDFTapplied       = mapLeft FFT (reshape swap twiddleFactorsApplied) 
+      in  reshape swap outerDFTapplied

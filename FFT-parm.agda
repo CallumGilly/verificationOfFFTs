@@ -55,15 +55,9 @@ record Uops (M : Mon) : Set where
     sum : ∀ u → (El u → ℂ) → ℂ
     -ω : U → ℂ → ℂ
 
---module A (U : Set) (El : U → Set) where
 module A (M : Mon) where
-  open Mon M using (U; El) --; pair-law) renaming (ι to ι′; _⊗_ to _⊗′_; comm to ⊗′-comm)
+  open Mon M using (U; El)
 
-  --open import Function.Properties.Inverse using (toFunction; fromFunction)
-
-  --private
-  --  to : ∀ (a b : U) → (El (a ⊗′ b)) → (El a × El b)
-  --  to a b = Inverse.to $ pair-law a b
 
   infixl 15 _⊗_
   data S : Set where
@@ -91,9 +85,6 @@ module A (M : Mon) where
     assocl : Reshape (s ⊗ (p ⊗ q)) ((s ⊗ p) ⊗ q)
     assocr : Reshape ((s ⊗ p) ⊗ q) (s ⊗ (p ⊗ q))
 
-    --flat : Reshape (ι m ⊗ ι n) (ι (m ⊗′ n)) 
-    --unflat : Reshape (ι (m ⊗′ n)) (ι m ⊗ ι n)
-
   _⟨_⟩ : P s → Reshape p s → P p
   i ⟨ eq ⟩ = i
   (i ⊗ i₁) ⟨ r ⊕ r₁ ⟩ = (i ⟨ r ⟩) ⊗ (i₁ ⟨ r₁ ⟩)
@@ -101,9 +92,6 @@ module A (M : Mon) where
   (i ⊗ i₁) ⟨ swap ⟩ = i₁ ⊗ i
   ((i ⊗ j) ⊗ k) ⟨ assocl ⟩ = i ⊗ (j ⊗ k)
   (i ⊗ (j ⊗ k)) ⟨ assocr ⟩ = (i ⊗ j) ⊗ k
-
-  --ι x ⟨ flat ⟩ = let a = (Inverse.to $ pair-law _ _) x in ι (proj₁ a) ⊗ ι (proj₂ a)
-  --(ι x₁ ⊗ ι x₂) ⟨ unflat ⟩ = ι ((Inverse.from $ pair-law _ _) (x₁ , x₂))
 
   rev : Reshape s p → Reshape p s
   rev eq = eq
@@ -113,9 +101,6 @@ module A (M : Mon) where
   rev assocl = assocr
   rev assocr = assocl
 
-  --rev unflat = flat
-  --rev flat = unflat
-
   rev-rev : ∀ (r : Reshape s p) (i : P p) →  i ⟨ r ∙ rev r ⟩ ≡ i
   rev-rev eq i = refl
   rev-rev (r₁ ⊕ r₂) (i₁ ⊗ i₂) rewrite rev-rev r₁ i₁ | rev-rev r₂ i₂ = refl
@@ -123,14 +108,6 @@ module A (M : Mon) where
   rev-rev swap (i₁ ⊗ i₂) = refl
   rev-rev assocl (i₁ ⊗ i₂ ⊗ i₃) = refl
   rev-rev assocr (i₁ ⊗ (i₂ ⊗ i₃)) = refl
-  --rev-rev unflat (ι {m} x₁ ⊗ ι {n} x₂) 
-  --  rewrite
-  --    (proj₁ ((Inverse.inverse (pair-law m n))) {x₁ , x₂}) refl 
-  --  = refl
-  --rev-rev (flat {m} {n}) (ι x)
-  --  rewrite
-  --    (proj₂ ((Inverse.inverse (pair-law m n))) {x}) refl 
-  --  = refl
 
   rev-rev′ : ∀ (r : Reshape s p) (i : P s) →  i ⟨ rev r ∙ r ⟩ ≡ i
   rev-rev′ eq i = refl
@@ -139,28 +116,9 @@ module A (M : Mon) where
   rev-rev′ swap (i₁ ⊗ i₂) = refl
   rev-rev′ assocl (i₁ ⊗ (i₂ ⊗ i₃)) = refl
   rev-rev′ assocr (i₁ ⊗ i₃ ⊗ i₂)   = refl
-  --rev-rev′ (unflat {m} {n}) (ι x)
-  --  rewrite
-  --    (proj₂ ((Inverse.inverse (pair-law m n))) {x}) refl 
-  --  = refl
-  --rev-rev′ (flat {m} {n}) (ι x₁ ⊗ ι x₂)
-  --  rewrite
-  --    (proj₁ ((Inverse.inverse (pair-law m n))) {x₁ , x₂}) refl 
-  --  = refl
-
-  --reindex : m ≡ n → Reshape (ι m) (ι n)
-  --reindex {m} {n} prf = subst (λ t → Reshape (ι m) (ι t)) prf eq
 
   reshape : Reshape s p → Ar s X → Ar p X
   reshape r a i = a (i ⟨ r ⟩)
-
-  --size : S → U
-  --size (ι x) = x
-  --size (s₁ ⊗ s₂) = size s₁ ⊗′ size s₂
-
-  --♭ : Reshape s (ι (size s))
-  --♭ {ι x} = eq
-  --♭ {s₁ ⊗ s₂} = flat ∙ ♭ ⊕ ♭
 
   transp : S → S
   transp (ι n) = ι n
@@ -169,14 +127,6 @@ module A (M : Mon) where
   transpᵣ : Reshape (transp s) s
   transpᵣ {ι x} = eq
   transpᵣ {s ⊗ s₁} = (transpᵣ ⊕ transpᵣ) ∙ swap
-
-  --|s|≡|sᵗ| : ∀ s → size s ≡ size (transp s)
-  --|s|≡|sᵗ| (ι x) = refl
-  --|s|≡|sᵗ| (s₁ ⊗ s₂) rewrite
-  --    |s|≡|sᵗ| s₁
-  --  | |s|≡|sᵗ| s₂
-  --  | ⊗′-comm (size (transp s₁)) (size (transp s₂))
-  --  = refl
 
   map : (X → Y) → Ar s X → Ar s Y
   map f a i = f (a i)
@@ -239,6 +189,7 @@ module A (M : Mon) where
   rev-fact : (r : Reshape s p) → ∀ i j → i ⟨ rev r ⟩ ≡ j → i ≡ j ⟨ r ⟩
   rev-fact r i j e = sym (resh-rev r i) ⊡ cong (_⟨ r ⟩) e
 
+{-
 --module D (U : Set) (El : U → Set) where
 module D (M : Mon)  where
   open Mon M using (U; El)
@@ -257,14 +208,13 @@ module D (M : Mon)  where
 
   twiddles : P s → P p → ℂ
   twiddles {s} {p} i j = -ω (size (s ⊗ p)) (iota i *ᶜ iota j)
+-}
 
-
---module F (U : Set) (El : U → Set) where
 module F (M : Mon)  where
   open Mon M using (U; El)
   open A M
 
-  -- Parametrised (u)ffts
+  -- Parametrised ffts
   fft : (dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ)
         (twid : ∀ {s p} → P s → P p → ℂ)
       → Ar s ℂ → Ar (transp s) ℂ
@@ -278,16 +228,16 @@ module F (M : Mon)  where
 
   -----------------------------------------------------------------------------
 
-  ufft : (dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ)
+  post-ufft : (dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ)
          (twid : ∀ {s p} → P s → P p → ℂ)
        → Ar s ℂ → Ar s ℂ
-  ufft {A.ι n} dft twid = dft
-  ufft {s A.⊗ p} dft twid a =
+  post-ufft {A.ι n} dft twid = dft
+  post-ufft {s A.⊗ p} dft twid a =
     let 
       c = unnest $ imap 
-          (λ i → zipWith _*ᶜ_ (twid {p} {s} i) ∘ ufft {s} dft twid) 
+          (λ i → zipWith _*ᶜ_ (twid {p} {s} i) ∘ post-ufft {s} dft twid) 
         (nest (reshape swap a))
-      d = map (ufft {p} dft twid) (nest (reshape swap c))
+      d = map (post-ufft {p} dft twid) (nest (reshape swap c))
     in (unnest d)
   
   pre-ufft : (dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ)
@@ -349,7 +299,18 @@ module F (M : Mon)  where
     in c
   vecPattern vec@(_ ⊗ (vec₂ ⊗ vec₃)) _ g g′ xs =
       g′ vec $ unnest $ map (g (vec₂ ⊗ vec₃)) (nest xs)
-  
+
+  {-
+    Could be nice, given cong on f and g as args
+  vecPattern₁-cong : 
+              ∀ {s p : S}
+            → (vec : VEC V (s ⊗ p))
+            → (f  : ∀ {n} → P (pull-V (vec-fst vec)) → Ar (V ⊗ ι n) X → Ar (V ⊗ ι n) Z)
+            → (g  : VEC V      p  → Ar p X       → Ar p Y      )
+            → (g′ : VEC V (s ⊗ p) → Ar (s ⊗ p) Y → Ar (s ⊗ p) Z) 
+            → ∀ a b → (∀ i → a i ≡ b i)
+            → ∀ i → vecPattern vec f g g′ a i ≡ vecPattern vec f g g′ b i
+  -}
   id₁ : X → Y → Y
   id₁ = λ _ → id
 
@@ -362,30 +323,50 @@ module F (M : Mon)  where
             → Ar (V ⊗ ι n) ℂ
   dftVec dft xs = unnest (map dft (nest xs))
 
-  ufft-vec₁ : (dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ)
+  post-ufft-vec₁ : (dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ)
          (twid : ∀ {s p} → P s → P p → ℂ)
        → VEC V s
        → Ar s ℂ → Ar s ℂ
-
-  ufft-vec₁ {V} {A.ι n  } dft twid vec = dft
-  ufft-vec₁ {V} {s A.⊗ p} dft twid (vec₁ ⊗ vec₂) a =
+  post-ufft-vec₁ {V} {A.ι n  } dft twid vec = dft
+  post-ufft-vec₁ {V} {s A.⊗ p} dft twid (vec₁ ⊗ vec₂) a =
     let 
-      --b = nest $ mapVec₁ dft (ufft-vec₁ dft twid) (vec₂ ⊗ vec₁) (reshape swap a)
       b = nest $ vecPattern 
                     (vec₂ ⊗ vec₁) 
                     (λ _ → (dftVec dft)) 
-                    (ufft-vec₁ dft twid) 
+                    (post-ufft-vec₁ dft twid) 
                     id₁ 
                     (reshape swap a)
       c = unnest (λ i → zipWith _*ᶜ_ (twid i) (b i)) 
-      --d = mapVec₁ dft (ufft-vec₁ dft twid) (vec₁ ⊗ vec₂) (reshape swap c)
+      --d = mapVec₁ dft (post-ufft-vec₁ dft twid) (vec₁ ⊗ vec₂) (reshape swap c)
       d = vecPattern
                     (vec₁ ⊗ vec₂)
                     (λ _ → (dftVec dft)) 
-                    (ufft-vec₁ dft twid) 
+                    (post-ufft-vec₁ dft twid) 
                     id₁ 
                     (reshape swap c)
     in d
+
+  pre-ufft-vec₁ : (dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ)
+         (twid : ∀ {s p} → P s → P p → ℂ)
+       → VEC V s
+       → Ar s ℂ → Ar s ℂ
+  pre-ufft-vec₁ {V} {A.ι n  } dft twid vec = dft
+  pre-ufft-vec₁ {V} {s A.⊗ p} dft twid (vec₁ ⊗ vec₂) a =
+    let 
+      b = nest $ vecPattern 
+                    (vec₁ ⊗ vec₂) 
+                    (λ _ → (dftVec dft)) 
+                    (pre-ufft-vec₁ dft twid) 
+                    id₁ 
+                    a
+      c = unnest (λ i → zipWith _*ᶜ_ (twid i) (b i)) 
+      d = vecPattern
+                    (vec₂ ⊗ vec₁)
+                    (λ _ → (dftVec dft)) 
+                    (pre-ufft-vec₁ dft twid) 
+                    id₁ 
+                    (reshape swap c)
+    in reshape swap d
 
   -----------------------------------------------------------------------------
 
@@ -416,30 +397,30 @@ module F (M : Mon)  where
   ... | k ⊗ l | Eq.[ e ] rewrite sym (rev-fact (pull-Vᵣ vec₁) _ _ e) = refl
 
 
-  ufft-vec₂ : (dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ)
+  post-ufft-vec₂ : (dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ)
          (twid : ∀ {s p} → P s → P p → ℂ)
        → VEC V s
        → Ar s ℂ → Ar s ℂ
-  ufft-vec₂ {V} {A.ι n  } dft twid vec = dft
-  ufft-vec₂ {V} {s A.⊗ p} dft twid (vec₁ ⊗ vec₂) a =
+  post-ufft-vec₂ {V} {A.ι n  } dft twid vec = dft
+  post-ufft-vec₂ {V} {s A.⊗ p} dft twid (vec₁ ⊗ vec₂) a =
     let 
       b = vecPattern 
             (vec₂ ⊗ vec₁) 
             (λ _ → (dftVec dft)) 
-            (ufft-vec₂ dft twid) 
+            (post-ufft-vec₂ dft twid) 
             id₁ 
             (reshape swap a)
       c = mapTwid₂ twid (vec₂ ⊗ vec₁) b
       d = vecPattern
             (vec₁ ⊗ vec₂)
             (λ _ → (dftVec dft)) 
-            (ufft-vec₂ dft twid) 
+            (post-ufft-vec₂ dft twid) 
             id₁ 
             (reshape swap c)
     in d
 
   -----------------------------------------------------------------------------
-  ufft-vec₃ : (dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ)
+  post-ufft-vec₃ : (dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ)
          (twid : ∀ {s p} → P s → P p → ℂ)
        → VEC V s
        → Ar s ℂ → Ar s ℂ
@@ -464,12 +445,12 @@ module F (M : Mon)  where
               else 
                 (λ _ → dftVec dft)
             )
-            (ufft-vec₃ dft twid)
+            (post-ufft-vec₃ dft twid)
             (if twiddle? then mapTwid₂ twid else id₁)
             xs
 
-  ufft-vec₃ {V} {A.ι n  } dft twid vec = dft
-  ufft-vec₃ {V} {s A.⊗ p} dft twid (vec₁ ⊗ vec₂) a =
+  post-ufft-vec₃ {V} {A.ι n  } dft twid vec = dft
+  post-ufft-vec₃ {V} {s A.⊗ p} dft twid (vec₁ ⊗ vec₂) a =
     let 
       b = mapVec₃ dft twid true  (vec₂ ⊗ vec₁) (reshape swap a)
       c = mapVec₃ dft twid false (vec₁ ⊗ vec₂) (reshape swap b)
@@ -492,18 +473,18 @@ module F (M : Mon)  where
                         j))
         i
 
-  ufft-cong : {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
+  post-ufft-cong : {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
               {twid : ∀ {s p} → P s → P p → ℂ}
             → (dft-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
                         → ∀ i → dft {n} a i ≡ dft b i)
             → ∀ {s} a b → (∀ i → a i ≡ b i)
-            → ∀ i → ufft {s} dft twid a i ≡ ufft dft twid b i
-  ufft-cong dft-cong {A.ι x} a b a≡b i = dft-cong a b a≡b i
-  ufft-cong dft-cong {s A.⊗ p} a b a≡b (i A.⊗ j) 
-    = ufft-cong 
+            → ∀ i → post-ufft {s} dft twid a i ≡ post-ufft dft twid b i
+  post-ufft-cong dft-cong {A.ι x} a b a≡b i = dft-cong a b a≡b i
+  post-ufft-cong dft-cong {s A.⊗ p} a b a≡b (i A.⊗ j) 
+    = post-ufft-cong 
         dft-cong _ _
         (λ k → cong (_ *ᶜ_) 
-                    (ufft-cong 
+                    (post-ufft-cong 
                         dft-cong _ _ 
                         (λ l → a≡b (l ⊗ k))
                         i))
@@ -524,21 +505,21 @@ module F (M : Mon)  where
           (pre-ufft-cong dft-cong _ _ (λ j₂ → prf (j₁ ⊗ j₂)) i₂)
       ) i₁
   
-  ufft≡fft :   ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
+  post-ufft≡fft :   ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
              → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
              → (dft-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
                          → ∀ i → dft {n} a i ≡ dft b i)
              → ∀ (xs : Ar s ℂ)
              → ∀ (i : P s) 
-             →  ufft dft (λ i j → twid i (j ⟨ transpᵣ ⟩)) xs i
+             →  post-ufft dft (λ i j → twid i (j ⟨ transpᵣ ⟩)) xs i
                 ≡ 
                 reshape (A.transpᵣ M) (fft  dft twid xs) i --((A._⟨_⟩ M i (A.transpᵣ M)))
                 --fft  dft twid xs ((A._⟨_⟩ M i (A.transpᵣ M)))
-  ufft≡fft _ _ (A.ι _) = refl
-  ufft≡fft dft-cong xs (i₁ A.⊗ j₁) = 
-      (ufft-cong dft-cong _ _ (λ i₂ → cong₂ _*ᶜ_ refl (ufft≡fft dft-cong _ i₁)) j₁)
+  post-ufft≡fft _ _ (A.ι _) = refl
+  post-ufft≡fft dft-cong xs (i₁ A.⊗ j₁) = 
+      (post-ufft-cong dft-cong _ _ (λ i₂ → cong₂ _*ᶜ_ refl (post-ufft≡fft dft-cong _ i₁)) j₁)
       ⊡
-      (ufft≡fft dft-cong _ j₁)
+      (post-ufft≡fft dft-cong _ j₁)
 
   pre-ufft≡fft′ :  ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
                  → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
@@ -557,7 +538,7 @@ module F (M : Mon)  where
       pre-ufft≡fft′ transp-twid dft-cong _ _ 
         (λ j₁ → 
           cong₂ _*ᶜ_ 
-            transp-twid --(cong₂ twid ? refl)
+            transp-twid
             (pre-ufft≡fft′ transp-twid dft-cong _ _ (λ j₂ → prf (j₂ ⊗ j₁)) i₂)
         )
         i₁
@@ -584,17 +565,17 @@ module F (M : Mon)  where
              → ∀ (i : P (transp s)) 
              → pre-ufft dft (λ j₁ j₂ → twid (j₁ ⟨ transpᵣ ⟩) j₂) (reshape (rev transpᵣ) xs) i
                  ≡
-               reshape (rev transpᵣ) (ufft dft (λ j₁ j₂ → twid j₁ (j₂ ⟨ transpᵣ ⟩)) xs) i
+               reshape (rev transpᵣ) (post-ufft dft (λ j₁ j₂ → twid j₁ (j₂ ⟨ transpᵣ ⟩)) xs) i
   pre-ufft≡post-ufft {s} {dft} {twid} transp-twid dft-cong xs i =
       pre-ufft≡fft {_} {dft} {twid} transp-twid dft-cong xs i
     ⊡ cong (fft dft twid xs) (sym (rev-rev′ transpᵣ i))
-    ⊡ sym (ufft≡fft {_} {dft} {twid} dft-cong xs (i ⟨ rev transpᵣ ⟩))
+    ⊡ sym (post-ufft≡fft {_} {dft} {twid} dft-cong xs (i ⟨ rev transpᵣ ⟩))
 
             {-
             FM.pre-ufft dft (λ j₁ → twiddles (j₁ ⟨ transpᵣ₁ ⟩₁))
             (λ i → xs (ι₁ (i ⟨ rev₁ transpᵣ₁ ⟩₁))) (x ⟨ change-major ⟩₁)
             ≡
-            FM.ufft dft (λ i j → twiddles i (j ⟨ transpᵣ₁ ⟩₁))
+            FM.post-ufft dft (λ i j → twiddles i (j ⟨ transpᵣ₁ ⟩₁))
             (λ i → ys (ι₁ i)) ((x ⟨ transpᵣ₁ ⟩₁) ⟨ rev₁ transpᵣ₁ ⟩₁)
             -}
 
@@ -606,41 +587,41 @@ module F (M : Mon)  where
   mapVec₁ {V} dft ufft-vec vec xs = vecPattern vec (λ _ → (dftVec dft)) ufft-vec id₁ xs
   -----------------------------------------------------------------------------
 
-  map-vec₁≡map-ufft :  ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
+  mapVec₁≡map-post-ufft :  ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
                     → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
                     → (dft-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
                                 → ∀ i → dft {n} a i ≡ dft b i)
                     → ∀ (vec : VEC V (s ⊗ p))
                     → ∀ (xs : Ar (s ⊗ p) ℂ)
                     → ∀ (i : P (s ⊗ p)) 
-                    → mapVec₁ dft (ufft-vec₁ dft twid) vec xs i ≡ unnest (map (ufft dft twid) (nest xs)) i
+                    → mapVec₁ dft (post-ufft-vec₁ dft twid) vec xs i ≡ unnest (map (post-ufft dft twid) (nest xs)) i
 
-  ufft-vec₁≡ufft :  ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
+  post-ufft-vec₁≡post-ufft :  ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
                   → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
                   → (dft-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
                               → ∀ i → dft {n} a i ≡ dft b i)
                   → ∀ (vec : VEC V s)
                   → ∀ (xs : Ar s ℂ)
                   → ∀ (i : P s) 
-                  →  ufft-vec₁ dft twid vec xs i
+                  →  post-ufft-vec₁ dft twid vec xs i
                      ≡ 
-                     ufft dft twid xs i
+                     post-ufft dft twid xs i
 
-  map-vec₁≡map-ufft dft-cong (vec₁ ⊗ ι x) xs (i A.⊗ A.ι j)
+  mapVec₁≡map-post-ufft dft-cong (vec₁ ⊗ ι x) xs (i A.⊗ A.ι j)
     with (i ⟨ rev (pull-Vᵣ vec₁) ⟩) | Eq.inspect (i ⟨_⟩) (rev (pull-Vᵣ vec₁))
   ... | k ⊗ l | Eq.[ e ] rewrite sym (rev-fact (pull-Vᵣ vec₁) _ _ e) = refl
-  map-vec₁≡map-ufft dft-cong vec@(vec₁ ⊗ (vec₂ ⊗ vec₃)) xs (i A.⊗ (i₁ A.⊗ i₂)) = 
-        ufft-vec₁≡ufft dft-cong (vec₂ ⊗ vec₃) (nest xs i) (i₁ ⊗ i₂)
+  mapVec₁≡map-post-ufft dft-cong vec@(vec₁ ⊗ (vec₂ ⊗ vec₃)) xs (i A.⊗ (i₁ A.⊗ i₂)) = 
+        post-ufft-vec₁≡post-ufft dft-cong (vec₂ ⊗ vec₃) (nest xs i) (i₁ ⊗ i₂)
 
-  ufft-vec₁≡ufft  _ (ι _) _ _ = refl
-  ufft-vec₁≡ufft dft-cong (vec₁ ⊗ vec₂) xs (i₁ ⊗ i₂) =
-    trans
-      (map-vec₁≡map-ufft dft-cong (vec₁ ⊗ vec₂) _ (i₁ ⊗ i₂))
-      (ufft-cong dft-cong _ _ (λ j → 
+  post-ufft-vec₁≡post-ufft  _ (ι _) _ _ = refl
+  post-ufft-vec₁≡post-ufft dft-cong (vec₁ ⊗ vec₂) xs (i₁ ⊗ i₂) =
+      (mapVec₁≡map-post-ufft dft-cong (vec₁ ⊗ vec₂) _ (i₁ ⊗ i₂))
+      ⊡ 
+      (post-ufft-cong dft-cong _ _ (λ j → 
         cong₂
           _*ᶜ_
           refl
-          (map-vec₁≡map-ufft dft-cong (vec₂ ⊗ vec₁) _ (j ⊗ i₁))
+          (mapVec₁≡map-post-ufft dft-cong (vec₂ ⊗ vec₁) _ (j ⊗ i₁))
       ) i₂)
 
   mapVec₁-cong : {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
@@ -650,47 +631,91 @@ module F (M : Mon)  where
             → ∀ {s p : S}
             → (v : VEC V (s ⊗ p))
             → ∀ a b → (∀ i → a i ≡ b i)
-            → ∀ i → mapVec₁ dft (ufft-vec₁ dft twid) v a i ≡ mapVec₁ dft (ufft-vec₁ dft twid) v b i
+            → ∀ i → mapVec₁ dft (post-ufft-vec₁ dft twid) v a i ≡ mapVec₁ dft (post-ufft-vec₁ dft twid) v b i
   mapVec₁-cong dft-cong vec a b prf i@(i₁ ⊗ i₂) =
-    map-vec₁≡map-ufft dft-cong vec _ i
+    mapVec₁≡map-post-ufft dft-cong vec _ i
     ⊡
-    ufft-cong dft-cong _ _ (λ i → prf (i₁ ⊗ i)) i₂
+    post-ufft-cong dft-cong _ _ (λ i → prf (i₁ ⊗ i)) i₂
     ⊡
-    sym (map-vec₁≡map-ufft dft-cong vec _ i)
+    sym (mapVec₁≡map-post-ufft dft-cong vec _ i)
 
-  -----------------------------------------------------------------------------
-
-  map-vec₂≡map-vec₁ :  ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
-                    → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
-                    → (dft-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
-                                → ∀ i → dft {n} a i ≡ dft b i)
-                    → ∀ (vec : VEC V (s ⊗ p))
-                    → ∀ (xs : Ar (s ⊗ p) ℂ)
-                    → ∀ (i : P (s ⊗ p)) 
-                    → mapVec₁ dft (ufft-vec₂ dft twid) vec xs i ≡ mapVec₁ dft (ufft-vec₁ dft twid) vec xs i
-
-  ufft-vec₂≡ufft-vec₁ :  ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
+  pre-ufft-vec₁≡pre-ufft :  ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
                   → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
                   → (dft-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
                               → ∀ i → dft {n} a i ≡ dft b i)
                   → ∀ (vec : VEC V s)
                   → ∀ (xs : Ar s ℂ)
                   → ∀ (i : P s) 
-                  →  ufft-vec₂ dft twid vec xs i
+                  →  pre-ufft-vec₁ dft twid vec xs i
                      ≡ 
-                     ufft-vec₁ dft twid vec xs i
+                     pre-ufft dft twid xs i
 
-  map-vec₂≡map-vec₁ dft-cong (vec₁ ⊗ ι x) xs (i₁ A.⊗ A.ι x₁) = refl
-  map-vec₂≡map-vec₁ dft-cong (vec₁ ⊗ (vec₂ ⊗ vec₃)) xs (i₁ A.⊗ (i₂ A.⊗ i₃)) 
-      = ufft-vec₂≡ufft-vec₁ dft-cong (vec₂ ⊗ vec₃) (nest xs i₁) (i₂ ⊗ i₃)
+  mapVec₁≡map-pre-ufft :  ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
+                    → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
+                    → (dft-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
+                                → ∀ i → dft {n} a i ≡ dft b i)
+                    → ∀ (vec : VEC V (s ⊗ p))
+                    → ∀ (xs : Ar (s ⊗ p) ℂ)
+                    → ∀ (i : P (s ⊗ p)) 
+                    → mapVec₁ dft (pre-ufft-vec₁ dft twid) vec xs i ≡ unnest (map (pre-ufft dft twid) (nest xs)) i
+  mapVec₁≡map-pre-ufft {_} {_} {_} {dft} dft-cong (vec₁ ⊗ ι x) xs (i A.⊗ A.ι j) 
+    with (i ⟨ rev (pull-Vᵣ vec₁) ⟩) | Eq.inspect (i ⟨_⟩) (rev (pull-Vᵣ vec₁))
+  ... | k ⊗ l | Eq.[ e ] rewrite sym (rev-fact (pull-Vᵣ vec₁) _ _ e) = refl
+  mapVec₁≡map-pre-ufft {_} {_} {_} {dft} dft-cong vec@(vec₁ ⊗ (vec₂ ⊗ vec₃)) xs i@(i₁ A.⊗ (i₂ A.⊗ i₃)) = 
+        pre-ufft-vec₁≡pre-ufft dft-cong (vec₂ ⊗ vec₃) (nest xs i₁) (i₂ ⊗ i₃)
+    {-
+      Feel like it may be easier to just... re do the proof as oppsed to 
+      translating it to use the other proof
+      cong (λ f → mapVec₁ dft f vec xs i) (pre-ufft≡post-ufft  ? ? )
+    ⊡ mapVec₁≡map-post-ufft dft-cong vec xs i
+    ⊡ ?
+    -}
 
-  ufft-vec₂≡ufft-vec₁ dft-cong (ι x) xs i = refl
-  ufft-vec₂≡ufft-vec₁ {dft = dft} {twid = twid} dft-cong (vec₁ ⊗ vec₂) xs (i₁ ⊗ i₂) =
-      (map-vec₂≡map-vec₁ dft-cong (vec₁ ⊗ vec₂) _ (i₁ ⊗ i₂))
+  pre-ufft-vec₁≡pre-ufft dft-cong vec xs (A.ι x) = refl
+  pre-ufft-vec₁≡pre-ufft dft-cong (vec₁ ⊗ vec₂) xs (i₁ A.⊗ i₂) = 
+      (mapVec₁≡map-pre-ufft dft-cong (vec₂ ⊗ vec₁) _ (i₂ ⊗ i₁))
+      ⊡ 
+      (pre-ufft-cong dft-cong _ _ (λ j → 
+        cong₂
+          _*ᶜ_
+          refl
+          (mapVec₁≡map-pre-ufft dft-cong (vec₁ ⊗ vec₂) _ (j ⊗ i₂))
+      ) i₁)
+
+
+  -----------------------------------------------------------------------------
+
+  mapVec₂≡mapVec₁ :  ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
+                    → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
+                    → (dft-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
+                                → ∀ i → dft {n} a i ≡ dft b i)
+                    → ∀ (vec : VEC V (s ⊗ p))
+                    → ∀ (xs : Ar (s ⊗ p) ℂ)
+                    → ∀ (i : P (s ⊗ p)) 
+                    → mapVec₁ dft (post-ufft-vec₂ dft twid) vec xs i ≡ mapVec₁ dft (post-ufft-vec₁ dft twid) vec xs i
+
+  post-ufft-vec₂≡post-ufft-vec₁ :  ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
+                  → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
+                  → (dft-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
+                              → ∀ i → dft {n} a i ≡ dft b i)
+                  → ∀ (vec : VEC V s)
+                  → ∀ (xs : Ar s ℂ)
+                  → ∀ (i : P s) 
+                  →  post-ufft-vec₂ dft twid vec xs i
+                     ≡ 
+                     post-ufft-vec₁ dft twid vec xs i
+
+  mapVec₂≡mapVec₁ dft-cong (vec₁ ⊗ ι x) xs (i₁ A.⊗ A.ι x₁) = refl
+  mapVec₂≡mapVec₁ dft-cong (vec₁ ⊗ (vec₂ ⊗ vec₃)) xs (i₁ A.⊗ (i₂ A.⊗ i₃)) 
+      = post-ufft-vec₂≡post-ufft-vec₁ dft-cong (vec₂ ⊗ vec₃) (nest xs i₁) (i₂ ⊗ i₃)
+
+  post-ufft-vec₂≡post-ufft-vec₁ dft-cong (ι x) xs i = refl
+  post-ufft-vec₂≡post-ufft-vec₁ {dft = dft} {twid = twid} dft-cong (vec₁ ⊗ vec₂) xs (i₁ ⊗ i₂) =
+      (mapVec₂≡mapVec₁ dft-cong (vec₁ ⊗ vec₂) _ (i₁ ⊗ i₂))
       ⊡
       (mapVec₁-cong dft-cong (vec₁ ⊗ vec₂) _ 
-        (reshape swap (zipWith _*ᶜ_ (unnest twid) (mapVec₁ dft (ufft-vec₂ dft twid) (vec₂ ⊗ vec₁) (reshape swap xs))))
-        (λ{(j₁ ⊗ j₂) → mapTwid₂-prop twid (vec₂ ⊗ vec₁) (mapVec₁ dft (ufft-vec₂ dft twid) (vec₂ ⊗ vec₁) (reshape swap xs)) (j₂ ⊗ j₁) }) 
+        (reshape swap (zipWith _*ᶜ_ (unnest twid) (mapVec₁ dft (post-ufft-vec₂ dft twid) (vec₂ ⊗ vec₁) (reshape swap xs))))
+        (λ{(j₁ ⊗ j₂) → mapTwid₂-prop twid (vec₂ ⊗ vec₁) (mapVec₁ dft (post-ufft-vec₂ dft twid) (vec₂ ⊗ vec₁) (reshape swap xs)) (j₂ ⊗ j₁) }) 
         (i₁ ⊗ i₂)
       )
       ⊡
@@ -698,7 +723,7 @@ module F (M : Mon)  where
               cong₂
                 _*ᶜ_
                 refl
-                (map-vec₂≡map-vec₁ dft-cong (vec₂ ⊗ vec₁) _ (j₂ ⊗ j₁)) 
+                (mapVec₂≡mapVec₁ dft-cong (vec₂ ⊗ vec₁) _ (j₂ ⊗ j₁)) 
       }) (i₁ ⊗ i₂))
 
   mapVec₂-cong : {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
@@ -708,16 +733,16 @@ module F (M : Mon)  where
             → ∀ {s p : S}
             → (v : VEC V (s ⊗ p))
             → ∀ a b → (∀ i → a i ≡ b i)
-            → ∀ i → mapVec₁ dft (ufft-vec₂ dft twid) v a i ≡ mapVec₁ dft (ufft-vec₂ dft twid) v b i
+            → ∀ i → mapVec₁ dft (post-ufft-vec₂ dft twid) v a i ≡ mapVec₁ dft (post-ufft-vec₂ dft twid) v b i
   mapVec₂-cong dft-cong vec _ _ prf i = 
-    map-vec₂≡map-vec₁ dft-cong vec _ i
+    mapVec₂≡mapVec₁ dft-cong vec _ i
     ⊡
     mapVec₁-cong dft-cong vec _ _ prf i 
     ⊡
-    sym (map-vec₂≡map-vec₁ dft-cong vec _ i)
+    sym (mapVec₂≡mapVec₁ dft-cong vec _ i)
 
   -----------------------------------------------------------------------------
-  map-vec₃≡map-vec₂ :  ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
+  mapVec₃≡mapVec₂ :  ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
                           → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
                           → (dft-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
                                       → ∀ i → dft {n} a i ≡ dft b i)
@@ -728,21 +753,21 @@ module F (M : Mon)  where
                           → mapVec₃ dft twid twiddle? vec xs i 
                           ≡ 
                             (if twiddle? then 
-                              mapTwid₂ twid vec (mapVec₁ dft (ufft-vec₂ dft twid) vec xs) i
+                              mapTwid₂ twid vec (mapVec₁ dft (post-ufft-vec₂ dft twid) vec xs) i
                             else
-                              mapVec₁ dft (ufft-vec₂ dft twid) vec xs i
+                              mapVec₁ dft (post-ufft-vec₂ dft twid) vec xs i
                             )
 
-  map-vec₃≡map-vec₂ _ false (_ ⊗ ι _) _ (_ A.⊗ A.ι _) = refl
-  map-vec₃≡map-vec₂ dft-cong false (vec₁ ⊗ (vec₂ ⊗ vec₃)) _ (i₁ A.⊗ (i₂ A.⊗ i₃)) 
-      = map-vec₃≡map-vec₂ dft-cong false (vec₂ ⊗ vec₃) _ (i₂ ⊗ i₃)
+  mapVec₃≡mapVec₂ _ false (_ ⊗ ι _) _ (_ A.⊗ A.ι _) = refl
+  mapVec₃≡mapVec₂ dft-cong false (vec₁ ⊗ (vec₂ ⊗ vec₃)) _ (i₁ A.⊗ (i₂ A.⊗ i₃)) 
+      = mapVec₃≡mapVec₂ dft-cong false (vec₂ ⊗ vec₃) _ (i₂ ⊗ i₃)
       ⊡ mapVec₂-cong dft-cong (vec₂ ⊗ vec₃) _ _ (λ{(j₁ ⊗ j₂) → 
-          map-vec₃≡map-vec₂ dft-cong true (vec₃ ⊗ vec₂) _ (j₂ ⊗ j₁)
+          mapVec₃≡mapVec₂ dft-cong true (vec₃ ⊗ vec₂) _ (j₂ ⊗ j₁)
         }) (i₂ ⊗ i₃)
-  map-vec₃≡map-vec₂ dft-cong true (vec ⊗ ι _) xs (i ⊗ ι x) 
+  mapVec₃≡mapVec₂ dft-cong true (vec ⊗ ι _) xs (i ⊗ ι x) 
     with (((i ⟨ rev (pull-Vᵣ vec) ⟩) ⊗ ι x) ⟨ assocl ⟩) 
   ... | j₁ ⊗ j₂ rewrite rev-rev (assocr ∙ pull-Vᵣ vec ⊕ eq) (j₁ ⊗ j₂) = refl
-  map-vec₃≡map-vec₂ dft-cong true (vec₁ ⊗ (vec₂ ⊗ vec₃)) xs (i₁ ⊗ (i₂ ⊗ i₃)) 
+  mapVec₃≡mapVec₂ dft-cong true (vec₁ ⊗ (vec₂ ⊗ vec₃)) xs (i₁ ⊗ (i₂ ⊗ i₃)) 
   -- TODO: Improve.... more.....
   --  with ((i₁ ⊗ (i₂ ⊗ i₃)) ⟨ (rev (assocr ∙ (pull-Vᵣ vec₁) ⊕ eq )) ⟩) 
   --     | (((i₁ ⊗ (i₂ ⊗ i₃)) ⟨ (rev (assocr ∙ (pull-Vᵣ vec₁) ⊕ eq )) ⟩) ⟨ assocr ∙ pull-Vᵣ vec₁ ⊕ eq ⟩)
@@ -751,7 +776,7 @@ module F (M : Mon)  where
   ... | j₁ ⊗ j₂ with ((j₁ ⊗ j₂) ⟨ assocr ∙ pull-Vᵣ vec₁ ⊕ eq ⟩)
   ...           | j₃ ⊗ j₄
     = cong₂ _*ᶜ_ refl (
-          (map-vec₃≡map-vec₂
+          (mapVec₃≡mapVec₂
             dft-cong 
             false
             (vec₂ ⊗ vec₃) 
@@ -759,26 +784,26 @@ module F (M : Mon)  where
             j₄
           )
           ⊡ mapVec₂-cong dft-cong (vec₂ ⊗ vec₃) _ _ (λ{(k₁ ⊗ k₂) → 
-              map-vec₃≡map-vec₂ dft-cong true (vec₃ ⊗ vec₂) _ (k₂ ⊗ k₁)
+              mapVec₃≡mapVec₂ dft-cong true (vec₃ ⊗ vec₂) _ (k₂ ⊗ k₁)
             }) j₄
           )
 
-  ufft-vec₃≡ufft-vec₂ :  ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
+  post-ufft-vec₃≡post-ufft-vec₂ :  ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
                   → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
                   → (dft-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
                               → ∀ i → dft {n} a i ≡ dft b i)
                   → ∀ (vec : VEC V s)
                   → ∀ (xs : Ar s ℂ)
                   → ∀ (i : P s) 
-                  →  ufft-vec₃ dft twid vec xs i
+                  →  post-ufft-vec₃ dft twid vec xs i
                      ≡ 
-                     ufft-vec₂ dft twid vec xs i
-  ufft-vec₃≡ufft-vec₂ dft-cong vec xs (A.ι x) = refl
-  ufft-vec₃≡ufft-vec₂ dft-cong vec@(vec₁ ⊗ vec₂) xs (i₁ A.⊗ i₂) =
-    map-vec₃≡map-vec₂ dft-cong false vec _ (i₁ ⊗ i₂)
+                     post-ufft-vec₂ dft twid vec xs i
+  post-ufft-vec₃≡post-ufft-vec₂ dft-cong vec xs (A.ι x) = refl
+  post-ufft-vec₃≡post-ufft-vec₂ dft-cong vec@(vec₁ ⊗ vec₂) xs (i₁ A.⊗ i₂) =
+    mapVec₃≡mapVec₂ dft-cong false vec _ (i₁ ⊗ i₂)
     ⊡
     mapVec₂-cong dft-cong vec _ _ (λ{ (j₁ ⊗ j₂) → 
-      map-vec₃≡map-vec₂ dft-cong true (vec₂ ⊗ vec₁) (reshape swap xs) (j₂ ⊗ j₁)
+      mapVec₃≡mapVec₂ dft-cong true (vec₂ ⊗ vec₁) (reshape swap xs) (j₂ ⊗ j₁)
     }) (i₁ ⊗ i₂)
 
 
@@ -857,42 +882,42 @@ module T (M₁ : Mon) where
 
   module F₁ = F M₁
 
-  ufft₁ : ∀ {s} → _ → _
-  ufft₁ {s} = F₁.ufft {s} dft₁ twid₁
+  post-ufft₁ : ∀ {s} → _ → _
+  post-ufft₁ {s} = F₁.post-ufft {s} dft₁ twid₁
 
   fft₁ : ∀ {s} → _ → _
   fft₁ {s} = F₁.fft {s} dft₁ twid₁
   
-  ufft₁-cong : ∀ {s} a b → (∀ i → a i ≡ b i)
-             → ∀ i → ufft₁ {s} a i ≡ ufft₁ b i
-  ufft₁-cong {s} a b pf = F₁.ufft-cong dft₁-cong a b pf 
+  post-ufft₁-cong : ∀ {s} a b → (∀ i → a i ≡ b i)
+             → ∀ i → post-ufft₁ {s} a i ≡ post-ufft₁ b i
+  post-ufft₁-cong {s} a b pf = F₁.post-ufft-cong dft₁-cong a b pf 
   
   dft₂ : ∀ {n} → Ar₂ (A.ι n) ℂ → Ar₂ (A.ι n) ℂ
-  dft₂ a = lift-ar (ufft₁ (flat-ar a))
+  dft₂ a = lift-ar (post-ufft₁ (flat-ar a))
 
   twid₂ : ∀ {s p} → P₂ s → P₂ p → ℂ
   twid₂ i j = twid₁ (flat-pos i) (flat-pos j)
 
   module F₂ = F M₂
 
-  ufft₂ : ∀ {s} → _ → _
-  ufft₂ {s} = F₂.ufft {s} dft₂ twid₂
+  post-ufft₂ : ∀ {s} → _ → _
+  post-ufft₂ {s} = F₂.post-ufft {s} dft₂ twid₂
 
   fft₂ : ∀ {s} → _ → _
   fft₂ {s} = F₂.fft {s} dft₂ twid₂
   
   thm : ∀ {s} (a : Ar₂ s ℂ) 
-      → ∀ i → flat-ar (ufft₂ a) i ≡ (ufft₁ (flat-ar a)) i
+      → ∀ i → flat-ar (post-ufft₂ a) i ≡ (post-ufft₁ (flat-ar a)) i
   thm {A.ι n} a (A.ι x) = refl
   thm {A.ι n} a (i A.⊗ i₁) = refl
   thm {s A.⊗ p} a (i A.⊗ j) 
       rewrite thm (λ j₁ →
                twid₁ (flat-pos j₁) (flat-pos {s} (flat-pos' i)) *ᶜ
-               F.ufft M₂ --(A.S M₁) (A.P M₁)
-               (λ a₁ → lift-ar (F₁.ufft dft₁ twid₁ (λ i₁ → a₁ (A.ι i₁))))
+               F.post-ufft M₂ --(A.S M₁) (A.P M₁)
+               (λ a₁ → lift-ar (F₁.post-ufft dft₁ twid₁ (λ i₁ → a₁ (A.ι i₁))))
                (λ i₁ j₂ → twid₁ (flat-pos i₁) (flat-pos j₂))
                (λ j₂ → a (j₂ A.⊗ j₁)) (flat-pos' i)) j
-      = ufft₁-cong _ _ (λ k → cong₂ _*ᶜ_ 
+      = post-ufft₁-cong _ _ (λ k → cong₂ _*ᶜ_ 
                      (cong₂ twid₁ (flat-pos-pos' {p} k)
                                   (flat-pos-pos' {s} i))
                      (thm (λ j₂ → a (j₂ A.⊗ flat-pos' k)) i)) j
@@ -1229,9 +1254,6 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
 
   M₂ = MM.mk-M₂ M₁
 
-  open Mon M₁ using (U₁; El₁)
-  open Mon M₂ using (U₂; El₂)
-
   module FM₁ = F M₁
   module FM₂ = F M₂
 
@@ -1358,31 +1380,31 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
       d = map₂ (ufft-two-level {p}) (nest₂ (reshape₂ swap₂ c))
     in (unnest₂ d)
 
-  ufft-two-level≡ufft : ∀ {s : S₂}
+  ufft-two-level≡post-ufft : ∀ {s : S₂}
                       → ∀ (xs : Ar₂ s ℂ)
                       → ∀ (ys : Ar₂ s ℂ)
                       → (∀ (i : P₂ s) → xs i ≡ ys i)
                       → ∀ (i : P₂ s)
                       → (ufft-two-level xs) i
                       ≡
-                        (FM.ufft dft (λ i j → twiddles i (j ⟨ transpᵣ₁ ⟩₁)) (lower-Ar ys)) (lower-P i)
-  ufft-two-level≡ufft {A.ι _} xs ys prf (A.ι x) =
+                        (FM.post-ufft dft (λ i j → twiddles i (j ⟨ transpᵣ₁ ⟩₁)) (lower-Ar ys)) (lower-P i)
+  ufft-two-level≡post-ufft {A.ι _} xs ys prf (A.ι x) =
         FM.pre-ufft≡post-ufft {_} {_} {twiddles} transp-twid dft-cong (lower-Ar xs) (x ⟨ transpᵣ₁ ⟩₁) 
-      ⊡ FM.ufft-cong dft-cong _ _ (λ j → prf (A.ι j)) (x ⟨ transpᵣ₁ ∙₁ rev₁ transpᵣ₁ ⟩₁)
-      ⊡ cong (FM.ufft dft _ _) (rev-rev₁ transpᵣ₁ x)
-  ufft-two-level≡ufft {s₁ A.⊗ s₂} xs ys prf (i₁ A.⊗ i₂) =
-      ufft-two-level≡ufft 
+      ⊡ FM.post-ufft-cong dft-cong _ _ (λ j → prf (A.ι j)) (x ⟨ transpᵣ₁ ∙₁ rev₁ transpᵣ₁ ⟩₁)
+      ⊡ cong (FM.post-ufft dft _ _) (rev-rev₁ transpᵣ₁ x)
+  ufft-two-level≡post-ufft {s₁ A.⊗ s₂} xs ys prf (i₁ A.⊗ i₂) =
+      ufft-two-level≡post-ufft 
         _ 
         _
         (λ j₁ → 
           cong₂   
             _*ᶜ_
             refl
-            (ufft-two-level≡ufft _ _ (λ j₂ → prf (j₂ ⊗₂ j₁)) i₁)
+            (ufft-two-level≡post-ufft _ _ (λ j₂ → prf (j₂ ⊗₂ j₁)) i₁)
         ) 
         i₂
     ⊡ 
-      FM.ufft-cong dft-cong 
+      FM.post-ufft-cong dft-cong 
         _ 
         _ 
         (λ j → 
@@ -1404,6 +1426,6 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
                       ≡
                         reshape₁ transpᵣ₁ (FM.fft dft twiddles (lower-Ar ys)) (lower-P i)
   ufft-two-level≡fft xs ys prf i =
-      ufft-two-level≡ufft xs ys prf i
-    ⊡ FM.ufft≡fft dft-cong (lower-Ar ys) (lower-P i)
+      ufft-two-level≡post-ufft xs ys prf i
+    ⊡ FM.post-ufft≡fft dft-cong (lower-Ar ys) (lower-P i)
 

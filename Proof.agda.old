@@ -6,44 +6,48 @@ import Algebra.Definitions as AlgebraDefinitions
 
 open import Relation.Nullary
 import Relation.Binary.PropositionalEquality as Eq
-open Eq
+open Eq using (_≡_; refl; cong; trans; sym; cong₂; subst; cong-app; cong′; icong)
 open Eq.≡-Reasoning
 
 module Proof (cplx : Cplx) where
 
-open Cplx cplx
+open Cplx cplx using (ℂ; _+_; _*_; -ω; 0ℂ; +-*-isCommutativeRing; ω-r₁x-r₁y; ω-N-mN; ω-N-k₀+k₁)
 
 open AlgebraStructures  {A = ℂ} _≡_
 open AlgebraDefinitions {A = ℂ} _≡_
 
-open IsCommutativeRing +-*-isCommutativeRing hiding (trans; refl; sym)
+open IsCommutativeRing +-*-isCommutativeRing using (+-isCommutativeMonoid; distribˡ; *-comm; zeroʳ; zeroˡ; *-identityʳ; *-assoc; +-identityʳ; +-assoc; +-comm; +-identityˡ)
 
-open import Data.Nat.Base renaming (_*_ to _*ₙ_; _+_ to _+ₙ_)
-open import Data.Nat.Properties renaming (*-comm to *ₙ-comm; *-identityʳ to *ₙ-identityʳ; *-assoc to *ₙ-assoc; 
+open import Data.Nat.Base using (ℕ; zero; suc; NonZero; _≡ᵇ_; nonZero) renaming (_*_ to _*ₙ_; _+_ to _+ₙ_)
+open import Data.Nat.Properties using (suc-injective; m*n≢0; m*n≢0⇒m≢0; m*n≢0⇒n≢0; nonZero?) renaming (*-comm to *ₙ-comm; *-identityʳ to *ₙ-identityʳ; *-assoc to *ₙ-assoc; 
   +-identityʳ to +ₙ-identityʳ; *-zeroˡ to *ₙ-zeroˡ; *-zeroʳ to *ₙ-zeroʳ)
 open import Data.Nat.Solver using (module +-*-Solver)
-open +-*-Solver 
-open import Data.Fin.Base renaming (zero to fzero; suc to fsuc) hiding (_+_)
-open import Data.Fin.Properties
+open +-*-Solver using (solve; _:*_; _:+_; con; _:=_)
+open import Data.Fin.Base using (Fin; quotRem; toℕ; combine; remQuot; quotient; remainder; cast; fromℕ<; _↑ˡ_; _↑ʳ_; splitAt; join) renaming (zero to fzero; suc to fsuc)
+open import Data.Fin.Properties using (cast-is-id; remQuot-combine; splitAt-↑ˡ; splitAt-↑ʳ; toℕ-↑ˡ; toℕ-↑ʳ; toℕ-combine; combine-remQuot; combine-surjective; toℕ-injective; toℕ-cast; cast-trans)
+open import Data.Bool using (Bool; true; false; not)
+open import Data.Bool using (T)
 open import Data.Empty
 
-open import Data.Product.Base hiding (map)
-open import Data.Sum.Base hiding (map)
-open import Data.Unit
+open import Data.Product.Base using (∃; ∃₂; _×_; proj₁; proj₂; map₁; map₂; uncurry) renaming ( _,_ to ⟨_,_⟩)
+open import Data.Sum.Base using (inj₁; inj₂; _⊎_)
+open import Data.Unit using (⊤; tt)
 
-open import Matrix 
-open import Matrix.Equality 
-open import Matrix.NonZero
+open import Matrix using (Ar; Shape; _⊗_; ι; Position; mapLeft; zipWith; nest; map; unnest; head₁; tail₁; zip; iterate; ι-cons; nil; length; splitAr; splitArₗ; splitArᵣ)
+open import Matrix.Equality using (_≅_; reduce-≅; tail₁-cong)
+open import Matrix.Properties using (splitArᵣ-zero; tail₁-const; zipWith-congˡ)
+open import Matrix.NonZero using (NonZeroₛ; ι; _⊗_; nonZeroₛ-s⇒nonZero-s; nonZeroDec; nonZeroₛ-s⇒nonZeroₛ-sᵗ; nonZeroₛ-s⇒nonZero-sᵗ; ¬nonZeroₛ-s⇒¬nonZero-sᵗ; ¬nonZero-N⇒PosN-irrelevant; ¬nonZero-sᵗ⇒¬nonZero-s)
 
 import Matrix.Sum as S
 open S _+_ 0ℂ +-isCommutativeMonoid using (merge-sum; sum-reindex; sum-swap)
 sum = S.sum _+_ 0ℂ +-isCommutativeMonoid
+--{-# DISPLAY S.sum _+_ 0ℂ +-isCommutativeMonoid = sum #-}
 sum-cong = S.sum-cong _+_ 0ℂ +-isCommutativeMonoid
 
-open import Matrix.Reshape 
-open import Function.Base
+open import Matrix.Reshape using (reshape; Reshape; flat; ♭; ♯; recursive-transpose; recursive-transposeᵣ; _∙_; rev; _⊕_; swap; eq; split; _⟨_⟩; reindex; rev-eq; flatten-reindex; |s|≡|sᵗ|; reindex-reindex; recursive-transpose-inv; recursive-transpose-invᵣ)
+open import Function.Base using (_$_; id; _∘_; flip; _∘₂_)
 
-open import FFT cplx
+open import FFT cplx using (DFT; FFT; DFT′; FFT′; offset-prod; iota; twiddles)
 
 private
   variable
@@ -67,6 +71,10 @@ _ᵗ = recursive-transpose
 
 nz-# : NonZeroₛ s → NonZero (length s)
 nz-# = nonZeroₛ-s⇒nonZero-s
+
+nz-ι# : NonZeroₛ s → NonZeroₛ (ι (length s))
+nz-ι# (ι x) = ι x
+nz-ι# {s ⊗ p} (nz-s ⊗ nz-p) = ι (m*n≢0 (# s) (# p) ⦃ nz-# nz-s ⦄ ⦃ nz-# nz-p ⦄ )
 
 nzᵗ : NonZeroₛ s → NonZeroₛ (s ᵗ)
 nzᵗ = nonZeroₛ-s⇒nonZeroₛ-sᵗ
@@ -111,8 +119,52 @@ iota-split (ι k₀) (ι k₁) rewrite toℕ-combine k₁ k₀ = refl
   → -ω n ⦃ nonZero-n ⦄ k ≡ -ω m ⦃ nonZero-m ⦄ j
 -ω-cong₂ refl refl = refl
 
-DFT-cong : ∀ {xs ys : Ar (ι N) ℂ} → xs ≅ ys → DFT xs ≅ DFT ys
-DFT-cong {suc N}  prf (ι j) = sum-cong {suc N} (λ i → cong₂ _*_ (prf i) refl)
+DFT′-cong : ∀ {xs ys : Ar (ι N) ℂ} → ⦃ nonZero-N : NonZero N ⦄ → xs ≅ ys → DFT′ xs ≅ DFT′ ys
+DFT′-cong {suc N} ⦃ nonZero-N ⦄ prf (ι j) = sum-cong {suc N} (λ i → cong₂ _*_ (prf i) refl)
+
+FFT′-cong : ∀ {s : Shape} {xs ys : Ar s ℂ} → ⦃ nonZeroₛ-s : NonZeroₛ s ⦄ → xs ≅ ys → FFT′ xs ≅ FFT′ ys
+FFT′-cong {ι N} ⦃ ι nonZero-N ⦄ = DFT′-cong ⦃ nonZero-N ⦄
+FFT′-cong {r₁ ⊗ r₂} {xs} {ys} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ prf (j₁ ⊗ j₀) =
+  let instance
+    _ : NonZeroₛ r₁
+    _ = nonZero-r₁
+    _ : NonZeroₛ r₂
+    _ = nonZero-r₂
+  in  (FFT′-cong {r₂} λ{ k₀ → 
+        (cong₂ _*_ 
+          ((FFT′-cong {r₁} λ{k₁ → 
+            prf (k₁ ⊗ k₀) 
+          }) j₀ ) 
+          refl
+        ) 
+      }) j₁
+
+reshape-cong : ∀ {s p : Shape} {xs ys : Ar s ℂ} → (r : Reshape s p) → xs ≅ ys → reshape r xs ≅ reshape r ys
+reshape-cong r x i = x ( i ⟨ r ⟩ ) 
+  
+
+{-
+--postulate
+FFT′′-cong : ∀ {s : Shape} {xs ys : Ar s ℂ} → ⦃ nonZeroₛ-s : NonZeroₛ s ⦄ → xs ≅ ys → FFT′′ xs ≅ FFT′′ ys
+FFT′′-cong {ι N} ⦃ ι nonZero-N ⦄ = DFT′-cong ⦃ nonZero-N ⦄
+FFT′′-cong {r₁ ⊗ r₂} {xs} {ys} ⦃ nonZero-r₁ ⊗ nonZero-r₂ ⦄ prf (j₀ ⊗ j₁) =
+  let instance
+    _ : NonZeroₛ r₁
+    _ = nonZero-r₁
+    _ : NonZeroₛ r₂
+    _ = nonZero-r₂
+    _ : NonZeroₛ (r₁ ⊗ r₂)
+    _ = nonZero-r₁ ⊗ nonZero-r₂
+  in begin 
+    FFT′′ xs (j₀ ⊗ j₁)
+  --≡⟨ ? ⟩ 
+  ≡⟨ (reshape-cong (♯ ∙ reindex (*ₙ-comm (length r₂) (length r₁)) ∙ (flat ∙ ♭ ⊕ ♭) ∙ swap) (FFT′′-cong {?} ⦃ ? ⦄ ?)) (j₀ ⊗ j₁) ⟩ 
+  --≡⟨ cong (λ f → reshape (♯ ∙ reindex (*ₙ-comm (length r₂) (length r₁)) ∙ (flat ∙ ♭ ⊕ ♭) ∙ swap) f (j₀ ⊗ j₁)) ? ⟩
+    ?
+  ≡⟨ ? ⟩
+    FFT′′ ys (j₀ ⊗ j₁)
+  ∎
+  -}
 
 -------------------------
 --- Properties of Sum ---
@@ -347,43 +399,36 @@ cooley-tukey-derivation-application {r₂} {r₁} j₁ j₀ k₀ k₁ nz-r₁ nz
 --- FFT ≡ DFT ---
 -----------------
 
-destructDFT : (nz : NonZero N)
-            → ∀ (xs : Ar (ι N) ℂ) 
-            → ∀ i 
-            → DFT xs i ≡ sum (λ k → xs k * -ω N ⦃ nz ⦄ (iota k *ₙ iota i))
-destructDFT {N} nz-N _ _ with nonZero? N
-... | no ¬nz-N = ⊥-elim (¬nz-N nz-N)
-... | yes _ = refl
-
-fft≅dft : 
-    ∀ (arr : Ar s ℂ) 
-  → FFT arr 
+fft′≅dft′ : 
+    ⦃ nz-s  : NonZeroₛ s ⦄
+  → ∀ (arr : Ar s ℂ) 
+  → FFT′ arr 
     ≅ 
     ( (reshape ♯) 
-    ∘ DFT
+    ∘ (DFT′ ⦃ nz-# (nzᵗ nz-s) ⦄ )
     ∘ (reshape flatten-reindex)) arr
-fft≅dft {ι n} _ (ι _) with nonZero? n 
-... | _ = refl
-fft≅dft {r₁ ⊗ r₂} arr (j₁ ⊗ j₀) with 
-    nonZeroDec r₁ 
-  | nonZeroDec r₂ 
-  | nonZeroDec (recursive-transpose r₁) 
-  | nonZeroDec (recursive-transpose r₂) 
-  | nonZero? (length (recursive-transpose r₁)) 
-  | nonZero? (length (recursive-transpose r₂))
-... | no ¬nz-r₁ | _         | _          | _          | _           | _           = ⊥-elim (¬nz-r₁ (pos⇒nz (j₀ ⟨ recursive-transposeᵣ ⟩)))
-... | yes nz-r₁ | no ¬nz-r₂ | _          | _          | _           | _           = ⊥-elim (¬nz-r₂ (pos⇒nz (j₁ ⟨ recursive-transposeᵣ ⟩)))
-... | yes nz-r₁ | yes nz-r₂ | no ¬nz-r₁ᵗ | _          | _           | _           = ⊥-elim (¬nz-r₁ᵗ (pos⇒nz j₀))
-... | yes nz-r₁ | yes nz-r₂ | yes nz-r₁ᵗ | no ¬nz-r₂ᵗ | _           | _           = ⊥-elim (¬nz-r₂ᵗ (pos⇒nz j₁))
-... | yes nz-r₁ | yes nz-r₂ | yes nz-r₁ᵗ | yes nz-r₂ᵗ | no ¬nz-#r₁ᵗ | _           = ⊥-elim (¬nz-#r₁ᵗ (nonZeroₛ-s⇒nonZero-s nz-r₁ᵗ))
-... | yes nz-r₁ | yes nz-r₂ | yes nz-r₁ᵗ | yes nz-r₂ᵗ | yes nz-#r₁ᵗ | no ¬nz-#r₂ᵗ = ⊥-elim (¬nz-#r₂ᵗ (nonZeroₛ-s⇒nonZero-s nz-r₂ᵗ))
-... | yes nz-r₁ | yes nz-r₂ | yes nz-r₁ᵗ | yes nz-r₂ᵗ | yes nz-#r₁ᵗ | yes nz-#r₂ᵗ
-  = 
-  begin
-    _ ≡⟨ fft≅dft _ j₁ ⟩
-    _ ≡⟨ DFT-cong (λ x → cong₂ _*_ (fft≅dft _ j₀) refl) (j₁ ⟨ rev ♭ ⟩ ) ⟩
-    _ ≡⟨ destructDFT nz-#r₂ᵗ _ _ ⟩
-    _ ≡⟨ sum-cong { # r₂ ᵗ } (λ i → cong₂ _*_ (cong₂ _*_ (destructDFT nz-#r₁ᵗ _ _) refl) refl) ⟩
+fft′≅dft′ {ι N} ⦃ ι nz-N ⦄ arr i = refl
+fft′≅dft′ {r₁ ⊗ r₂} ⦃ nz-r₁ ⊗ nz-r₂ ⦄ arr (j₁ ⊗ j₀) =
+  let instance
+    _ : NonZeroₛ r₁
+    _ = nz-r₁
+    _ : NonZeroₛ r₂
+    _ = nz-r₂
+    _ : NonZero (# r₁)
+    _ = (nz-# nz-r₁)
+    _ : NonZero (# r₂)
+    _ = (nz-# nz-r₂)
+    _ : NonZero (# r₁ ᵗ)
+    _ = (nz-# (nzᵗ nz-r₁))
+    _ : NonZero (# r₂ ᵗ)
+    _ = (nz-# (nzᵗ nz-r₂))
+    _ : NonZero (# r₂   *ₙ # r₁ ᵗ)
+    _ = m*n≢0 (# r₂) (# r₁ ᵗ)
+    _ : NonZero (# r₂ ᵗ *ₙ # r₁ ᵗ)
+    _ = m*n≢0 (# r₂ ᵗ) (# r₁ ᵗ)
+  in begin
+    _ ≡⟨ fft′≅dft′ _ j₁ ⟩
+    _ ≡⟨ DFT′-cong (λ x → cong₂ _*_ (fft′≅dft′ _ j₀) refl) (j₁ ⟨ rev ♭ ⟩ ) ⟩
     _ ≡⟨  sum-cong {  # r₂ ᵗ } 
             (λ k₀ → 
                 cong₂ _*_ (*-distribʳ-sum {# r₁ ᵗ} _) refl
@@ -416,27 +461,60 @@ fft≅dft {r₁ ⊗ r₂} arr (j₁ ⊗ j₀) with
                *
                  -ω
                    (# r₂ ᵗ *ₙ # r₁ ᵗ)
-                    ⦃ m*n≢0 _ _ ⦃ nz-#r₂ᵗ ⦄ ⦃ nz-#r₁ᵗ ⦄ ⦄
                    (iota k *ₙ iota (((j₁ ⟨ rev ♭ ⟩) ⊗ (j₀ ⟨ rev ♭ ⟩)) ⟨ split ⟩))
             )
       ≡⟨ sum-reindex (|s|≡|sᵗ| {r₁ ⊗ r₂}) ⟩
-    _ ≡⟨ sum-cong 
+        sum {# (r₁ ⊗ r₂) ᵗ} _
+      ≡⟨ sum-cong 
         {# (r₁ ⊗ r₂) ᵗ} 
         (λ k → 
             cong₂ _*_ 
               refl 
               (-ω-cong₂ 
-                ⦃ m*n≢0 _ _ ⦃ nz-#r₂ᵗ ⦄ ⦃ nz-#r₁ᵗ ⦄ ⦄
-                ⦃ m*n≢0 _ _ ⦃ nz-#r₂ᵗ ⦄ ⦃ nz-#r₁ᵗ ⦄ ⦄
                 refl 
                 (cong₂ _*ₙ_ (iota-reindex (|s|≡|sᵗ| {r₁ ⊗ r₂})) refl)
               )
         ) 
       ⟩
-    _ ≡⟨ sym (destructDFT (m*n≢0 _ _ ⦃ nz-#r₂ᵗ ⦄ ⦃ nz-#r₁ᵗ ⦄) _ _) ⟩
-    _ ∎
+      (reshape ♯ ∘ (DFT′ {length (recursive-transpose (r₁ ⊗ r₂))}) ∘ reshape flatten-reindex) arr (j₁ ⊗ j₀)
+    ∎
 
-{-
+fft≅dft : 
+    ∀ (arr : Ar s ℂ) 
+  → FFT arr 
+    ≅ 
+    ( (reshape ♯) 
+    ∘ DFT
+    ∘ (reshape flatten-reindex)) arr
+fft≅dft {s} arr i with nonZeroDec s | nonZero? (# s ᵗ) 
+fft≅dft {s} arr i | yes  nz-s | yes  nz-#sᵗ = fft′≅dft′ ⦃ nz-s ⦄ arr i
+fft≅dft {s} arr i | yes  nz-s | no  ¬nz-#sᵗ = ⊥-elim (¬nz-#sᵗ (nonZeroₛ-s⇒nonZero-sᵗ {s} nz-s))
+fft≅dft {s} arr i | no  ¬nz-s | yes  nz-#sᵗ = ⊥-elim ((¬nonZeroₛ-s⇒¬nonZero-sᵗ ¬nz-s) nz-#sᵗ)
+fft≅dft {s} arr i | no  ¬nz-s | no  ¬nz-#sᵗ 
+  with (i ⟨ recursive-transposeᵣ ⟩) | (((i ⟨ rev ♭ ⟩) ⟨ reindex (|s|≡|sᵗ| {s}) ⟩) ⟨ ♭ {s} ⟩)
+fft≅dft {s} arr i | no ¬nz-s  | no ¬nz-#sᵗ  | p | j = 
+  cong arr 
+    $ (sym (rev-eq ♯ p)) 
+    ⊡ (cong _⟨ rev ♯ ⟩ (¬nonZero-N⇒PosN-irrelevant (¬nonZero-sᵗ⇒¬nonZero-s {s} ¬nz-#sᵗ) (p ⟨ ♯ ⟩) (j ⟨ ♯ ⟩) ))
+    ⊡ (rev-eq ♯ j)
+
+
+
+
+
+
+
+fin-nz : (N : ℕ) → Fin N → NonZero N
+fin-nz (suc n) i = _
+
+pos⇒nz : Position s → NonZeroₛ s
+pos⇒nz (ι i) = ι (fin-nz _ i)
+pos⇒nz (i ⊗ i₁) = pos⇒nz i ⊗ pos⇒nz i₁
+
+zs-nopos : ¬ NonZeroₛ s → Position s → ⊥
+zs-nopos ¬nz-s (ι {suc n} i) = ¬nz-s (ι (fin-nz _ i))
+zs-nopos ¬nz-s (i ⊗ i₁) = ¬nz-s (pos⇒nz (i ⊗ i₁)) 
+
 twiddles′ :  Ar (s ⊗ p) ℂ
 twiddles′ {s} {p} i with nonZeroDec (s ⊗ p)
 ... | no ¬nz = ⊥-elim (zs-nopos ¬nz i)
@@ -560,7 +638,6 @@ trans-before {s ⊗ s₁} a b e (i₁ ⊗ i₂) =
 
 
 
--}
 
 
 
