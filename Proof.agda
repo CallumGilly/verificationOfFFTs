@@ -114,6 +114,18 @@ iota-split (ι k₀) (ι k₁) rewrite toℕ-combine k₁ k₀ = refl
 DFT-cong : ∀ {xs ys : Ar (ι N) ℂ} → xs ≅ ys → DFT xs ≅ DFT ys
 DFT-cong {suc N}  prf (ι j) = sum-cong {suc N} (λ i → cong₂ _*_ (prf i) refl)
 
+FFT-cong : ∀ {s : Shape} {xs ys : Ar s ℂ} → xs ≅ ys → FFT xs ≅ FFT ys
+FFT-cong {ι N} = DFT-cong 
+FFT-cong {r₁ ⊗ r₂} {xs} {ys} prf (j₁ ⊗ j₀) =
+    (FFT-cong {r₂} λ{ k₀ → 
+        (cong₂ _*_ 
+          ((FFT-cong {r₁} λ{k₁ → 
+            prf (k₁ ⊗ k₀) 
+          }) j₀ ) 
+          refl
+        ) 
+      }) j₁
+
 -------------------------
 --- Properties of Sum ---
 -------------------------
