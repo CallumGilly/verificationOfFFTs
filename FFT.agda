@@ -7,7 +7,7 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_)
 
 module FFT (cplx : Cplx) where
-  open Cplx cplx using (ℂ; _*_; -ω; _+_; 0ℂ; +-*-isCommutativeRing)
+  open Cplx cplx using (ℂ; _*_; ω; _+_; 0ℂ; +-*-isCommutativeRing)
 
   open AlgebraStructures  {A = ℂ} _≡_
   open IsCommutativeRing +-*-isCommutativeRing using (+-isCommutativeMonoid)
@@ -54,11 +54,16 @@ module FFT (cplx : Cplx) where
   offset-prod : Position (s ⊗ p) → ℕ
   offset-prod (k ⊗ j) = iota (k ⟨ ♯ ⟩) *ₙ iota (j ⟨ ♯ ⟩)
 
+  {-
   twiddles : Ar (s ⊗ p) ℂ
   twiddles {s} {p} i with nonZeroDec (s ⊗ p)
   ... | no ¬nz = ⊥-elim (¬nz (pos⇒nz i))
   ... | yes nz = -ω (length (s ⊗ p)) ⦃ nonZeroₛ-s⇒nonZero-s nz ⦄ (offset-prod i)
+  -}
+  twiddles : Ar (s ⊗ p) ℂ
+  twiddles {s} {p} i = ω (length (s ⊗ p)) (offset-prod i)
 
+  {-
   -------------------
   --- DFT and FFT ---
   -------------------
@@ -76,3 +81,4 @@ module FFT (cplx : Cplx) where
           twiddleFactorsApplied = zipWith _*_   innerDFTapplied twiddles
           outerDFTapplied       = mapLeft FFT (reshape swap twiddleFactorsApplied) 
       in  reshape swap outerDFTapplied
+  -}
