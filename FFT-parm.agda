@@ -1242,6 +1242,33 @@ record dft-fft (M : Mon) (CM : Change-Major M) : Set₁ where
             ≡ 
             reshape change-major (FM.fft dft twiddles xs) i
 
+
+  {-
+  ∀ (f : (f′ : ∀ s → Ar s X → Ar s X) → (g : ∀ s → Ar-1 s X → Ar-1 s X))
+   Where Ar-1 of Arₙ is ιₙ
+  ∀ (f : () → ∀ s → Arₙ s X → Arₙ s Y)
+
+  -}
+--- The idea here, was is there some way to generalise the set of functions where
+--- f (lower xs) ≡ lower (f xs)
+module lvl (M : Mon) where
+  open Mon M using (U; El)
+  open A M 
+
+  --a : ∀ { s } → (g : ∀ { n } → Ar (ι n) X → Ar (ι n) Y) → Ar s X → Ar s Y
+  --a g xs (A.ι x) = (g xs) (ι x)
+  --a g xs (i A.⊗ i₁) = ?
+
+  lower′ : ∀ { n } → Ar (ι n) X → (El n → X)
+  lower′ x i = x (ι i)
+  
+  a : ∀ { s } → (g : ∀ { n : U} → (El n → X) → El n → Y) → Ar s X → Ar s Y
+  a g xs (ι x) = g (λ i → xs (ι i)) x 
+  a g xs (i₁ ⊗ i₂) = let
+    b = nest xs
+    in ?
+  
+
 module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM₂ : Change-Major (MM.mk-M₂ M₁)) where
   open Change-Major CM₁
   open Change-Major CM₂ using () renaming (change-major to change-major₂; change-major-id to change-major-id₂)
