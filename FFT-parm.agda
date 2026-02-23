@@ -31,15 +31,15 @@ record Mon : Set₁ where
     U : Set
     El : U → Set
 
-    -- ι : U
-    -- _⊗_ : U → U → U
+    ε : U
+    _●_ : U → U → U
 
-    -- unit-law : El ι ↔ ⊤
+    unit-law : El ε ↔ ⊤
     -- -- The bracketing on the left hand side here is VERY important, otherwise
     -- -- we have a pair where the left is an isomorhism... that took me too long
-    -- pair-law : ∀ a b → El (a ⊗ b) ↔ (El a × El b)
+    pair-law : ∀ a b → El (a ● b) ↔ (El a × El b)
 
-    -- comm : ∀ a b → a ⊗ b ≡ b ⊗ a
+    comm : ∀ a b → a ● b ≡ b ● a
 
 {-
 record Uops (U : Set) (El : U → Set) : Set where
@@ -55,8 +55,35 @@ record Uops (M : Mon) : Set where
     sum : ∀ u → (El u → ℂ) → ℂ
     -ω : U → ℂ → ℂ
 
+{- 
+  Was thinking that it could be nice to use multiple "Levels" of reshape, such
+  that we don't add (for example) flat and unflat to the requirements for a 
+  module when we dont need them
+
+  Would be nice if we could construct this by pairs of reshapes - i.e. flat and 
+  unflat, swap and swap, assocl and assocr - then each module could require only 
+  those which it requires
+-}
+record RShp (S : Set) (P : S → Set) : Set₁ where
+  field
+    Reshape : S → S → Set
+    _∙_ : ∀ {s p q : S} → Reshape p q → Reshape s p → Reshape s q 
+    _⟨_⟩ : ∀ {s p : S} → P s → Reshape p s → P p
+    rev : ∀ {s p : S} → Reshape s p → Reshape p s
+    rev-eq : ∀ {s p : S} 
+            → ∀ (r : Reshape s p) 
+            → ∀ (i : P p) 
+            →  i ⟨ r ∙ rev r ⟩ ≡ i 
+    rev-rev : ∀ {s p : S}
+            → ∀ (r : Reshape s p)
+            → ∀ (i : P p ) → 
+            i ⟨ rev (rev r) ⟩ ≡ i ⟨ r ⟩
+
+
+
+
 module A (M : Mon) where
-  open Mon M using (U; El)
+  open Mon M
 
 
   infixl 15 _⊗_
@@ -84,6 +111,9 @@ module A (M : Mon) where
     swap : Reshape (s ⊗ p) (p ⊗ s)
     assocl : Reshape (s ⊗ (p ⊗ q)) ((s ⊗ p) ⊗ q)
     assocr : Reshape ((s ⊗ p) ⊗ q) (s ⊗ (p ⊗ q))
+    
+    flat   : Reshape (ι n ⊗ ι m) (ι (n ● m))
+    unflat : Reshape (ι (n ● m)) (ι n ⊗ ι m)
 
   _⟨_⟩ : P s → Reshape p s → P p
   i ⟨ eq ⟩ = i
@@ -92,6 +122,9 @@ module A (M : Mon) where
   (i ⊗ i₁) ⟨ swap ⟩ = i₁ ⊗ i
   ((i ⊗ j) ⊗ k) ⟨ assocl ⟩ = i ⊗ (j ⊗ k)
   (i ⊗ (j ⊗ k)) ⟨ assocr ⟩ = (i ⊗ j) ⊗ k
+  ι x ⟨ flat ⟩ = let a = (Inverse.to $ pair-law _ _) x 
+                 in ι (proj₁ a) ⊗ ι (proj₂ a) 
+  (ι x₁ ⊗ ι x₂) ⟨ unflat ⟩ =  ι ((Inverse.from $ pair-law _ _) (x₁ , x₂))
 
   rev : Reshape s p → Reshape p s
   rev eq = eq
@@ -100,22 +133,38 @@ module A (M : Mon) where
   rev swap = swap
   rev assocl = assocr
   rev assocr = assocl
+  rev flat = unflat
+  rev unflat = flat
 
-  rev-rev : ∀ (r : Reshape s p) (i : P p) →  i ⟨ r ∙ rev r ⟩ ≡ i
+  rev-rev : ∀ (r : Reshape s p) (i : P p ) → i ⟨ rev (rev r) ⟩ ≡ i ⟨ r ⟩
   rev-rev eq i = refl
-  rev-rev (r₁ ⊕ r₂) (i₁ ⊗ i₂) rewrite rev-rev r₁ i₁ | rev-rev r₂ i₂ = refl
-  rev-rev (r₁ ∙ r₂) i rewrite rev-rev r₂ (i ⟨ r₁ ⟩) | rev-rev r₁ i  = refl
-  rev-rev swap (i₁ ⊗ i₂) = refl
-  rev-rev assocl (i₁ ⊗ i₂ ⊗ i₃) = refl
-  rev-rev assocr (i₁ ⊗ (i₂ ⊗ i₃)) = refl
+  rev-rev (r ⊕ r₁) i = ?
+  rev-rev (r ∙ r₁) i = ?
+  rev-rev swap i = ?
+  rev-rev assocl i = ?
+  rev-rev assocr i = ?
+  rev-rev flat i = ?
+  rev-rev unflat i = ?
 
-  rev-rev′ : ∀ (r : Reshape s p) (i : P s) →  i ⟨ rev r ∙ r ⟩ ≡ i
-  rev-rev′ eq i = refl
-  rev-rev′ (r₁ ⊕ r₂) (i₁ ⊗ i₂) rewrite rev-rev′ r₁ i₁ | rev-rev′ r₂ i₂ = refl
-  rev-rev′ (r₁ ∙ r₂) i rewrite rev-rev′ r₁ (i ⟨ rev r₂ ⟩) | rev-rev′ r₂ i = refl
-  rev-rev′ swap (i₁ ⊗ i₂) = refl
-  rev-rev′ assocl (i₁ ⊗ (i₂ ⊗ i₃)) = refl
-  rev-rev′ assocr (i₁ ⊗ i₃ ⊗ i₂)   = refl
+  rev-eq : ∀ (r : Reshape s p) (i : P p) →  i ⟨ r ∙ rev r ⟩ ≡ i
+  rev-eq eq i = refl
+  rev-eq (r₁ ⊕ r₂) (i₁ ⊗ i₂) rewrite rev-eq r₁ i₁ | rev-eq r₂ i₂ = refl
+  rev-eq (r₁ ∙ r₂) i rewrite rev-eq r₂ (i ⟨ r₁ ⟩) | rev-eq r₁ i  = refl
+  rev-eq swap (i₁ ⊗ i₂) = refl
+  rev-eq assocl (i₁ ⊗ i₂ ⊗ i₃) = refl
+  rev-eq assocr (i₁ ⊗ (i₂ ⊗ i₃)) = refl
+
+  rev-eq′ : ∀ (r : Reshape s p) (i : P s) →  i ⟨ rev r ∙ r ⟩ ≡ i
+  rev-eq′ r i rewrite
+      sym (rev-rev r (i ⟨ rev r ⟩))
+    = rev-eq (rev r) i 
+
+  --rev-eq′ eq i = refl
+  --rev-eq′ (r₁ ⊕ r₂) (i₁ ⊗ i₂) rewrite rev-eq′ r₁ i₁ | rev-eq′ r₂ i₂ = refl
+  --rev-eq′ (r₁ ∙ r₂) i rewrite rev-eq′ r₁ (i ⟨ rev r₂ ⟩) | rev-eq′ r₂ i = refl
+  --rev-eq′ swap (i₁ ⊗ i₂) = refl
+  --rev-eq′ assocl (i₁ ⊗ (i₂ ⊗ i₃)) = refl
+  --rev-eq′ assocr (i₁ ⊗ i₃ ⊗ i₂)   = refl
 
   reshape : Reshape s p → Ar s X → Ar p X
   reshape r a i = a (i ⟨ r ⟩)
@@ -148,7 +197,7 @@ module A (M : Mon) where
               → ∀ (xs : Ar s X)
               → ∀ i
               → map f xs i ≡ reshape (rev r) (map f (reshape r xs)) i
-  map-reshape f r xs i rewrite rev-rev′ r i = refl
+  map-reshape f r xs i rewrite rev-eq′ r i = refl
 
   map-nest : ∀ (f : X → Y)
              → ∀ (xs : Ar (s ⊗ p) X)
@@ -171,23 +220,46 @@ module A (M : Mon) where
                 → reshape r a i ≡ reshape r b i
   reshape-cong r x i = x (i ⟨ r ⟩)
 
-  resh-rev : (r : Reshape s p) → ∀ i → i ⟨ rev r ⟩ ⟨ r ⟩ ≡ i
-  resh-rev eq i = refl
-  resh-rev (r ⊕ r₁) (i ⊗ j) rewrite resh-rev r i | resh-rev r₁ j = refl
-  resh-rev (r ∙ r₁) i rewrite resh-rev r (i ⟨ rev r₁ ⟩) = resh-rev r₁ i
-  resh-rev swap (i ⊗ j) = refl
-  resh-rev assocl (i ⊗ (i₁ ⊗ i₂)) = refl
-  resh-rev assocr (i ⊗ i₂ ⊗ i₁) = refl
-
-  resh-rev-transpᵣ : ∀ { s } → ∀ i → i ⟨ rev transpᵣ ⟩ ⟨ transpᵣ {s} ⟩ ≡ i
-  resh-rev-transpᵣ {ι n} (ι x) = refl
-  resh-rev-transpᵣ {s ⊗ p} (i ⊗ j) rewrite
-      resh-rev-transpᵣ i
-    | resh-rev-transpᵣ j
-    = refl
- 
   rev-fact : (r : Reshape s p) → ∀ i j → i ⟨ rev r ⟩ ≡ j → i ≡ j ⟨ r ⟩
-  rev-fact r i j e = sym (resh-rev r i) ⊡ cong (_⟨ r ⟩) e
+  rev-fact r i j e = sym (rev-eq′ r i) ⊡ cong (_⟨ r ⟩) e
+
+  size : S → U
+  size (ι x) = x
+  size (s₁ ⊗ s₂) = size s₁ ● size s₂
+  --size : S → U
+  --size (ι x) = x
+  --size (s₁ ⊗ s₂) = size s₁ ⊗′ size s₂
+
+  flat-R  : Reshape (ι n ⊗ ι m) (ι (m ● n))
+  flat-R {n} {m} = (subst (λ t → Reshape (ι (n ● m)) (ι t)) (comm n m) eq) ∙ flat
+  --flat-R {n} {m} rewrite comm m n = flat
+
+  unflat-R : Reshape (ι (n ● m)) (ι m ⊗ ι n)
+  unflat-R {n} {m} = unflat ∙ (subst (λ t → Reshape (ι (n ● m)) (ι t)) (comm n m) eq)
+  --unflat-R {n} {m} rewrite comm n m = unflat
+
+  flatten : Reshape s (ι (size s))
+  flatten {ι x} = eq
+  flatten {s₁ ⊗ s₂} = flat ∙ flatten ⊕ flatten
+
+  flatten-R : Reshape s (ι (size (transp s)))
+  flatten-R {ι _} = eq
+  flatten-R {_ ⊗ _} = flat-R ∙ flatten-R ⊕ flatten-R
+
+  unflatten : Reshape (ι (size s)) s 
+  unflatten = rev flatten
+
+  unflatten-R : Reshape (ι (size (transp s))) s 
+  unflatten-R {s} = rev flatten-R
+
+  change-major′ : Reshape (transp s) s
+  change-major′ = unflatten-R ∙ flatten 
+
+  change-major′-id : ∀ {u : U} {x : El u} → (ι x) ⟨ change-major′ ⟩ ≡ ι x
+  change-major′-id {u} {x} = refl
+
+  _ : ∀ (i : P s) → i ⟨ unflatten-R ∙ flatten-R ⟩ ≡ i ⟨ eq ⟩
+  _ = rev-eq′ flatten-R
 
 {-
 --module D (U : Set) (El : U → Set) where
@@ -553,7 +625,7 @@ module F (M : Mon)  where
              →  (pre-ufft dft (λ i₁ j₁ → twid (i₁ ⟨ transpᵣ ⟩) j₁ ) (reshape (rev transpᵣ) xs)) i
                 ≡ 
                 (fft  dft twid xs) i
-  pre-ufft≡fft transp-twid dft-cong xs i = pre-ufft≡fft′ transp-twid dft-cong xs (reshape (rev transpᵣ) xs) (cong xs ∘ rev-rev transpᵣ) i
+  pre-ufft≡fft transp-twid dft-cong xs i = pre-ufft≡fft′ transp-twid dft-cong xs (reshape (rev transpᵣ) xs) (cong xs ∘ rev-eq transpᵣ) i
 
   pre-ufft≡post-ufft :
                ∀ {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
@@ -568,7 +640,7 @@ module F (M : Mon)  where
                reshape (rev transpᵣ) (post-ufft dft (λ j₁ j₂ → twid j₁ (j₂ ⟨ transpᵣ ⟩)) xs) i
   pre-ufft≡post-ufft {s} {dft} {twid} transp-twid dft-cong xs i =
       pre-ufft≡fft {_} {dft} {twid} transp-twid dft-cong xs i
-    ⊡ cong (fft dft twid xs) (sym (rev-rev′ transpᵣ i))
+    ⊡ cong (fft dft twid xs) (sym (rev-eq′ transpᵣ i))
     ⊡ sym (post-ufft≡fft {_} {dft} {twid} dft-cong xs (i ⟨ rev transpᵣ ⟩))
 
             {-
@@ -766,7 +838,7 @@ module F (M : Mon)  where
         }) (i₂ ⊗ i₃)
   mapVec₃≡mapVec₂ dft-cong true (vec ⊗ ι _) xs (i ⊗ ι x) 
     with (((i ⟨ rev (pull-Vᵣ vec) ⟩) ⊗ ι x) ⟨ assocl ⟩) 
-  ... | j₁ ⊗ j₂ rewrite rev-rev (assocr ∙ pull-Vᵣ vec ⊕ eq) (j₁ ⊗ j₂) = refl
+  ... | j₁ ⊗ j₂ rewrite rev-eq (assocr ∙ pull-Vᵣ vec ⊕ eq) (j₁ ⊗ j₂) = refl
   mapVec₃≡mapVec₂ dft-cong true (vec₁ ⊗ (vec₂ ⊗ vec₃)) xs (i₁ ⊗ (i₂ ⊗ i₃)) 
   -- TODO: Improve.... more.....
   --  with ((i₁ ⊗ (i₂ ⊗ i₃)) ⟨ (rev (assocr ∙ (pull-Vᵣ vec₁) ⊕ eq )) ⟩) 
@@ -807,25 +879,47 @@ module F (M : Mon)  where
     }) (i₁ ⊗ i₂)
 
 
-module MM (M₁ : Mon) where
+module SM (M₁ : Mon) where
   private
     variable
       X Y : Set
     S₁ = A.S M₁
     P₁ = A.P M₁
 
-  mk-M₂ : Mon
-  mk-M₂ = record {
+  raise-M : Mon
+  raise-M = record {
       U    = S₁
     ; El   = P₁
-    --; ι    = A.ι   (Mon.ι M₁)
-    --; _⊗_  = ?
-    --; unit-law  = ?
-    --; pair-law  = ?
-    --; flat = ?
-    --; comm = ?
+    ; ε    = ? --A.ι   (Mon.ι M₁)
+    ; _●_  = ?
+    ; unit-law  = ?
+    ; pair-law  = ?
+    ; comm = ?
     }
+  
+  lower-S : A.S raise-M → A.S M₁
+  lower-S (A.ι x) = x
+  lower-S (s₁ A.⊗ s₂) = lower-S s₁ A.⊗ lower-S s₂
+
+  lower-P : ∀ {s : A.S raise-M} → A.P raise-M s → A.P M₁ (lower-S s)
+  lower-P (A.ι x) = x
+  lower-P (i₁ A.⊗ i₂) = lower-P i₁ A.⊗ lower-P i₂
+
+  raise-P : ∀ {s : A.S raise-M} → A.P M₁ (lower-S s) → A.P raise-M s
+  raise-P {A.ι _} i = A.ι i
+  raise-P {s₁ A.⊗ s₂} (i₁ A.⊗ i₂) = raise-P i₁ A.⊗ raise-P i₂
+  
+  lower-Ar :  ∀ {s : A.S raise-M}
+            → ∀ {X : Set}
+            → A.Ar raise-M s X 
+            → A.Ar M₁ (lower-S s) X
+  lower-Ar xs i = xs (raise-P i)
     
+  raise-Ar :  ∀ {s : A.S raise-M}
+            → ∀ {X : Set}
+            → A.Ar M₁ (lower-S s) X
+            → A.Ar raise-M s X 
+  raise-Ar xs i = xs (lower-P i) 
 
 module T (M₁ : Mon) where
   open Mon M₁ using (U; El)
@@ -941,27 +1035,26 @@ module B where
   ℕ-Mon = record {
       U    = ℕ
     ; El   = Fin ∘ suc
-    -- This being 0 feels wrong, as it should be an identity element and zero 
-    -- is not identity for multiplication, but I believe the suc above fixes 
-    -- this issue?
-    --; ι    = 0
-    --; _⊗_  = _*_
-    --; unit-law  = record 
-    --              { to        = λ _ → tt
-    --              ; from      = λ _ → Fin.zero
-    --              ; to-cong   = λ _ → refl
-    --              ; from-cong = λ _ → refl
-    --              ; inverse   = (λ _ → inv₁) , (λ _ → inv₂)
-    --              }
-    --; pair-law  = λ a b → record 
-    --              { to        = ?
-    --              ; from      = ?
-    --              ; to-cong   = ?
-    --              ; from-cong = ?
-    --              ; inverse   = ?
-    --              }
+    ; ε    = 0
+    --; _●_  = λ a b → (Nat.pred a) * (Nat.pred b)
+    --; _●_  = λ a b → ((a * b) ∸ a) ∸ b
+    ; _●_ = ?
+    ; unit-law  = record 
+                  { to        = λ _ → tt
+                  ; from      = λ _ → Fin.zero
+                  ; to-cong   = λ _ → refl
+                  ; from-cong = λ _ → refl
+                  ; inverse   = (λ _ → inv₁) , (λ _ → inv₂)
+                  }
+    ; pair-law  = λ{zero b → ?; (suc n) m → ?} --λ a b → record 
+                  --{ to        = λ c → ?
+                  --; from      = ?
+                  --; to-cong   = ?
+                  --; from-cong = ?
+                  --; inverse   = ?
+                  -- }
     --; flat = ?
-    --; comm = ?
+    ; comm = ?
     }
 
   S₁ = A.S ℕ-Mon
@@ -1231,9 +1324,9 @@ record dft-fft (M : Mon) (CM : Change-Major M) : Set₁ where
     transp-twid : ∀ {s p} → ∀ {i j} → twiddles ((i ⟨ transpᵣ ⟩) ⟨ transpᵣ ⟩) j ≡ twiddles {s} {p} i j
 
 
-    size : S → U
+    --size : S → U
 
-    flatten : ∀ {s : S} → Reshape s (ι (size s))
+    --flatten : ∀ {s : S} → Reshape s (ι (size s))
 
     prf :   ∀ {s : S}
           → ∀ (xs : Ar s ℂ)
@@ -1251,7 +1344,28 @@ record dft-fft (M : Mon) (CM : Change-Major M) : Set₁ where
   -}
 --- The idea here, was is there some way to generalise the set of functions where
 --- f (lower xs) ≡ lower (f xs)
+module lvl₂ where
+  open A
+  prop₁ : {X Y : Set}
+        --→ ∀ (f : ∀ (Mₙ : Mon) → ∀ (s : A.S Mₙ) → A.Ar Mₙ s X → A.Ar Mₙ s Y)
+        → ∀ (M : Mon) 
+        → ∀ (s : A.S (SM.raise-M M)) 
+        → ∀ (xs : A.Ar _ s X)
+        → ∀ (i : A.P _ s)
+        → A.reshape M (?) ? ≡ ?
+
+  prop₂ : {X Y : Set}
+        → ∀ (f : ∀ (Mₙ : Mon) → ∀ (s : A.S Mₙ) → A.Ar Mₙ s X → A.Ar Mₙ s Y)
+        → ∀ (M : Mon) 
+        → ∀ (s : A.S (SM.raise-M M)) 
+        → ∀ (xs : A.Ar _ s X)
+        → ∀ (i : A.P _ s)
+        → f (SM.raise-M M) s xs i ≡ f M (SM.lower-S M s) (SM.lower-Ar M xs) (SM.lower-P M i)
+  prop₂ f M (ι x) xs (ι x₁) = ?
+  prop₂ f M (s₁ ⊗ s₂) xs (i₁ ⊗ i₂) = ?
+
 module lvl (M : Mon) where
+
   open Mon M using (U; El)
   open A M 
 
@@ -1269,14 +1383,23 @@ module lvl (M : Mon) where
     in ?
   
 
-module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM₂ : Change-Major (MM.mk-M₂ M₁)) where
-  open Change-Major CM₁
-  open Change-Major CM₂ using () renaming (change-major to change-major₂; change-major-id to change-major-id₂)
+module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM₂ : Change-Major (SM.raise-M M₁)) where
+  open Change-Major CM₁ 
+      renaming ( _●_ to _●₁_
+               ; comm to ●₁-comm
+               )
+  open Change-Major CM₂ 
+      using () 
+      renaming ( change-major to change-major₂
+               ; change-major-id to change-major-id₂
+               ; _●_ to _●₂_
+               ; comm to ●₂-comm
+               )
   
   variable
     X Y : Set
 
-  M₂ = MM.mk-M₂ M₁
+  M₂ = SM.raise-M M₁
 
   module FM₁ = F M₁
   module FM₂ = F M₂
@@ -1302,8 +1425,10 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
     ; transp to transp₂
     ; eq to eq₂
     ; _⊕_ to _⊕₂_
-    ; rev-rev′ to rev-rev′₂
-    ; rev-rev to rev-rev₂
+    ; rev-eq′ to rev-eq′₂
+    ; rev-eq to rev-eq₂
+    ; change-major′ to change-major′₂
+    ; change-major′-id to change-major′-id₂
     )
 
   open A M₁ using () renaming
@@ -1327,8 +1452,10 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
     ; transp to transp₁
     ; eq to eq₁
     ; _⊕_ to _⊕₁_
-    ; rev-rev′ to rev-rev′₁
-    ; rev-rev to rev-rev₁
+    ; rev-eq′ to rev-eq′₁
+    ; rev-eq to rev-eq₁
+    ; change-major′ to change-major′₁
+    ; change-major′-id to change-major′-id₁
     )
 
   lower-shp : S₂ → S₁
@@ -1417,7 +1544,7 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
   ufft-two-level≡post-ufft {A.ι _} xs ys prf (A.ι x) =
         FM.pre-ufft≡post-ufft {_} {_} {twiddles} transp-twid dft-cong (lower-Ar xs) (x ⟨ transpᵣ₁ ⟩₁) 
       ⊡ FM.post-ufft-cong dft-cong _ _ (λ j → prf (A.ι j)) (x ⟨ transpᵣ₁ ∙₁ rev₁ transpᵣ₁ ⟩₁)
-      ⊡ cong (FM.post-ufft dft _ _) (rev-rev₁ transpᵣ₁ x)
+      ⊡ cong (FM.post-ufft dft _ _) (rev-eq₁ transpᵣ₁ x)
   ufft-two-level≡post-ufft {s₁ A.⊗ s₂} xs ys prf (i₁ A.⊗ i₂) =
       ufft-two-level≡post-ufft 
         _ 
@@ -1465,7 +1592,7 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
             -- Although the proof has gone through, this transpose feels suspicious
             -- to me, I have a feeling that I need this here because I then
             -- transpose again at the end.
-            change-major
+            change-major′₁
             (FM.pre-ufft 
               dft 
               (λ j₁ j₂ → twiddles (j₁ ⟨ transpᵣ₁ ⟩₁) j₂) 
@@ -1491,13 +1618,20 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
                       → ∀ (ys : Ar₂ s ℂ)
                       → (∀ (i : P₂ s) → xs i ≡ ys i)
                       → ∀ (i : P₂ s)
-                      → (ufft-two-level xs) (i ⟨ change-major₂ ∙₂ (rev₂ transpᵣ₂) ⟩₂)
+                      → (ufft-two-level xs) (i ⟨ change-major′₂ ∙₂ (rev₂ transpᵣ₂) ⟩₂)
                       ≡
-                        (FM.post-ufft dft (λ i j → twiddles i (j ⟨ transpᵣ₁ ⟩₁)) (lower-Ar ys)) ((lower-P i) ⟨ change-major ∙₁ (rev₁ transpᵣ₁ )⟩₁)
-  ufft-two-level≡post-ufft {A.ι _} xs ys prf (A.ι x) rewrite change-major-id₂ {_} {x} =
-        FM.pre-ufft≡post-ufft {_} {_} {twiddles} transp-twid dft-cong (lower-Ar xs) (x ⟨ change-major ⟩₁) 
-      ⊡ FM.post-ufft-cong dft-cong _ _ (λ j → prf (A.ι j)) (x ⟨ change-major ∙₁ rev₁ transpᵣ₁ ⟩₁)
-  ufft-two-level≡post-ufft {s₁ A.⊗ s₂} xs ys prf (i₁ A.⊗ i₂) = ?
+                        (FM.post-ufft dft (λ i j → twiddles i (j ⟨ transpᵣ₁ ⟩₁)) (lower-Ar ys)) ((lower-P i) ⟨ change-major′₁ ∙₁ (rev₁ transpᵣ₁ )⟩₁)
+  ufft-two-level≡post-ufft {A.ι _} xs ys prf (A.ι x) rewrite change-major′-id₂ {_} {x} =
+        FM.pre-ufft≡post-ufft {_} {_} {twiddles} transp-twid dft-cong (lower-Ar xs) (x ⟨ change-major′₁ ⟩₁) 
+      ⊡ FM.post-ufft-cong dft-cong _ _ (λ j → prf (A.ι j)) (x ⟨ change-major′₁ ∙₁ rev₁ transpᵣ₁ ⟩₁)
+  ufft-two-level≡post-ufft {s₁ A.⊗ s₂} xs ys prf (i₁ A.⊗ i₂) =
+      ufft-two-level≡post-ufft
+        _
+        _
+        ?
+        ((i₁ A.⊗ i₂) ⟨ ? ⟩₂)
+      ⊡ ?
+
 
 
   --with (i₁ A.⊗ i₂) ⟨ change-major₂ ⟩₂
