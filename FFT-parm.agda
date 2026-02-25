@@ -878,6 +878,88 @@ module F (M : Mon)  where
       mapVec₃≡mapVec₂ dft-cong true (vec₂ ⊗ vec₁) (reshape swap xs) (j₂ ⊗ j₁)
     }) (i₁ ⊗ i₂)
 
+module V (M : Mon) where
+  private
+    S₁ = A.S M
+    P₁ = A.P M
+  open Mon M
+  open A M
+
+  flat-P : P (ι n ⊗ ι m) → El (n ● m)
+  flat-P (ι x₁ ⊗ ι x₂) = ((Inverse.from $ pair-law _ _) (x₁ , x₂))
+
+  flatten-P : P s → El (size s)
+  flatten-P (A.ι x) = x
+  flatten-P (i₁ A.⊗ i₂) = ((Inverse.from $ pair-law _ _) (flatten-P i₁ , flatten-P i₂))
+
+  unflatten-P : El (size s) → P s
+  unflatten-P {A.ι _} x = ι x
+  unflatten-P {s₁ A.⊗ s₂} x = let 
+      l , r = (Inverse.to $ pair-law (size s₁) (size s₂)) x 
+    in unflatten-P l A.⊗ unflatten-P r
+
+  P-inv₁ : ∀ {s} → ∀ i → unflatten-P {s} (flatten-P i) ≡ i
+  P-inv₁ {.(ι _)} (A.ι x) = refl
+  P-inv₁ {(s₁ ⊗ s₂)} (i₁ A.⊗ i₂) = ?
+    
+    --let a = (Inverse.fr $ pair-law (size s₁) (size s₂)) 
+
+                                  --let l , r = (Inverse.inverse $ pair-law (size s₁) (size s₂)) 
+                                  -- in let b = r (P-inv₁ ?) 
+                                  -- in ?
+  --P-inv₁ {(s₁ ⊗ s₂)} (i₁ A.⊗ i₂) rewrite
+  --    (proj₁ (Inverse.inverse $ pair-law (size s₁) (size s₂))) (?)
+  --  | (proj₂ (Inverse.inverse $ pair-law (size s₁) (size s₂))) ?
+  --  = ?
+
+  P-inv₂ : ∀ {s} → ∀ i → flatten-P {s} (unflatten-P i) ≡ i
+
+  P↔El : El (size s) ↔ P s 
+  Inverse.to P↔El = unflatten-P
+  Inverse.from P↔El = flatten-P
+  Inverse.to-cong P↔El = ?
+  Inverse.from-cong P↔El = ?
+  proj₁ (Inverse.inverse (P↔El {s})) refl = P-inv₁ {s} _
+  proj₂ (Inverse.inverse (P↔El {s})) refl = P-inv₂ {s} _
+
+  UVec : U → Set → Set
+  UVec u X = El u → X
+  
+
+  Ar-to-UVec : ∀ {s : S₁} → Ar s X → UVec (size s) X
+  Ar-to-UVec xs i = xs (unflatten-P i) --((ι i) ⟨ flatten ⟩)
+
+  Ar-from-UVec : ∀ {s : S₁} → UVec (size s) X → Ar s X
+  Ar-from-UVec xs i = xs (flatten-P i)
+
+  inv₁ : ∀ (xs : Ar s X) → ∀ i → Ar-from-UVec {X} {s} (Ar-to-UVec xs) i ≡ xs i
+  inv₁ {s} xs i rewrite P-inv₁ {s} i = refl 
+
+  inv₂ : ∀ (xs : UVec (size s) X) → ∀ i → Ar-to-UVec {X} {s} (Ar-from-UVec xs) i ≡ xs i
+  inv₂ {s} xs i rewrite P-inv₂ {s} i = refl 
+
+  UVec↔Ar  : UVec (size s) X ↔ Ar s X
+  Inverse.to UVec↔Ar = Ar-from-UVec
+  Inverse.from UVec↔Ar = Ar-to-UVec
+  Inverse.to-cong UVec↔Ar refl = refl
+  Inverse.from-cong UVec↔Ar refl = refl
+  -- Extensionally equal
+  proj₁ (Inverse.inverse UVec↔Ar) refl = ? --inv₁
+  proj₂ (Inverse.inverse UVec↔Ar) refl = ? --inv₂ 
+
+  tm : ∀ {xs : Ar s X} → ∀ i → Ar-to-UVec xs (flatten-P i) ≡ xs i
+  tm i rewrite P-inv₁ i = refl
+
+  vecPrf⇒arPrf :  ∀ {xs ys : Ar s X} 
+                  → (∀ i → Ar-to-UVec xs i ≡ Ar-to-UVec ys i)
+                  → (∀ i → xs i ≡ ys i)
+  vecPrf⇒arPrf prf i rewrite sym (P-inv₁ i) = prf (flatten-P i) 
+  
+  arPrf⇒vecPrf :  ∀ {xs ys : UVec (size s) X} 
+                  → (∀ i → Ar-from-UVec {X} {s} xs i ≡ Ar-from-UVec ys i)
+                  → (∀ i → xs i ≡ ys i)
+  arPrf⇒vecPrf {s} prf i rewrite sym (P-inv₂ {s} i) = prf (unflatten-P i) 
+
 
 module SM (M₁ : Mon) where
   private
@@ -908,6 +990,13 @@ module SM (M₁ : Mon) where
   raise-P : ∀ {s : A.S raise-M} → A.P M₁ (lower-S s) → A.P raise-M s
   raise-P {A.ι _} i = A.ι i
   raise-P {s₁ A.⊗ s₂} (i₁ A.⊗ i₂) = raise-P i₁ A.⊗ raise-P i₂
+
+  P-inv₁ : ∀ {s : A.S raise-M} → ∀ i → lower-P {s} (raise-P i) ≡ i
+  P-inv₁ {A.ι x} i = refl
+  P-inv₁ {s₁ A.⊗ s₂} (i₁ A.⊗ i₂) rewrite
+      P-inv₁ {s₁} i₁
+    | P-inv₁ {s₂} i₂
+    = refl
   
   lower-Ar :  ∀ {s : A.S raise-M}
             → ∀ {X : Set}
@@ -920,6 +1009,10 @@ module SM (M₁ : Mon) where
             → A.Ar M₁ (lower-S s) X
             → A.Ar raise-M s X 
   raise-Ar xs i = xs (lower-P i) 
+
+  Ar-inv₁ : ∀ {s : A.S raise-M} → ∀ {X : Set} → ∀ {xs : A.Ar M₁ (lower-S s) X} → ∀ i → lower-Ar {s} (raise-Ar xs) i ≡ xs i
+  Ar-inv₁ {s} i rewrite P-inv₁ {s} i = refl
+
 
 module T (M₁ : Mon) where
   open Mon M₁ using (U; El)
@@ -1384,18 +1477,7 @@ module lvl (M : Mon) where
   
 
 module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM₂ : Change-Major (SM.raise-M M₁)) where
-  open Change-Major CM₁ 
-      renaming ( _●_ to _●₁_
-               ; comm to ●₁-comm
-               )
-  open Change-Major CM₂ 
-      using () 
-      renaming ( change-major to change-major₂
-               ; change-major-id to change-major-id₂
-               ; _●_ to _●₂_
-               ; comm to ●₂-comm
-               )
-  
+
   variable
     X Y : Set
 
@@ -1427,8 +1509,6 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
     ; _⊕_ to _⊕₂_
     ; rev-eq′ to rev-eq′₂
     ; rev-eq to rev-eq₂
-    ; change-major′ to change-major′₂
-    ; change-major′-id to change-major′-id₂
     )
 
   open A M₁ using () renaming
@@ -1454,51 +1534,70 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
     ; _⊕_ to _⊕₁_
     ; rev-eq′ to rev-eq′₁
     ; rev-eq to rev-eq₁
-    ; change-major′ to change-major′₁
-    ; change-major′-id to change-major′-id₁
     )
 
-  lower-shp : S₂ → S₁
-  lower-shp (A.ι x) = x
-  lower-shp (s₁ ⊗₂ s₂) = lower-shp s₁ ⊗₁ lower-shp s₂
+  open Change-Major CM₁ 
+      using () 
+      renaming ( change-major to change-major₁
+               ; change-major-id to change-major-id₁
+               ; _●_ to _●₁_
+               ; comm to ●₁-comm
+               )
+  open Change-Major CM₂ 
+      using () 
+      renaming ( change-major to change-major₂
+               ; change-major-id to change-major-id₂
+               ; _●_ to _●₂_
+               ; comm to ●₂-comm
+               )
   
+  open SM M₁
+
   shp-map : S₂ → (S₁ → S₁) → S₂
   shp-map (A.ι x) f = A.ι (f x)
   shp-map (s₁ A.⊗ s₂) f = (shp-map s₁ f) A.⊗ (shp-map s₂ f)
 
-  lower-P : ∀ {s : S₂} → P₂ s → P₁ (lower-shp s) 
-  lower-P (A.ι x) = x
-  lower-P (p₁ A.⊗ p₂) = lower-P p₁ ⊗₁ lower-P p₂ 
+  shp-map-id : ∀ {s : S₂} → shp-map s id ≡ s
+  shp-map-id {A.ι x} = refl
+  shp-map-id {s₁ A.⊗ s₂} rewrite
+      shp-map-id {s₁}
+    | shp-map-id {s₂}
+    = refl
 
-  raise-P : ∀ {s : S₂} → P₁ (lower-shp s) → P₂ s
-  raise-P {A.ι x} i = ι₂ i
-  raise-P {s₁ A.⊗ s₂} (i₁ A.⊗ i₂) = (raise-P i₁) ⊗₂ (raise-P i₂)
-  
+  resh-map : ∀ {s : S₂} 
+           → ∀ {f : S₁ → S₁} 
+           → ∀ (r : ∀ {p₁ : S₁} → Reshape₁ (f p₁) p₁) 
+           → P₂ s
+           → P₂ (shp-map s f) 
+  resh-map {A.ι _} r (A.ι i) = A.ι (i ⟨ r ⟩₁)
+  resh-map {s₁ A.⊗ s₂} r (i₁ A.⊗ i₂) = (resh-map r i₁) A.⊗ (resh-map r i₂)
+
+  resh-map-id : ∀ {s : S₂} → Reshape₂ s (shp-map s id)
+  resh-map-id {s} rewrite shp-map-id {s} = A.eq 
+
   raise-lower-P : 
                   ∀ {s} 
-                → ∀ (i : P₁ (lower-shp s)) 
+                → ∀ (i : P₁ (lower-S s)) 
                 → lower-P {s} (raise-P i) ≡ i
   raise-lower-P {A.ι x} i = refl
   raise-lower-P {s₁ A.⊗ s₂} (i₁ A.⊗ i₂) rewrite
       raise-lower-P {s₁} i₁
     | raise-lower-P {s₂} i₂ = refl
 
-  resh-map : ∀ {s : S₂} → P₂ s → {f : S₁ → S₁} → (∀ {s₁ : S₁} → Reshape₁ (f s₁) s₁) → P₂ (shp-map s f)
-  resh-map (A.ι x)     r = A.ι (x ⟨ r ⟩₁)
-  resh-map (i₁ A.⊗ i₂) r = (resh-map i₁ r) A.⊗ (resh-map i₂ r)
-
-  lower-P-raise-P-inv : ∀ {s : S₂} → ∀ {p : P₁ (lower-shp s)} → (lower-P {s} (raise-P p)) ≡ p
+  lower-P-raise-P-inv : ∀ {s : S₂} → ∀ {p : P₁ (lower-S s)} → (lower-P {s} (raise-P p)) ≡ p
   lower-P-raise-P-inv {A.ι x} {p} = refl
   lower-P-raise-P-inv {s₁ A.⊗ s₂} {p₁ A.⊗ p₂} rewrite
       lower-P-raise-P-inv {s₁} {p₁}
     | lower-P-raise-P-inv {s₂} {p₂}
     = refl
-  
-  lower-Ar : ∀ {s : S₂} → Ar₂ s X → Ar₁ (lower-shp s) X
-  lower-Ar {s = s} xs i = xs (raise-P i)
 
-  raise-Ar : ∀ {s : S₂} → Ar₁ (lower-shp s) X → Ar₂ s X
-  raise-Ar {s = s} xs i = xs (lower-P i)
+
+  brf : ∀ {s : S₂}
+      → ∀ {xs : Ar₂ s X} 
+      → ∀ (i : P₂ s)
+      → xs ((resh-map (change-major₁ ∙₁ (rev₁ transpᵣ₁)) i) ⟨ resh-map-id ∙₂ change-major₂ ∙₂ (rev₂ transpᵣ₂) ⟩₂)
+        ≡ 
+        (lower-Ar (xs)) ((lower-P i) ⟨ change-major₁ ∙₁ (rev₁ transpᵣ₁) ⟩₁)
 
   open dft-fft rel
 
@@ -1525,7 +1624,7 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
             zipWith₂ 
               _*ᶜ_ 
               (λ j → twiddles
-                  {lower-shp p} {transp₁ (lower-shp s)} (lower-P i) ((lower-P j) ⟨ transpᵣ₁ ⟩₁)
+                  {lower-S p} {transp₁ (lower-S s)} (lower-P i) ((lower-P j) ⟨ transpᵣ₁ ⟩₁)
               )
             ∘ ufft-two-level {s} 
           )
@@ -1592,7 +1691,7 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
             -- Although the proof has gone through, this transpose feels suspicious
             -- to me, I have a feeling that I need this here because I then
             -- transpose again at the end.
-            change-major′₁
+            change-major₁
             (FM.pre-ufft 
               dft 
               (λ j₁ j₂ → twiddles (j₁ ⟨ transpᵣ₁ ⟩₁) j₂) 
@@ -1605,32 +1704,59 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
             zipWith₂ 
               _*ᶜ_ 
               (λ j → twiddles
-                  {lower-shp p} {transp₁ (lower-shp s)} (lower-P i) ((lower-P j) ⟨ transpᵣ₁ ⟩₁)
+                  {lower-S p} {transp₁ (lower-S s)} (lower-P i) ((lower-P j) ⟨ transpᵣ₁ ⟩₁)
               )
             ∘ ufft-two-level {s} 
           )
         (nest₂ (reshape₂ swap₂ a))
       d = map₂ (ufft-two-level {p}) (nest₂ (reshape₂ swap₂ c))
     in (unnest₂ d)
-
+    
   ufft-two-level≡post-ufft : ∀ {s : S₂}
                       → ∀ (xs : Ar₂ s ℂ)
                       → ∀ (ys : Ar₂ s ℂ)
                       → (∀ (i : P₂ s) → xs i ≡ ys i)
                       → ∀ (i : P₂ s)
-                      → (ufft-two-level xs) (i ⟨ change-major′₂ ∙₂ (rev₂ transpᵣ₂) ⟩₂)
+                      → (ufft-two-level xs) (i ⟨ change-major₂ ∙₂ (rev₂ transpᵣ₂) ⟩₂)
                       ≡
-                        (FM.post-ufft dft (λ i j → twiddles i (j ⟨ transpᵣ₁ ⟩₁)) (lower-Ar ys)) ((lower-P i) ⟨ change-major′₁ ∙₁ (rev₁ transpᵣ₁ )⟩₁)
-  ufft-two-level≡post-ufft {A.ι _} xs ys prf (A.ι x) rewrite change-major′-id₂ {_} {x} =
-        FM.pre-ufft≡post-ufft {_} {_} {twiddles} transp-twid dft-cong (lower-Ar xs) (x ⟨ change-major′₁ ⟩₁) 
-      ⊡ FM.post-ufft-cong dft-cong _ _ (λ j → prf (A.ι j)) (x ⟨ change-major′₁ ∙₁ rev₁ transpᵣ₁ ⟩₁)
-  ufft-two-level≡post-ufft {s₁ A.⊗ s₂} xs ys prf (i₁ A.⊗ i₂) =
-      ufft-two-level≡post-ufft
-        _
-        _
-        ?
-        ((i₁ A.⊗ i₂) ⟨ ? ⟩₂)
-      ⊡ ?
+                        (FM.post-ufft dft (λ i j → twiddles i (j ⟨ transpᵣ₁ ⟩₁)) (lower-Ar ys)) ((lower-P i) ⟨ change-major₁ ∙₁ (rev₁ transpᵣ₁ )⟩₁)
+  ufft-two-level≡post-ufft {A.ι _} xs ys prf (A.ι x) rewrite change-major-id₂ {_} {x} =
+        FM.pre-ufft≡post-ufft {_} {_} {twiddles} transp-twid dft-cong (lower-Ar xs) (x ⟨ change-major₁ ⟩₁) 
+      ⊡ FM.post-ufft-cong dft-cong _ _ (λ j → prf (A.ι j)) (x ⟨ change-major₁ ∙₁ rev₁ transpᵣ₁ ⟩₁)
+  ufft-two-level≡post-ufft {s₁ A.⊗ s₂} xs ys prf (i₁ A.⊗ i₂) = ?
+
+  -- I Liked the below idea... so natrually it doesn't work
+      --  ?
+      --⊡ 
+      --  brf {ℂ} {s₁ A.⊗ s₂} {raise-Ar (FM.post-ufft dft (λ i j → twiddles i (j ⟨ transpᵣ₁ ⟩₁)) (lower-Ar ys))} (i₁ A.⊗ i₂)
+      ----⊡
+      ----  ? --(lower-P (i₁ ⊗₁ i₂) ⟨ change-major₁ ∙₁ rev₁ transpᵣ₁ ⟩₁)
+      --⊡
+      --  SM.Ar-inv₁ M₁ {s₁ A.⊗ s₂} {ℂ} {FM.post-ufft dft (λ i j → twiddles i (j ⟨ transpᵣ₁ ⟩₁)) (lower-Ar ys)} (lower-P (i₁ A.⊗ i₂) ⟨ change-major₁ ∙₁ rev₁ transpᵣ₁ ⟩₁)
+
+
+
+  {-
+  with (i₁ A.⊗ i₂) ⟨ change-major₂ ∙₂ rev₂ transpᵣ₂ ⟩₂
+  ... | k₁ A.⊗ k₂ =
+    begin
+          ufft-two-level
+          (λ j →
+             twiddles (lower-P j) (lower-P k₁ ⟨ transpᵣ₁ ⟩₁) *ᶜ
+             ufft-two-level (λ j₁ → xs (j₁ A.⊗ j)) k₁)
+          k₂
+    ≡⟨ ? ⟩
+          unnest₁
+          (λ i →
+             FM.post-ufft dft (λ i₃ j → twiddles i₃ (j ⟨ transpᵣ₁ ⟩₁))
+             (λ j →
+                twiddles j (i ⟨ transpᵣ₁ ⟩₁) *ᶜ
+                FM.post-ufft dft (λ i₃ j₁ → twiddles i₃ (j₁ ⟨ transpᵣ₁ ⟩₁))
+                (λ j₁ → ys (raise-P j₁ A.⊗ raise-P j)) i))
+          ((((lower-P i₁ ⊗₁ lower-P i₂) ⟨ change-major₁ ⟩₁) ⟨ swap₁ ⟩₁) ⟨
+           rev₁ transpᵣ₁ ⊕₁ rev₁ transpᵣ₁ ⟩₁)
+    ∎
+    -}
 
 
 

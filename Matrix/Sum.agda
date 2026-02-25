@@ -172,7 +172,7 @@ module Matrix.Sum {A : Set} (_⋆_ : Op₂ A) (ε : A) (isCommutativeMonoid : Is
     | sym (assoc (sum (tail₁ (a (ι fzero))))         (sum (λ z → tail₁ a z (ι fzero))) (sum (λ z → sum (tail₁ (tail₁ a z)))))
     | sym (assoc (sum (tail₁ (λ i → a i (ι fzero)))) (sum (tail₁ (a (ι fzero))))       (sum (λ z → sum (λ i → tail₁ (tail₁ a i) z))))
     | comm (sum (tail₁ (a (ι fzero)))) (sum (λ z → tail₁ a z (ι fzero)))
-    = cong₂ _⋆_ refl (cong₂ _⋆_ (cong₂ _⋆_ (sum-cong {m} (λ{(ι z) → refl })) refl) (trans (sum-swap (λ z → (tail₁ (tail₁ a z)))) refl))
+    = cong₂ _⋆_ refl (cong₂ _⋆_ (cong₂ _⋆_ (sum-cong {m} (λ{(ι z) → refl })) refl) (sum-swap (λ z → (tail₁ (tail₁ a z)))))
 
   ------------------------------------------------
   --- Sum of Sum can be represented as one sum ---
