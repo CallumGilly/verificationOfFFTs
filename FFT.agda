@@ -17,6 +17,7 @@ module FFT (cplx : Cplx) where
   open import Data.Nat.Properties using (nonZero?; *-comm)
   open import Relation.Nullary
   open import Data.Empty
+  open import Data.Unit.Base
 
   open import Matrix using (Ar; Shape; Position; ι; _⊗_; zipWith; mapLeft; length; nest; unnest; map)
   open import Matrix.Sum _+_ 0ℂ +-isCommutativeMonoid using (sum)
@@ -54,6 +55,9 @@ module FFT (cplx : Cplx) where
   offset-prod : Position (s ⊗ p) → ℕ
   offset-prod (k ⊗ j) = iota (k ⟨ ♯ ⟩) *ₙ iota (j ⟨ ♯ ⟩)
 
+  twiddles′ : ℕ → Position s → Position p → ℂ
+  twiddles′ n i j = -ω (suc n) ⦃ record { nonZero = tt } ⦄ (offset-prod (i ⊗ j))
+
   twiddles : Ar (s ⊗ p) ℂ
   twiddles {s} {p} i with nonZeroDec (s ⊗ p)
   ... | no ¬nz = ⊥-elim (¬nz (pos⇒nz i))
@@ -62,6 +66,11 @@ module FFT (cplx : Cplx) where
   -------------------
   --- DFT and FFT ---
   -------------------
+
+  DFT′ : ∀ {N} → Ar (ι N) ℂ → Ar (ι N) ℂ
+  DFT′ {N} xs with nonZero? N
+  ... | no ¬nz = λ { (ι j) → ⊥-elim (¬nz (fin-nz _ j)) }
+  DFT′ {suc N} xs | yes nz = λ j → sum (λ k → xs k * twiddles′ N j k)
 
   DFT : ∀ {N} → Ar (ι N) ℂ → Ar (ι N) ℂ
   DFT {N} xs with nonZero? N

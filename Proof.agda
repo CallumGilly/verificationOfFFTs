@@ -367,6 +367,10 @@ destructDFT {N} nz-N _ _ with nonZero? N
 ... | no ¬nz-N = ⊥-elim (¬nz-N nz-N)
 ... | yes _ = refl
 
+dft≅dft′ :
+    ∀ (arr : Ar (ι N) ℂ)
+    → DFT arr ≅ DFT′ arr
+
 fft≅dft : 
     ∀ (arr : Ar s ℂ) 
   → FFT arr 
