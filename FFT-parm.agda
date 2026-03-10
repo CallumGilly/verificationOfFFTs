@@ -1,6 +1,6 @@
 open import Data.Nat as Nat
 open import Data.Nat.Properties
-open import Data.Fin as Fin
+open import Data.Fin as Fin hiding (raise)
 open import Data.Bool
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; trans; sym; cong₂; subst; cong-app; cong′; icong; dcong₂)
@@ -13,6 +13,7 @@ open import Data.Unit
 -- This gives a warn on older versions of Agda when Product doesnt have a zipWith method
 open import Data.Product hiding (swap; map; map₁; map₂; zipWith)
 open import Data.Product.Properties
+open import Data.Sum as Sum hiding (swap; map)
 
 open import Complex using (Cplx)
 
@@ -94,10 +95,11 @@ module A (M : Mon) where
     ι : U → S  --  ι n means ι (suc n)
     _⊗_ : S → S → S
 
-  variable
-    s s′ p q q₁ q₂ r V : S
-    m n k : U
-    X Y Z : Set
+  private 
+    variable
+      s s′ p q q₁ q₂ r V : S
+      m n k : U
+      X Y Z : Set
 
   data P : S → Set where
     ι : El n → P (ι n)
@@ -156,6 +158,17 @@ module A (M : Mon) where
   rev-eq swap (i₁ ⊗ i₂) = refl
   rev-eq assocl (i₁ ⊗ i₂ ⊗ i₃) = refl
   rev-eq assocr (i₁ ⊗ (i₂ ⊗ i₃)) = refl
+
+  reshape-is-RShp : RShp S P
+  reshape-is-RShp = record
+    { Reshape = Reshape
+    ; _∙_     = _∙_
+    ; _⟨_⟩    = _⟨_⟩
+    ; rev     = rev
+    ; rev-eq  = rev-eq
+    ; rev-rev = rev-rev
+    }
+    
 
   rev-eq′ : ∀ (r : Reshape s p) (i : P s) →  i ⟨ rev r ∙ r ⟩ ≡ i
   rev-eq′ r i rewrite
@@ -293,14 +306,13 @@ module PL (M : Mon) where
   lower-S : S → U
   lower-S = size
 
+  -- This clearly cannot be implemented with reshapes, as reshapes work 
+  -- lvl n → lvl n, while this works lvl n+1 → lvl n - could I create an extended
+  -- Reshape which works lvl n ⊎ lvl n+1 → lvl n ⊎ lvl n+1
+  -- Or Reshape which ∀ {n m : ℕ} → lvl n → lvl m ?
   lower-P : ∀ {s : S} → P s → El (lower-S s)
   lower-P (A.ι x) = x
   lower-P (i₁ A.⊗ i₂) = (Inverse.from $ pair-law _ _) (lower-P i₁ , lower-P i₂)
-
-
-  lower-Pᵣ : ∀ {s : S} → Reshape s (ι (lower-S s))
-  lower-Pᵣ {A.ι x} = eq
-  lower-Pᵣ {s₁ A.⊗ s₂} = flatten 
 
   raise-P : ∀ {s : S} → El (lower-S s) → P s 
   raise-P {A.ι x} i = ι i
@@ -345,10 +357,79 @@ module PL (M : Mon) where
   raise-Ar : ∀ {s : S} → ∀ {X : Set} → (El (lower-S s) → X) → Ar s X
   raise-Ar xs = xs ∘ lower-P
 
+module PLR (M : Mon) where
+  open Mon M
+  open A M
+  open PL M
+
+  data ℓ : Set where
+    uu ss : ℓ
+
+  Sℓ : ℓ -> Set
+  Sℓ uu = U
+  Sℓ ss = S
+
+  Pℓ : ∀ {s : ℓ} → Sℓ s -> Set
+  Pℓ {s = uu} = El
+  Pℓ {s = ss} = P
+
+  infixl 5 _∙_
+  data Reshapeℓ : {a b : ℓ} → Sℓ a → Sℓ b → Set₁ where
+    resh-S : ∀ {s p : S} → (r : Reshape s p) → Reshapeℓ {ss} {ss} s p
+    --resh-U : ∀ {s   : U} (r : Σ (U → U) (λ f → ∀ {u : U} → El u → El (f u) )) → Reshapeℓ {uu} {uu} (r .proj₁ s) s
+    -- Don't like the below solution - as it doesn't allow the parsing of a Reshapeℓ
+    resh-U : ∀ {s p : U} → {rshp : RShp U El} → (r : RShp.Reshape rshp s p) → Reshapeℓ {uu} {uu} s p
+    raise  : ∀ {s   : S} → Reshapeℓ {ss} {uu} s (lower-S s)
+    lower  : ∀ {s   : S} → Reshapeℓ {uu} {ss} (lower-S s) s
+    eq     : ∀ {a : ℓ}  {su  : Sℓ a} → Reshapeℓ {a} {a} su su
+    _∙_    : ∀ {s p q : ℓ} 
+           → ∀ {su : Sℓ s} 
+           → ∀ {pu : Sℓ p}
+           → ∀ {qu : Sℓ q} 
+           → Reshapeℓ {s} {p} su pu → Reshapeℓ {q} {s} qu su → Reshapeℓ {q} {p} qu pu 
+    _⊕_    : ∀ {su₁ su₂ pu₁ pu₂ : Sℓ ss} 
+           → Reshapeℓ su₁ pu₁ → Reshapeℓ su₂ pu₂
+           → Reshapeℓ (su₁ ⊗ su₂) (pu₁ ⊗ pu₂)
+
+  _⟨_⟩ₗ : ∀ {a b : ℓ} {s : Sℓ a} {p : Sℓ b} → Pℓ {b} p → Reshapeℓ {a} {b} s p → Pℓ {a} s
+  i ⟨ eq       ⟩ₗ = i
+  i ⟨ r₁ ∙ r₂  ⟩ₗ = (i ⟨ r₁ ⟩ₗ) ⟨ r₂ ⟩ₗ
+  i ⟨ resh-S r ⟩ₗ = i ⟨ r ⟩ 
+  i ⟨ resh-U {rshp = rshp} r ⟩ₗ = RShp._⟨_⟩ rshp i r
+  i ⟨ raise    ⟩ₗ = raise-P i
+  i ⟨ lower    ⟩ₗ = lower-P i
+
+  revℓ : ∀ {a b : ℓ} → ∀ {s : Sℓ a} {p : Sℓ b} → Reshapeℓ {a} {b} s p → Reshapeℓ {b} {a} p s
+  revℓ {_} {_} {s} {.s} eq = eq
+  revℓ {_} {_} {s} {p} (r₁ ∙ r₂) = (revℓ r₂) ∙ (revℓ r₁)
+  revℓ {_} {_} {.(_)} {.(_)} (resh-S r) = resh-S (rev r)
+  revℓ {_} {_} {s} {.((lower-S s))} raise = lower
+  revℓ {_} {_} {.((lower-S s))} {s} lower = raise
+
+  rev-eq′ℓ : ∀ {a b : ℓ} 
+           → ∀ {s : Sℓ a} 
+           → ∀ {q : Sℓ b} 
+           → ∀ (r : Reshapeℓ {a} {b} s q)
+           → ∀ (i : Pℓ {a} s) 
+           → i ⟨ revℓ {a} {b} {s} {q}  r ∙ r ⟩ₗ ≡ i
+  rev-eq′ℓ {_} {_} {s} {.s} eq i = refl
+  rev-eq′ℓ {_} {_} {s} {q} (r ∙ r₁) i rewrite 
+      rev-eq′ℓ r (i ⟨ revℓ r₁ ⟩ₗ) 
+    | rev-eq′ℓ r₁ i 
+    = refl
+  rev-eq′ℓ {_} {_} {(s)} {.(_)} (resh-S r) i rewrite rev-eq′ r i = refl
+  rev-eq′ℓ {_} {_} {(s)} {.((lower-S s))} raise i = inv₁ i
+  rev-eq′ℓ {_} {_} {.((lower-S s))} {(s)} lower i = inv₂ {s} i
+
 module F (M : Mon)  where
   open Mon M using (U; El)
   open A M
   open PL M
+  
+  private
+    variable
+      s p : S
+      n : U
 
   -- This is the form I really WANT F to take...
   vfft : (dft : ∀ {n : U} → (El n → ℂ) → (El n → ℂ))
@@ -450,6 +531,11 @@ module F (M : Mon)  where
     -- XXX: probably ok, but we need more powerful reshape
     ι : Reshape (ι n) (s ⊗ V) → VEC V (ι n)
     _⊗_ : VEC V s → VEC V p → VEC V (s ⊗ p)
+
+  private
+    variable
+      V : S
+      X Y Z : Set
 
   pull-V : VEC V s → S
   pull-V {_} {.(ι _)} (ι {s = s} _) = s
@@ -1009,11 +1095,17 @@ module F (M : Mon)  where
     }) (i₁ ⊗ i₂)
 
 module V (M : Mon) where
+  open Mon M
+  open A M
+
   private
     S₁ = A.S M
     P₁ = A.P M
-  open Mon M
-  open A M
+
+    variable
+      n m : U
+      s : S
+      X : Set
 
   flat-P : P (ι n ⊗ ι m) → El (n ● m)
   flat-P (ι x₁ ⊗ ι x₂) = ((Inverse.from $ pair-law _ _) (x₁ , x₂))
@@ -1651,8 +1743,10 @@ module X (M : Mon) (Pred : Mon.U M → Set) where
   open A M
   open PL M
   
-  variable 
-    u : U
+  private
+    variable 
+      u : U
+      s p : S
   
   data All : S → Set where
     ι   : Pred u → All (ι u)
@@ -1778,6 +1872,9 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
                       ; inv₁ to P₂-inv₁
                       ; inv₂ to P₂-inv₂
                       )
+  open PLR M₂
+            renaming ( _∙_ to _∙ₗ_
+                     )
 
   --raise-lower-P₂ : 
   --                ∀ {s} 
@@ -1942,8 +2039,8 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
   PF {A.ι _} (A.ι k) = A.ι (A.ι (lower-P₁ k)) 
   PF {_ A.⊗ _} (i A.⊗ j) = PF i A.⊗ PF j
 
-  PFᵣ : ∀ {s : S₂} → Reshape₂ s (SF s .proj₁)
-  PFᵣ {A.ι x} = ?
+  PFᵣ : ∀ {s : S₂} → Reshapeℓ {ss} {ss} s (SF s .proj₁)
+  PFᵣ {A.ι x} = lower ∙ₗ (resh-U {_} {_} {A.reshape-is-RShp M₁} flatten₁) ∙ₗ raise 
   PFᵣ {s A.⊗ s₁} = ?
 
   PF′ : ∀ {s : S₂} → P₂ (SF s .proj₁) → P₂ s
@@ -1956,9 +2053,9 @@ module L (M₁ : Mon) (CM₁ : Change-Major M₁) (rel : dft-fft M₁ CM₁) (CM
   ArF′ : ∀ {s : S₂} → Ar₂ (SF s .proj₁) ℂ → Ar₂ s ℂ
   ArF′ xs i = xs (PF i)
 
-  RF : ∀ {s : S₂} → Reshape₂ (transp₂ s) (transp₂ (SF s .proj₁))
-  RF {A.ι x} = ?
-  RF {s₁ A.⊗ s₂} = ?
+  PFᵗᵣ : ∀ {s : S₂} → Reshape₂ (transp₂ s) (transp₂ (SF s .proj₁))
+  PFᵗᵣ {A.ι x} = ?
+  PFᵗᵣ {s₁ A.⊗ s₂} = ?
 
   PFᵗ : ∀ {s : S₂} → P₂ (transp₂ s) → P₂ (transp₂ (SF s .proj₁))
   PFᵗ {A.ι x} (A.ι i) = PF (A.ι i)
