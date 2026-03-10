@@ -1,9 +1,9 @@
-module Matrix.NonZero where
+module Matrix.Simple.NonZero where
 open import Data.Fin using (Fin)
 open import Data.Nat.Base using (ℕ; NonZero; nonZero; suc; zero)
 open import Data.Nat.Properties using (m*n≢0; m*n≢0⇒n≢0; m*n≢0⇒m≢0)
-open import Matrix
-open import Matrix.Reshape using (recursive-transpose)
+open import Matrix.Simple.Base
+open import Matrix.Simple.Reshape using (recursive-transpose)
 open import Relation.Nullary
 open import Data.Empty
 open import Function.Base using (_$_)

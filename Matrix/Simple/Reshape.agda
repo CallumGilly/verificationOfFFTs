@@ -1,4 +1,4 @@
-module Matrix.Reshape where
+module Matrix.Simple.Reshape where
 
 open import Data.Nat using (ℕ; _*_; NonZero)
 open import Data.Nat.Properties using (*-comm; *-assoc)
@@ -6,7 +6,7 @@ open import Data.Fin as F using (Fin; combine; remQuot; quotRem; toℕ; cast)
 open import Data.Fin.Properties using (remQuot-combine; combine-remQuot; cast-is-id; cast-trans)
 
 open import Data.Product using (_,_; proj₁; proj₂)
-open import Matrix using (Shape; Position; Ar; ι; _⊗_; length)
+open import Matrix.Simple.Base using (Shape; Position; Ar; ι; _⊗_; length)
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; trans; subst; sym)

@@ -1,7 +1,7 @@
-module Matrix.Show where
+module Matrix.Simple.Show where
 
-open import Matrix using (Ar; Shape; Position; ι; _⊗_; foldr; nest; map; head₁; tail₁)
-open import Matrix.Reshape
+open import Matrix.Simple.Base using (Ar; Shape; Position; ι; _⊗_; foldr; nest; map; head₁; tail₁)
+open import Matrix.Simple.Reshape
 open import Agda.Builtin.String using (String; primStringAppend; primShowString)
 open import Data.Nat using (ℕ) 
 open import Data.Nat.Show renaming (show to showNat)

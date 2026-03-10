@@ -1,4 +1,4 @@
-module Matrix where
+module Matrix.Simple.Base where
 
 open import Data.Nat using (ℕ; suc; zero; NonZero; _+_; _*_)
 open import Data.Fin as F using (Fin; join) renaming (zero to fzero; suc to fsuc)

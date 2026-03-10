@@ -8,7 +8,7 @@ open Eq using (_≡_; refl; cong; sym; cong₂; subst; cong-app; trans)
 open Eq.≡-Reasoning
 
 
-module Matrix.Sum {A : Set} (_⋆_ : Op₂ A) (ε : A) (isCommutativeMonoid : IsCommutativeMonoid {A = A} _≡_ _⋆_ ε) where
+module Matrix.Simple.Sum {A : Set} (_⋆_ : Op₂ A) (ε : A) (isCommutativeMonoid : IsCommutativeMonoid {A = A} _≡_ _⋆_ ε) where
 
   open import Data.Product.Base using (proj₁; proj₂)
 
@@ -16,11 +16,11 @@ module Matrix.Sum {A : Set} (_⋆_ : Op₂ A) (ε : A) (isCommutativeMonoid : Is
   open import Data.Nat.Properties using (*-zeroʳ)
   open import Data.Fin.Base using () renaming (zero to fzero; suc to fsuc)
 
-  open import Matrix using (Ar; Position; ι; _⊗_; head₁; tail₁; splitArₗ; splitArᵣ)
-  open import Matrix.Equality using (_≅_; reduce-≅)
-  open import Matrix.Properties using (tail₁-const)
+  open import Matrix.Simple.Base using (Ar; Position; ι; _⊗_; head₁; tail₁; splitArₗ; splitArᵣ)
+  open import Matrix.Simple.Equality using (_≅_; reduce-≅)
+  open import Matrix.Simple.Properties using (tail₁-const)
 
-  open import Matrix.Reshape using (reshape; reindex; |s|≡|sᵗ|; _⟨_⟩; split; _∙_; eq)
+  open import Matrix.Simple.Reshape using (reshape; reindex; |s|≡|sᵗ|; _⟨_⟩; split; _∙_; eq)
 
   open import Function.Base using (_$_; _∘_)
 

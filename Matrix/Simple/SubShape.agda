@@ -1,7 +1,7 @@
-module Matrix.SubShape where
+module Matrix.Simple.SubShape where
 
-open import Matrix
-open import Matrix.Reshape
+open import Matrix.Simple.Base
+open import Matrix.Simple.Reshape
 
 open import Data.Maybe
 

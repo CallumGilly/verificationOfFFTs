@@ -1,6 +1,6 @@
-module Matrix.Equality where
+module Matrix.Simple.Equality where
 
-open import Matrix using (Shape; Position; Ar; ι; tail₁)
+open import Matrix.Simple.Base using (Shape; Position; Ar; ι; tail₁)
 open import Data.Nat.Base using (ℕ; zero; suc)
 open import Data.Fin.Base using (Fin) renaming (zero to fzero; suc to fsuc)
 
