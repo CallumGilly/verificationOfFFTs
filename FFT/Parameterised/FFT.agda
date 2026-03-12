@@ -1,6 +1,6 @@
 {-# OPTIONS --allow-unsolved-metas #-}
 open import Complex using (Cplx)
-open import Matrix.Parameterised.Mon
+open import Matrix.Mon
 
 
 module FFT.Parameterised.FFT (cplx : Cplx) (M : Mon) where
@@ -44,60 +44,45 @@ private
     s p : S
     n : U
 
--- This is the form I really WANT F to take, as opposed to (Ar (ι n) ℂ)
-vfft : (dft : ∀ {n : U} → (El n → ℂ) → (El n → ℂ))
-     → (twid : ∀ {s p} → P s → P p → ℂ)
-     → Ar s ℂ → Ar (transp s) ℂ
-vfft {ι x} dft twid = raise-Ar ∘ dft ∘ lower-Ar
-vfft {s ⊗ p} dft twid a =
+fft : (dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ)
+      (twid : ∀ {s p} → P s → P p → ℂ)
+    → Ar s ℂ → Ar (transp s) ℂ
+fft {s = ι n} dft twid = dft
+fft {s = s ⊗ p} dft twid a =
   let 
-    b = map (vfft dft twid) (nest (reshape swap a))
+    b = map (fft dft twid) (nest (reshape swap a))
     c = unnest (λ i → zipWith _*ᶜ_ (twid i) (b i)) 
-    d = map (vfft dft twid) (nest (reshape swap c))
+    d = map (fft dft twid) (nest (reshape swap c))
   in reshape swap (unnest d)
 
 
-vpost-ufft : (dft : ∀ {n : U} → (El n → ℂ) → (El n → ℂ))
-       (twid : ∀ {s p} → P s → P p → ℂ)
-     → Ar s ℂ → Ar s ℂ
-vpost-ufft {ι n} dft twid = raise-Ar ∘ dft ∘ lower-Ar
-vpost-ufft {s ⊗ p} dft twid a =
-  let 
-    c = unnest $ imap 
-        (λ i → zipWith _*ᶜ_ (twid {p} {s} i) ∘ vpost-ufft {s} dft twid) 
-      (nest (reshape swap a))
-    d = map (vpost-ufft {p} dft twid) (nest (reshape swap c))
-  in (unnest d)
+fft-cong : {dft : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ}
+            {twid : ∀ {s p} → P s → P p → ℂ}
+          → (dft-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
+                      → ∀ i → dft {n} a i ≡ dft b i)
+          → ∀ {s} a b → (∀ i → a i ≡ b i)
+          → ∀ i → fft {s} dft twid a i ≡ fft dft twid b i
+fft-cong dft-cong {ι x} a b a≡b i = dft-cong a b a≡b i
+fft-cong dft-cong {s ⊗ p} a b a≡b (i ⊗ j) = fft-cong 
+      dft-cong _ _
+      (λ k → cong (_ *ᶜ_) 
+                  (fft-cong 
+                      dft-cong _ _ 
+                      (λ l → a≡b (l ⊗ k))
+                      j))
+      i
 
-vpre-ufft : (dft : ∀ {n : U} → (El n → ℂ) → (El n → ℂ))
-       (twid : ∀ {s p} → P s → P p → ℂ)
-     → Ar s ℂ → Ar s ℂ
-vpre-ufft {ι n} dft twid = raise-Ar ∘ dft ∘ lower-Ar
-vpre-ufft {s ⊗ p} dft twid a =
-  let 
-    c = unnest $ imap 
-        (λ i → zipWith _*ᶜ_ (twid {s} {p} i) ∘ vpre-ufft {p} dft twid) 
-      (nest a)
-    d = map (vpre-ufft {s} dft twid) (nest (reshape swap c))
-  in reshape swap (unnest d)
--- Parametrised ffts
-
-vfft-dft-cong : ∀ (dft₁ dft₂ : ∀ {n : U} → (El n → ℂ) → (El n → ℂ))
+fft-dft-cong : ∀ (dft₁ dft₂ : ∀ {n} → Ar (ι n) ℂ → Ar (ι n) ℂ)
              → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
+             → (dft₂-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
+                          → ∀ i → dft₂ {n} a i ≡ dft₂ b i)
              → ∀ {s : S}
              → ∀ (xs : Ar s ℂ)
-             → (prf : ∀ {n} → ∀ (ys : (El n → ℂ)) → ∀ j → dft₁ ys j ≡ dft₂ ys j)
+             → (prf : ∀ {n} → ∀ (ys : Ar (ι n) ℂ) → ∀ j → dft₁ ys j ≡ dft₂ ys j)
              → ∀ i
-             → vfft dft₁ twid xs i ≡ vfft dft₂ twid xs i
-vfft-dft-cong = ?
-             
-vpost-ufft≡vfft :   ∀ {dft : ∀ {n : U} → (El n → ℂ) → (El n → ℂ)}
-           → ∀ {twid : ∀ {s p} → P s → P p → ℂ}
-           → (dft-cong : ∀ {n} a b → (∀ i → a i ≡ b i) 
-                       → ∀ i → dft {n} a i ≡ dft b i)
-           → ∀ (xs : Ar s ℂ)
-           → ∀ (i : P s) 
-           →  vpost-ufft dft (λ i j → twid i (j ⟨ transpᵣ ⟩)) xs i
-              ≡ 
-              reshape transpᵣ (vfft  dft twid xs) i --((_⟨_⟩ M i (transpᵣ M)))
-vpost-ufft≡vfft = ?
+             → fft dft₁ twid xs i ≡ fft dft₂ twid xs i
+fft-dft-cong dft₁ dft₂ {twid} _ {ι x} xs prf = prf xs
+fft-dft-cong dft₁ dft₂ {twid} dft₂-cong {s₁ ⊗ s₂} xs prf (i₁ ⊗ i₂) =
+    fft-dft-cong _ _ dft₂-cong _ prf i₁
+  ⊡ fft-cong dft₂-cong _ _ (λ j → cong₂ _*ᶜ_ refl (fft-dft-cong _ _ dft₂-cong _ prf i₂)) i₁
+
