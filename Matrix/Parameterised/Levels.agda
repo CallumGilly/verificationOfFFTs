@@ -18,7 +18,7 @@ open import Data.Product hiding (swap; map; map₁; map₂; zipWith)
 open import Data.Product.Properties
 open import Data.Sum as Sum hiding (swap; map)
 
-open import Matrix.Parameterised.Mon
+open import Matrix.Mon
 
 private 
   infixl 4 _⊡_

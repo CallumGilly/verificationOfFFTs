@@ -9,49 +9,25 @@ module Matrix.SimpleParameterisedRelation where
   open import Algebra.Definitions
 
   open import Data.Unit
-  open import Data.Fin
+  open import Data.Fin hiding (_+_)
   open import Data.Nat as Nat
   open import Data.Nat.Properties
   open import Data.Product hiding (swap; map; map₁; map₂; zipWith)
 
-  open import Matrix.Parameterised.Mon
+  open import Matrix.Mon
   import Matrix.Simple.Base as M
   import Matrix.Simple.Equality as ME
   open import Matrix.Simple.NonZero
   import Data.Fin as Fin
+  open import Data.Fin.Properties
   open import Function.Bundles
   open Inverse
   open import Matrix.Parameterised.Base
-
-  inv₁ : {x : ⊤} → tt ≡ x
-  inv₁ {tt} = refl
-
-  inv₂ : {x : Fin 1} → Fin.zero ≡ x
-  inv₂ {zero} = refl
-
-  ℕ-Mon : Mon
-  ℕ-Mon = record {
-      U    = ℕ
-    ; El   = Fin ∘ suc
-    ; ε    = 0
-    --; _●_  = λ a b → (Nat.pred a) * (Nat.pred b)
-    --; _●_  = λ a b → ((a * b) ∸ a) ∸ b
-    ; _●_ = ?
-    ; unit-law  = record 
-                  { to        = λ _ → tt
-                  ; from      = λ _ → Fin.zero
-                  ; to-cong   = λ _ → refl
-                  ; from-cong = λ _ → refl
-                  ; inverse   = (λ _ → inv₁) , (λ _ → inv₂)
-                  }
-    ; pair-law  = λ{zero b → ?; (suc n) m → ?} --λ a b → record 
-                  --{ to        = λ c → ?
-                  --; from      = ?
-                  --; to-cong   = ?
-                  --; from-cong = ?
-                  --; inverse   = ?
-                  -- }
-    }
+  open import Data.Nat.Solver
+  open +-*-Solver
+  open import Data.Sum.Base
+  
+  open import Matrix.NatMon
 
   S₁ = S ℕ-Mon
   P₁ = P ℕ-Mon

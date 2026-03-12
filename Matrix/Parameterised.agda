@@ -1,5 +1,5 @@
 {-# OPTIONS --allow-unsolved-metas #-}
-open import Matrix.Parameterised.Mon
+open import Matrix.Mon
               
 module Matrix.Parameterised (M : Mon) where
   open import Matrix.Parameterised.Base M public

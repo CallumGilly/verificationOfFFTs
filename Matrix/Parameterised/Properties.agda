@@ -1,4 +1,4 @@
-open import Matrix.Parameterised.Mon
+open import Matrix.Mon
 
 module Matrix.Parameterised.Properties (M : Mon) where
 
