@@ -14,14 +14,10 @@ open import Data.Nat.Properties
 open import Data.Product hiding (swap; map; map₁; map₂; zipWith)
 
 open import Matrix.Mon
-import Matrix.Simple.Base as M
-import Matrix.Simple.Equality as ME
-open import Matrix.Simple.NonZero
 import Data.Fin as Fin
 open import Data.Fin.Properties
 open import Function.Bundles
 open Inverse
-open import Matrix.Parameterised.Base
 open import Data.Nat.Solver
 open +-*-Solver
 open import Data.Sum.Base
@@ -32,37 +28,38 @@ private
   _⊡_ = trans
 
 opaque
-  lemma : ∀ {a b : ℕ} → Nat.suc (a * b + a + b) ≡ suc (b + a * suc b)
-  lemma {a} {b} = cong suc (solve 2 (λ :a :b → :a :* :b :+ :a :+ :b := :b :+ (:a :* (con 1 :+ :b))) refl a b)
+  ∘-suc-lemma₁ : ∀ {a b : ℕ} → Nat.suc (a * b + a + b) ≡ suc (b + a * suc b)
+  ∘-suc-lemma₁ {a} {b} = cong suc (solve 2 (λ :a :b → :a :* :b :+ :a :+ :b := :b :+ (:a :* (con 1 :+ :b))) refl a b)
+
+  ∘-suc-lemma₂ : ∀ (a b : ℕ) → b * a + b + a ≡ a * b + a + b
+  ∘-suc-lemma₂ = solve 2 (λ :a :b → :b :* :a :+ :b :+ :a := :a :* :b :+ :a :+ :b) refl
 
 pair-to : ∀ {a : ℕ} {b : ℕ} → Fin (suc (a * b + a + b)) → Fin (suc a) × Fin (suc b) 
 pair-to {a} {b} = 
         remQuot {suc a} (suc b) 
-      ∘ cast (lemma {a} {b})
+      ∘ cast (∘-suc-lemma₁ {a} {b})
 
 pair-from : ∀ {a : ℕ} {b : ℕ} → Fin (suc a) × Fin (suc b) → Fin (suc (a * b + a + b))
 pair-from {a} {b} (fst , snd) = 
-        cast (sym (lemma {a} {b}))
+        cast (sym (∘-suc-lemma₁ {a} {b}))
         (combine fst snd)
+
+
+    
+-- Taken from the master branch of std library - not in my version
+cast-involutive : ∀ {m n} → .(eq₁ : m ≡ n) .(eq₂ : n ≡ m) →
+                  ∀ k → cast eq₁ (cast eq₂ k) ≡ k
+cast-involutive eq₁ eq₂ k = trans (cast-trans eq₂ eq₁ k) (cast-is-id refl k)
 
 from-to : ∀ {a b : ℕ} {x : Fin (suc (a * b + a + b))} → pair-from {a} {b} (pair-to x) ≡ x
 from-to {a} {b} {x} = 
-    sym (subst-is-cast (sym $ lemma {a} {b}) ?)
-  ⊡
-    ?
---asd : ∀ {a} {b} {fst = x₁ : Fin (suc a)} {snd = x₂ : Fin (suc b)} →
---      quotRem (suc b) (cast _ (pair-from (x₁ , x₂))) .proj₂ ≡
---      quotRem (suc b) (combine x₁ x₂) .proj₂
-asdfafds : ∀ {a} {b} {fst = x₁ : Fin (suc a)}
-             {snd = x₂ : Fin (suc b)} →
-           proj₂ (quotRem (suc b) (cast _ (pair-from (x₁ , x₂)))) ≡
-           proj₂ (quotRem (suc b) (combine x₁ x₂))
-asdfafds {a} {b} {fst = x₁} {snd = x₂} = ?
+    cong (cast (sym (∘-suc-lemma₁ {a} {b}))) (combine-remQuot (suc b) (cast (∘-suc-lemma₁ {a} {b}) x))
+  ⊡ cast-involutive (sym (∘-suc-lemma₁ {a} {b})) (∘-suc-lemma₁ {a} {b}) x
+
 to-from : ∀ {a b : ℕ} {x : Fin (suc a) × Fin (suc b)} → pair-to {a} {b} (pair-from x) ≡ x
-to-from {a} {b} {x₁ , x₂} =
-      cong₂ _,_ (cong proj₂ (cong₂ _,_ refl ?)) (?)
-    ⊡ 
-      remQuot-combine x₁ x₂
+to-from {a} {b} {x₁ , x₂} rewrite 
+    cast-involutive (∘-suc-lemma₁ {a} {b}) (sym (∘-suc-lemma₁ {a} {b})) (combine x₁ x₂) 
+  = remQuot-combine x₁ x₂
 
 ℕ-Mon : Mon
 ℕ-Mon = record {
@@ -78,11 +75,42 @@ to-from {a} {b} {x₁ , x₂} =
                 ; from      = pair-from
                 ; to-cong   = λ{refl → refl}
                 ; from-cong = λ{refl → refl}
-                ; inverse   = ? , λ{refl → ?}
+                ; inverse   = (λ{refl → to-from}) , λ{refl → from-to}
                 }
-  ; comm = λ {u₁} {u₂} → solve 2 (λ :a :b → :a :* :b :+ :a :+ :b := :b :* :a :+ :b :+ :a) refl u₁ u₂
+  ; comm = λ {u₁} {u₂} → ∘-suc-lemma₂ u₂ u₁
   }
 
+{-
 open import Matrix.Leveled.Change-Major ℕ-Mon
+open import Matrix.Leveled.Base ℕ-Mon
+open import Matrix.Leveled.Reshape ℕ-Mon
+
+--Horrid:
+change-majorᵣ : ∀ {l : L} → {s : S l} → Reshape (transp s) s
+change-majorᵣ {.zz} {ν x} = eq
+change-majorᵣ {.(ss _)} {ι s} = eq
+change-majorᵣ {.(ss _)} {s₁ ⊗ s₂} = (
+    (rev u-flattenᵣ) 
+  ∙ ((subst 
+        (λ t → Reshape (ι (ν (u-flatten s₂ * u-flatten s₁ + u-flatten s₂ + u-flatten s₁))) t) 
+        (cong ι (cong ν (∘-suc-lemma₂ (u-flatten s₁) (u-flatten s₂))))
+        eq
+     ) 
+  ∙ u-flattenᵣ)) 
+  ∙ (change-majorᵣ ⊕ change-majorᵣ)
+
+private
+  variable
+    X : Set
+    l : L
+
+--Goal Type : Reshape
+--            (ι (ν (u-flatten s₂ * u-flatten s₁ + u-flatten s₂ + u-flatten s₁)))
+--            (ι (ν (u-flatten s₁ * u-flatten s₂ + u-flatten s₁ + u-flatten s₂)))
 Leveled-CM : CM
-Leveled-CM = ?
+Leveled-CM = record 
+  { change-majorᵣ = change-majorᵣ
+  ; preserves-flat = ?
+  ; helper = ?
+  }
+-}

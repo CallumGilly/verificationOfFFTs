@@ -3,7 +3,7 @@ CompileGenerator: $(shell find . -name '*.agda')
 	agda --compile CGenerator.agda	
 
 CompileGHC: $(shell find . -name '*.agda')
-	agda --compile Implementations/FFT.agda
+	agda --compile Implementations/FFT.agda --compile-dir=bin
 
 GenerateCCode: CompileGenerator
 	./CGenerator && clang-format -i generated/*

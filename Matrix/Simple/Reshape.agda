@@ -206,3 +206,29 @@ reindex-reindex refl i = refl
 flatten-reindex : Reshape s (ι (length (recursive-transpose s)))
 flatten-reindex {s} = reindex (|s|≡|sᵗ| {s}) ∙ ♭
 
+
+{- 
+Can I prove that CMᵗ ∙ recursive-transposeᵣ ≡ ♯ ∙ reindex (|s|≡|sᵗ| {s}) ∙ ♭ ∙ recursive-transposeᵣ
+-}
+
+
+open import Data.Nat.Properties
+open import Data.Nat.Base
+
+
+CM : ∀ {s p : Shape} → Reshape (s ⊗ p) (p ⊗ s)
+CM {s} {p} = ♯ ∙ (reindex (*-comm (length s) (length p))) ∙ ♭
+
+CMᵗ : ∀ {s : Shape} → Reshape s (recursive-transpose s)
+CMᵗ {ι x} = eq
+CMᵗ {s ⊗ s₁} = CMᵗ ⊕ CMᵗ ∙ CM
+
+{-
+private
+  thm : ∀ {s : Shape} → ∀ (i : Position (recursive-transpose s)) → i ⟨ CMᵗ ⟩ ≡ i ⟨ ♯ ∙ reindex (|s|≡|sᵗ| {s}) ∙ ♭ ⟩
+  thm {ι x} i = refl
+  thm {s₁ ⊗ s₂} (i₁ ⊗ i₂) rewrite thm i₁ | thm i₂ = ? --cong (_⟨ ♭ ⊕ ♭ ⟩) ?
+-}
+
+
+

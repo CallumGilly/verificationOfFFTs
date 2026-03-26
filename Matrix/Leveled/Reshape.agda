@@ -21,15 +21,16 @@ module Matrix.Leveled.Reshape (M : Mon) where
       u : U
       X : Set
 
+  infixl 5 _∙_
   data Reshape : {l r : L} → S l → S r → Set where
     eq     : ∀ {s : S l} → Reshape s s 
     _∙_    : ∀ {s : S l}{p : S r}{q : S w} → Reshape p q → Reshape s p → Reshape s q
-    _⊕_    : ∀ {s p : S l}{q t : S r} → Reshape s q → Reshape p t → Reshape (s ⊗ p) (q ⊗ t)
+    _⊕_    : ∀ {s p : S (ss l)}{q t : S (ss r)} → Reshape s q → Reshape p t → Reshape (s ⊗ p) (q ⊗ t)
     up     : ∀ {s : S l}{p : S r} → Reshape s p → Reshape s (ι p)
     down   : ∀ {s : S l}{p : S r} → Reshape s p → Reshape (ι s) p
-    flat   : ∀ {m n} → Reshape (ν m ⊗ ν n) (ν (m ● n))
-    unflat : ∀ {m n} → Reshape (ν (m ● n)) (ν m ⊗ ν n)
-    swap   : ∀ {s p : S l} → Reshape (s ⊗ p) (p ⊗ s)
+    flat   : ∀ {m n} → Reshape (ι (ν m) ⊗ ι (ν n)) (ν (m ● n))
+    unflat : ∀ {m n} → Reshape (ν (m ● n)) (ι (ν m) ⊗ ι (ν n))
+    swap   : ∀ {s p : S (ss l)} → Reshape (s ⊗ p) (p ⊗ s)
     
   _⟨_⟩ : {s : S l} {p : S r} → P s → Reshape p s → P p
   i ⟨ eq ⟩ = i
@@ -37,8 +38,8 @@ module Matrix.Leveled.Reshape (M : Mon) where
   (i₁ ⊗ i₂) ⟨ r₁ ⊕ r₂ ⟩ = (i₁ ⟨ r₁ ⟩) ⊗ (i₂ ⟨ r₂ ⟩)
   ι i ⟨ up r ⟩ = i ⟨ r ⟩
   i ⟨ down r ⟩ = ι (i ⟨ r ⟩)
-  ν x ⟨ flat ⟩ = let em , en = (Inverse.to $ pair-law _ _) x in (ν em ⊗ ν en)
-  (ν x₁ ⊗ ν x₂) ⟨ unflat ⟩ = ν ((Inverse.from $ pair-law _ _) (x₁ , x₂))
+  ν x ⟨ flat ⟩ = let em , en = (Inverse.to $ pair-law _ _) x in (ι (ν em) ⊗ ι (ν en))
+  (ι (ν x₁) ⊗ ι (ν x₂)) ⟨ unflat ⟩ = ν ((Inverse.from $ pair-law _ _) (x₁ , x₂)) 
   (i₁ ⊗ i₂) ⟨ swap ⟩ = i₂ ⊗ i₁
 
   reshape : {s : S l}{p : S r} → Reshape s p → Ar s X → Ar p X
@@ -63,9 +64,9 @@ module Matrix.Leveled.Reshape (M : Mon) where
   rev-eq′ (r₁ ⊕ r₂) (i₁ ⊗ i₂) = cong₂ _⊗_ (rev-eq′ r₁ i₁) (rev-eq′ r₂ i₂)
   rev-eq′ (up r) i = rev-eq′ r i
   rev-eq′ (down r) (ι i) = cong ι (rev-eq′ r i)
-  rev-eq′ flat (ν x₁ ⊗ ν x₂) = let 
+  rev-eq′ flat (ι (ν x₁) ⊗ ι (ν x₂)) = let 
       inv = (Inverse.inverse (pair-law _ _) .proj₁) refl 
-    in cong₂ _⊗_ (cong ν (,-injectiveˡ inv)) (cong ν (,-injectiveʳ inv))
+    in cong₂ _⊗_ (cong ι (cong ν (,-injectiveˡ inv))) (cong ι (cong ν (,-injectiveʳ inv)))
   rev-eq′ unflat (ν x) = cong ν (Inverse.inverse (pair-law _ _) .proj₂ refl)
   rev-eq′ swap (i₁ ⊗ i₂) = refl
 
@@ -88,6 +89,19 @@ module Matrix.Leveled.Reshape (M : Mon) where
          → i ⟨ r ∙ rev r ⟩ ≡ i  
   rev-eq r i rewrite sym (rev-rev r i) = rev-eq′ (rev r) i
 
+  tmp : ∀ {l o : L} {s : S l} {p : S o} 
+      → ∀ (xs ys : Ar s X) 
+      → ∀ (r : Reshape {l} {o} s p)
+      → ∀ (prf : ∀ (i : P s) → xs i ≡ ys i)
+      → ∀ (i : P p) → xs (i ⟨ r ⟩) ≡ ys (i ⟨ r ⟩)
+  tmp xs ys r prf i = prf (i ⟨ r ⟩)
+  --tmp xs ys eq prf i = prf i
+  --tmp xs ys (_∙_ r₁ r₂) prf i = tmp xs ys r₂ prf (i ⟨ r₁ ⟩) 
+  --tmp xs ys (r₁ ⊕ r₂) prf (i₁ ⊗ i₂) = prf ((i₁ ⟨ r₁ ⟩) ⊗ (i₂ ⟨ r₂ ⟩))
+  --tmp xs ys (up r) prf i = prf (i ⟨ up r ⟩)
+  --tmp xs ys (down r) prf i = ?
+  --tmp xs ys swap prf i = ?
+
   transp : S l → S l
   transp (ν x) = ν x
   transp (ι s) = ι s
@@ -98,11 +112,11 @@ module Matrix.Leveled.Reshape (M : Mon) where
   transpᵣ {_} {ι s} = eq
   transpᵣ {_} {s₁ ⊗ s₂} = (transpᵣ ⊕ transpᵣ) ∙ swap
 
-  flatten : S (ss l) → S l
+  flatten : S (ss (ss l)) → S (ss l)
   flatten (ι s) = s
   flatten (s ⊗ p) = flatten s ⊗ flatten p
   
-  flattenᵣ : ∀ {s : S (ss l)} → Reshape s (flatten s)
+  flattenᵣ : ∀ {s : S (ss (ss l))} → Reshape s (flatten s)
   flattenᵣ {l} {ι s} = down eq
   flattenᵣ {l} {s ⊗ s₁} = flattenᵣ ⊕ flattenᵣ
 
@@ -111,11 +125,77 @@ module Matrix.Leveled.Reshape (M : Mon) where
   u-flatten (ι s) = u-flatten s
   u-flatten (s ⊗ p) = u-flatten s ● u-flatten p
   
+  u-flattenᵣ : ∀ {s : S (ss l)} → Reshape s (ι (ν (u-flatten s)))
+  u-flattenᵣ {_} {s ⊗ s₁} = up flat ∙ (u-flattenᵣ ⊕ u-flattenᵣ)
+  u-flattenᵣ {zz} {ι (ν x)} = eq
+  u-flattenᵣ {ss l} {ι s} = down u-flattenᵣ
+
+  ν-flattenᵣ : ∀ {s : S l} → Reshape s (ν (u-flatten s))
+  ν-flattenᵣ {.(ss _)} {s ⊗ s₁} = flat ∙ (up ν-flattenᵣ ⊕ up ν-flattenᵣ)
+  ν-flattenᵣ {.zz} {ν x} = eq
+  ν-flattenᵣ {.(ss _)} {ι s} = down ν-flattenᵣ
+
+
+
+
+
+
+
+
+
+
+
+  ⊗-remQuot : ∀ {s : S (ss l)} (p : S (ss l)) → P (s ⊗ p) → P s × P p
+  ⊗-combine : ∀ {s p : S (ss l)} → P s → P p → P (s ⊗ p)
+  
+  ⊗-remQuot-combine : ∀ {s p : S (ss l)}
+                     → ∀ (i : P s)
+                     → ∀ (j : P p)
+                     → ⊗-remQuot p (⊗-combine i j) ≡ (i , j)
+
+  ⊗-combine-remQuot : ∀ {s : S (ss l)}
+                     → ∀ (p : S (ss l))
+                     → ∀ (i : P (s ⊗ p))
+                     → uncurry ⊗-combine (⊗-remQuot p i) ≡ i
+
+  ⊗-remQuot _ (i₁ ⊗ i₂) = i₁ , i₂
+  ⊗-combine i₁ i₂ = i₁ ⊗ i₂
+  ⊗-remQuot-combine i₁ i₂ = refl
+  ⊗-combine-remQuot _ (i₁ ⊗ i₂) = refl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  --u₂ : ∀ {s : S (ss l)} → Reshape s (ν (u-flatten s))
+  --u₂ {_} {s ⊗ s₁} = ?
+  --u₂ {zz} {ι (ν x)} = down eq
+  --u₂ {ss l} {ι s} = down u₂
+
+  {-
   u-flattenᵣ : ∀ {s : S l} → Reshape s (ν (u-flatten s))
   u-flattenᵣ {_} {ν _} = eq
   u-flattenᵣ {_} {ι _} = down u-flattenᵣ
-  u-flattenᵣ {_} {_ ⊗ _} = flat ∙ (u-flattenᵣ ⊕ u-flattenᵣ)
-
+  u-flattenᵣ {_} {_ ⊗ _} = flat ∙ (? ⊕ ?) --flat ∙ (u-flattenᵣ ⊕ u-flattenᵣ)
+  -}
+  
   {-
   open import Matrix.Parameterised.Base M
   open import Matrix.Parameterised.Reshape M

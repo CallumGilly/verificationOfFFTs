@@ -20,7 +20,7 @@ module FFT.Simple.Base (cplx : Cplx) where
 
   open import Matrix.Simple.Base using (Ar; Shape; Position; ι; _⊗_; zipWith; mapLeft; length; nest; unnest; map)
   open import Matrix.Simple.Sum _+_ 0ℂ +-isCommutativeMonoid using (sum)
-  open import Matrix.Simple.Reshape using (recursive-transpose; reshape; swap; _⟨_⟩; ♯; recursive-transposeᵣ; _∙_; reindex; ♭)
+  open import Matrix.Simple.Reshape 
   open import Matrix.Simple.NonZero using (NonZeroₛ; ι; _⊗_; nonZeroₛ-s⇒nonZero-s; nonZeroDec; nonZeroₛ-s⇒nonZeroₛ-sᵗ)
 
   open import Function
@@ -84,3 +84,12 @@ module FFT.Simple.Base (cplx : Cplx) where
           twiddleFactorsApplied = zipWith _*_   innerDFTapplied twiddles
           outerDFTapplied       = mapLeft FFT (reshape swap twiddleFactorsApplied) 
       in  reshape swap outerDFTapplied
+
+  RFFT : ∀ {s : Shape} → Ar s ℂ → Ar s ℂ
+  RFFT {ι N} arr = DFT arr
+  RFFT {r₁ ⊗ r₂} arr = 
+      let 
+          innerDFTapplied       = mapLeft RFFT (reshape swap arr)   
+          twiddleFactorsApplied = zipWith _*_   innerDFTapplied twiddles
+          outerDFTapplied       = mapLeft RFFT (reshape swap twiddleFactorsApplied) 
+      in  reshape (CM ∙ swap) outerDFTapplied

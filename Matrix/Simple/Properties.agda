@@ -7,7 +7,7 @@ open import Data.Nat using (ℕ)
 open import Function.Base using (_∘_)
 
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; refl; cong₂)
+open Eq 
 
 private
   variable

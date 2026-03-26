@@ -1,5 +1,5 @@
 open import Matrix.Mon
-open import Complex
+open import ComplexNew
 
 module FFT.Leveled.UFFT (cplx : Cplx) (M : Mon) where
 

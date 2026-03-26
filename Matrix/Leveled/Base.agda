@@ -17,12 +17,12 @@ module Matrix.Leveled.Base (M : Mon) where
   data S : L → Set where
     ν   : U → S zz
     ι   : S l → (S (ss l))
-    _⊗_ : S l → S l → S l
+    _⊗_ : S (ss l) → S (ss l) → S (ss l)
 
   data P : S l → Set where
     ν   : El u → P (ν u) 
     ι   : ∀ {s : S l} → P s → P (ι s)
-    _⊗_ : ∀ {s p : S l} → P s → P p → P (s ⊗ p)
+    _⊗_ : ∀ {s p : S (ss l)} → P s → P p → P (s ⊗ p)
 
   Ar : S l → Set → Set
   Ar s X = P s → X
@@ -36,10 +36,10 @@ module Matrix.Leveled.Base (M : Mon) where
   zipWith : {s : S l} → (X → Y → Z) → Ar s X → Ar s Y → Ar s Z
   zipWith f xs ys i = f (xs i) (ys i)
 
-  nest : {s p : S l} → Ar (s ⊗ p) X → Ar s (Ar p X)
+  nest : {s p : S (ss l)} → Ar (s ⊗ p) X → Ar s (Ar p X)
   nest xs i j = xs (i ⊗ j)
 
-  unnest : {s p : S l} → Ar s (Ar p X) → Ar (s ⊗ p) X 
+  unnest : {s p : S (ss l)} → Ar s (Ar p X) → Ar (s ⊗ p) X 
   unnest xs (i ⊗ j) = xs i j
   
  

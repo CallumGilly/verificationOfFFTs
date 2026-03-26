@@ -53,12 +53,12 @@ if __name__ == "__main__":
 
         count += 1
 
-    print("CDFT_CFFT_Real_Diff: ", CDFT_CFFT_Real_Diff / count)
-    print("CDFT_CFFT_Imag_Diff: ", CDFT_CFFT_Imag_Diff / count)
-    print("CDFT_PFFT_Real_Diff: ", CDFT_PFFT_Real_Diff / count)
-    print("CDFT_PFFT_Imag_Diff: ", CDFT_PFFT_Imag_Diff / count)
-    print("CFFT_PFFT_Real_Diff: ", CFFT_PFFT_Real_Diff / count)
-    print("CFFT_PFFT_Imag_Diff: ", CFFT_PFFT_Imag_Diff / count)
+    print("GIVEN_DFT_&FFT_Real_Diff: ", CDFT_CFFT_Real_Diff / count)
+    print("GIVEN_DFT_&FFT_Imag_Diff: ", CDFT_CFFT_Imag_Diff / count)
+    print("GIVEN_DFT_PFFT_Real_Diff: ", CDFT_PFFT_Real_Diff / count)
+    print("GIVEN_DFT_PFFT_Imag_Diff: ", CDFT_PFFT_Imag_Diff / count)
+    print("GIVEN_FFT_PFFT_Real_Diff: ", CFFT_PFFT_Real_Diff / count)
+    print("GIVEN_FFT_PFFT_Imag_Diff: ", CFFT_PFFT_Imag_Diff / count)
 
 
 

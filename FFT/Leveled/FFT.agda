@@ -1,5 +1,5 @@
 open import Matrix.Mon
-open import Complex
+open import ComplexNew
 
 module FFT.Leveled.FFT (cplx : Cplx) (M : Mon) where
   open Mon M
@@ -31,6 +31,31 @@ module FFT.Leveled.FFT (cplx : Cplx) (M : Mon) where
       c = unnest (λ i → zipWith _*_ (twid i) (b i)) 
       d = map (fft dft twid) (nest (reshape swap c))
     in reshape swap (unnest d)
+
+  cmfft : (dft : {s : S l} → Ar s ℂ → Ar s ℂ)
+        → (twid : ∀ {s p : S (ss l)} → P s → P p → ℂ)
+        → (CM : ∀ {s p : S (ss l)} → Reshape (s ⊗ p) (p ⊗ s))
+        → {s : S (ss l)} → Ar s ℂ → Ar s ℂ
+  cmfft dft twid CM {ι s} a = reshape (up eq) (dft (reshape (down eq) a))
+  cmfft dft twid CM {s ⊗ p} a = 
+    let 
+      b = map (cmfft dft twid CM) (nest (reshape swap a))
+      c = unnest (λ i → zipWith _*_ (twid i) (b i)) 
+      d = map (cmfft dft twid CM) (nest (reshape swap c))
+    in reshape (CM ∙ swap) (unnest d)
+
+  postulate 
+    cmfft-cong : {dft : ∀ {s : S l} → Ar s ℂ → Ar s ℂ}
+                {twid : ∀ {s p : S (ss l)} → P s → P p → ℂ}
+              → (CM : ∀ {s p : S (ss l)} → Reshape (s ⊗ p) (p ⊗ s))
+              → (dft-cong : ∀ {s} a b → (∀ i → a i ≡ b i) 
+                          → ∀ i → dft {s} a i ≡ dft b i)
+              → ∀ {s : S (ss l)} (a b : Ar s ℂ) → (∀ i → a i ≡ b i)
+              → ∀ i → cmfft dft twid CM a i ≡ cmfft dft twid CM b i
+              {-
+  cmfft-cong {l} {dft} {twid} CM dft-cong {ι s} a b a≡b i = dft-cong (reshape (down eq) a) (reshape (down eq) b) (a≡b ∘ _⟨ down eq ⟩) (i ⟨ up eq ⟩)
+  cmfft-cong {l} {dft} {twid} CM dft-cong {s ⊗ p} a b a≡b (i ⊗ j) = ?
+  -}
   
   fft-cong : {dft : ∀ {s : S l} → Ar s ℂ → Ar s ℂ}
               {twid : ∀ {s p : S (ss l)} → P s → P p → ℂ}
