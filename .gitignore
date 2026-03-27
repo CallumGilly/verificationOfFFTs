@@ -6,6 +6,7 @@ MAlonzo/**
 /generated/*
 program
 CGenerator
+/bin/*
 
 ### LaTeX
 
