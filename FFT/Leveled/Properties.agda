@@ -26,6 +26,8 @@ open import FFT.Leveled.UFFT cplx ℕ-Mon
 
 open import Function 
 open import Data.Product hiding (swap; map)
+open import Data.Product.Properties
+
 
 private 
   infixl 4 _⊡_
@@ -150,13 +152,82 @@ remQuot-splits-proof : ∀ {X : Set}
                     → ∀ (i : P (s ⊗ p)) → xs i ≡ ys i
 remQuot-splits-proof prf (i₁ ⊗ i₂) = prf i₁ i₂
 
+proj₁-remQuot-⊕ : ∀ {l₁ : L} {s₁ s₂ : S (ss l₁)}
+                → ∀ {l₂ : L} {p₁ p₂ : S (ss l₂)}
+                → ∀ (i : P (s₁ ⊗ s₂))
+                → ∀ (r₁ : Reshape p₁ s₁)
+                → ∀ (r₂ : Reshape p₂ s₂)
+                → proj₁ (⊗-remQuot p₂ (i ⟨ r₁ ⊕ r₂ ⟩)) ≡ (proj₁ (⊗-remQuot s₂ i)) ⟨ r₁ ⟩ 
+proj₁-remQuot-⊕ (i₁ ⊗ i₂) r₁ r₂ = refl
+
+proj₂-remQuot-⊕ : ∀ {l₁ : L} {s₁ s₂ : S (ss l₁)}
+                → ∀ {l₂ : L} {p₁ p₂ : S (ss l₂)}
+                → ∀ (i : P (s₁ ⊗ s₂))
+                → ∀ (r₁ : Reshape p₁ s₁)
+                → ∀ (r₂ : Reshape p₂ s₂)
+                → proj₂ (⊗-remQuot p₂ (i ⟨ r₁ ⊕ r₂ ⟩)) ≡ (proj₂ (⊗-remQuot s₂ i)) ⟨ r₂ ⟩ 
+proj₂-remQuot-⊕ (i₁ ⊗ i₂) _ _ = refl
+
+cong-proj₁-remQuot : ∀ {s p : S (ss l)}
+                   → ∀ {i j : P (s ⊗ p)} 
+                   → (prf : i ≡ j)
+                   → proj₁ (⊗-remQuot p i) ≡ proj₁ (⊗-remQuot p j)
+
+helper₁ : {s₁ s₂ : S (ss (ss l))}
+          {xs : Ar (s₁ ⊗ s₂) ℂ} {i₁ : P s₁} {i₂ : P s₂} →
+          (proj₁ (⊗-remQuot s₁ ((i₁ ⊗ i₂) ⟨ CM ⟩)) ⟨ rev flatten-zᵣ ⟩) ≡
+          proj₁
+          (⊗-remQuot (flatten-z s₁)
+           (((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩))
+helper₁ {l} {s₁} {s₂} {xs} {i₁} {i₂} = 
+      ? --sym (proj₁-remQuot-⊕ ((i₁ ⊗ i₂) ⟨ (rev flatten-zᵣ ⊕ rev flatten-zᵣ) ∙ CM ⟩) ? ?)
+    ⊡ ?
+
+lemma₃ : ∀ {s₁ s₂ : S (ss (ss l))}
+       → ∀ (i₁ : P s₁)
+       → ∀ (i₂ : P s₂)
+       →  ((((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩) ⟨ (flatten-zᵣ {_} {s₂}) ⊕ (flatten-zᵣ {_} {s₁}) ⟩) ⟨ rev flatten-zᵣ ⟩
+        ≡
+          ((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩
+lemma₃ {l} {s₁} {s₂} i₁ i₂ =
+    begin
+     ((((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩) ⟨ (flatten-zᵣ {_} {s₂}) ⊕ (flatten-zᵣ {_} {s₁}) ⟩) ⟨ rev flatten-zᵣ ⟩
+    ≡⟨⟩
+     (i₁ ⊗ i₂) ⟨ rev flatten-zᵣ ⊕ rev flatten-zᵣ ∙ CM ∙ (flatten-zᵣ {_} {s₂}) ⊕ (flatten-zᵣ {_} {s₁}) ∙ rev flatten-zᵣ ⟩
+    ≡⟨⟩
+     (i₁ ⊗ i₂) ⟨ rev flatten-zᵣ ⊕ rev flatten-zᵣ ∙ CM ∙ (flatten-zᵣ {_} {s₂}) ⊕ (flatten-zᵣ {_} {s₁}) ∙ (rev flatten-zᵣ ⊕ rev flatten-zᵣ) ⟩
+    ≡⟨ rev-eq (_⊕_ {_} {_} {s₂} {s₁} flatten-zᵣ flatten-zᵣ) ((i₁ ⊗ i₂) ⟨ rev flatten-zᵣ ⊕ rev flatten-zᵣ ∙ CM ⟩)  ⟩
+     ((i₁ ⊗ i₂) ⟨ rev flatten-zᵣ ⊕ rev flatten-zᵣ ⟩) ⟨ CM ⟩
+    ≡⟨⟩
+     ((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩
+    ∎
+
+cmfft-icong : ∀ {s : S (ss l)}
+             → ∀ {dft₁ : {s : S l} → Ar s ℂ → Ar s ℂ}
+             → ∀ {twid : ∀ {r : L} → ∀ {s p : S r} → P s → P p → ℂ}
+             → ∀ (xs : Ar s ℂ)
+             → ∀ (i j : P s)
+             → i ≡ j
+             → cmfft dft₁ twid CM xs i ≡ cmfft dft₁ twid CM xs j
+cmfft-icong _ _ _ refl = refl
+
+⊕-distributes-∙ : ∀ {l₁ l₂ l₃ : L} 
+                → ∀ {p₁ p₂ : S (ss l₁)}
+                → ∀ {s₁ : S (ss l₂)} → ∀ (r₁ : Reshape s₁ p₁ )
+                → ∀ {s₂ : S (ss l₂)} → ∀ (r₂ : Reshape s₂ p₂ )
+                → ∀ {p₃ : S (ss l₃)} → ∀ (r₃ : Reshape p₃ s₁ )
+                → ∀ {p₄ : S (ss l₃)} → ∀ (r₄ : Reshape p₄ s₂ )
+                → ∀ (i : P (p₁ ⊗ p₂))
+                → i ⟨ ((r₁ ⊕ r₂) ∙ (r₃ ⊕ r₄)) ⟩ ≡ i ⟨ ((r₁ ∙ r₃) ⊕ (r₂ ∙ r₄)) ⟩
+
 thm₂ : ∀ {s : S (ss (ss l))}
      → ∀ {dft : {s : S l} → Ar s ℂ → Ar s ℂ}
      → ∀ {twid : ∀ {r : L} → ∀ {s p : S r} → P s → P p → ℂ}
      → ∀ {dft-cong : ∀ {p : S l} → (a b : Ar p ℂ) → (prf : ∀ i → a i ≡ b i) → ∀ i → dft a i ≡ dft b i}
+     --→ ∀ {twid-thm : ∀ {r : L} → ∀ {s : S (ss r)} → ∀ {p : S r} → ∀ (i : P s) → ∀ (j : P p) → twid i j ≡ twid (i ⟨ flattenᵣ ⟩) j} 
      → ∀ (xs : Ar s ℂ)
      → ∀ (i : P s)
-     → cmfft {ss l} (cmfft dft twid CM) twid CM {s} xs i ≡ cmfft {l} dft twid CM {flatten s} (reshape flattenᵣ xs) (i ⟨ rev flattenᵣ ⟩)
+     → cmfft {ss l} (cmfft dft twid CM) twid CM {s} xs i ≡ cmfft {l} dft twid CM {flatten-z s} (reshape flatten-zᵣ xs) (i ⟨ rev flatten-zᵣ ⟩)
 thm₂ {l} {ι s} {dft₁} {twid} xs (ι i) = refl
 thm₂ {l} {s₁ ⊗ s₂} {dft₁} {twid} {dft₁-cong} xs i@(i₁ ⊗ i₂) = 
     remQuot-splits-proof 
@@ -178,11 +249,86 @@ thm₂ {l} {s₁ ⊗ s₂} {dft₁} {twid} {dft₁-cong} xs i@(i₁ ⊗ i₂) =
               cong₂ _*_
                 refl
                 (thm₂ {_} {s₁} {_} {twid} {dft₁-cong} _ j₁)
-            ) (j₂ ⟨ rev flattenᵣ ⟩)
+            ) (j₂ ⟨ rev flatten-zᵣ ⟩)
         ) 
         (((((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩) ⟨ flatten-zᵣ ⊕ flatten-zᵣ ⟩) ⟨ swap ⟩)
-    -- TODO: This should just require that I flatten the left hand side...
-  ⊡ ?
+  ⊡ (
+      begin
+        unnest {ss l} 
+          (λ α φ → 
+            cmfft {l} dft₁ twid CM 
+              (λ β → 
+                  twid {ss (ss l)} (β ⟨ flatten-zᵣ ⟩) α
+                * 
+                  cmfft {l} dft₁ twid CM 
+                  ((λ δ → xs ((δ ⟨ flatten-zᵣ ⟩) ⊗ (β ⟨ flatten-zᵣ ⟩))))
+                  (α ⟨ rev flatten-zᵣ ⟩)
+              ) 
+              (φ ⟨ rev flatten-zᵣ ⟩)) 
+            ((i₁ ⊗ i₂)  
+                ⟨ rev flatten-zᵣ ⊕ rev flatten-zᵣ
+                ∙ CM 
+                ∙ flatten-zᵣ ⊕ flatten-zᵣ
+                ∙ swap ⟩)
+      ≡⟨ (cong (unnest {ss l} _) (sym (cong (_⟨ swap ⟩) (⊗-combine-remQuot s₁ ((i₁ ⊗ i₂)  ⟨ CM ⟩))))) ⟩
+      _ ≡⟨ cmfft-icong {l} {flatten-z s₂} {_} {twid} _ _ (proj₁ (⊗-remQuot (flatten-z s₁) (((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩))) (helper₁ {_} {_} {_} {xs} {_} {i₂}) ⟩ 
+      _ ≡⟨ cmfft-cong CM dft₁-cong {flatten-z s₂} _ _ 
+            (λ β → 
+              cong₂ 
+                _*_ 
+                ? -- Pretty reasonable property for twid onces revEQ is applied
+                (cmfft-icong {twid = twid} (λ δ → xs ((δ ⟨ flatten-zᵣ ⟩) ⊗ (β ⟨ flatten-zᵣ ⟩))) _ _ ( 
+                    --( cong 
+                    --      (_⟨ rev (flatten-zᵣ {ss l} {s₁}) ⟩) 
+                    --      (proj₂-remQuot-⊕ (((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩) flatten-zᵣ flatten-zᵣ)
+                    --) ⊡ ( cong
+                    --        (_⟨ rev (flatten-zᵣ {ss l} {s₁}) ⟩) 
+                    --        (sym (proj₂-remQuot-⊕ (((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩) flatten-zᵣ flatten-zᵣ))
+                    --) ⊡
+                         ( sym ( proj₂-remQuot-⊕ ((((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩) ⟨
+               flatten-zᵣ ⊕ flatten-zᵣ ⟩) (rev flatten-zᵣ) (rev flatten-zᵣ) )
+                    )
+                  )
+                )
+            ) 
+            _ 
+         ⟩
+         -- Reveq
+      _ ≡⟨ cmfft-icong {l} {flatten-z s₂} {_} {twid} _ 
+              (proj₁ (⊗-remQuot (flatten-z s₁) (((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩)))
+              _ 
+              (   sym (rev-eq {_} {_} {s₂} flatten-zᵣ _)
+                ⊡ sym (proj₁-remQuot-⊕ (((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩) ((flatten-zᵣ {_} {s₂}) ∙ rev flatten-zᵣ) ((flatten-zᵣ {_} {s₁}) ∙ rev flatten-zᵣ))
+                ⊡ (cong-proj₁-remQuot 
+                      {_} {_} {_} 
+                      {((((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩) ⟨ (flatten-zᵣ ∙ rev flatten-zᵣ) ⊕ (flatten-zᵣ ∙ rev flatten-zᵣ) ⟩)} 
+                      {(((((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩) ⟨ flatten-zᵣ ⊕ flatten-zᵣ ⟩) ⟨ rev flatten-zᵣ ⊕ rev flatten-zᵣ ⟩)} 
+                      (sym (⊕-distributes-∙ {_} {_} {_} {_} {_} {s₂} flatten-zᵣ {s₁} flatten-zᵣ (rev flatten-zᵣ) (rev flatten-zᵣ) (((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩) ))
+                  ) 
+              ) 
+          ⟩
+      _ ≡⟨ (cong (unnest {l} _) ((cong (_⟨ swap ⟩) (⊗-combine-remQuot (flatten-z s₁) (((((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩) ⟨ flatten-zᵣ ⊕ flatten-zᵣ ⟩) ⟨ rev flatten-zᵣ ⊕ rev flatten-zᵣ ⟩))))) ⟩
+      _ ≡⟨ cong (unnest {l} _) (cong (_⟨ swap ⟩) ((lemma₃ i₁ i₂))) ⟩
+        unnest {l}
+          (λ α φ → 
+            cmfft {l} dft₁ twid CM 
+              (λ β → 
+                  twid {ss l} β α
+                * 
+                  cmfft {l} dft₁ twid CM 
+                  (λ δ → xs ((δ ⟨ flatten-zᵣ ⟩) ⊗ (β ⟨ flatten-zᵣ ⟩))) 
+                  α
+              )
+              φ
+          ) 
+          ((i₁ ⊗ i₂) 
+              ⟨ rev flatten-zᵣ ⊕ rev flatten-zᵣ 
+              ∙ CM 
+              ∙ swap ⟩)
+      ≡⟨⟩
+        cmfft {l} dft₁ twid CM (reshape flatten-zᵣ xs) ((i₁ ⊗ i₂) ⟨ rev flatten-zᵣ ⟩)
+      ∎
+    )
 
 --with ⊗-remQuot _ (((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩)
 --... | fst , snd = ?
