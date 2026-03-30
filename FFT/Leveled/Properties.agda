@@ -133,10 +133,8 @@ cmfft₂≡cmfft₁ {l} {s₁ ⊗ s₂} {dft₁} {twid} {dft₁-cong} {twid-♭}
 
 CMᵗ-lemma₁ : {s₁ s₂ : S (ss l)} (i₁ : P s₁) (i₂ : P s₂) →
             ((i₁ ⊗ i₂) ⟨ CM ∙ (CMᵗ ⊕ CMᵗ) ⟩) ≡ ((i₁ ⊗ i₂) ⟨ CMᵗ ⟩)
+CMᵗ-lemma₁ {l} {s₁} {s₂} i₁ i₂ = ?
 
-CMᵗ-lemma₂ : {s₁ s₂ : S (ss l)} (i₁ : P s₁) (i₂ : P s₂) →
-             (((i₁ ⊗ i₂) ⟨ CM ⟩) ⟨ CMᵗ ⊕ CMᵗ ⟩) ≡
-             (((i₁ ⟨ CMᵗ ⟩) ⊗ (i₂ ⟨ CMᵗ ⟩)) ⟨ CM ⟩)
   {-
       (
         begin
@@ -220,7 +218,7 @@ cmfft₁≡fft₁ {l} {s₁ ⊗ s₂} {dft₁} {twid} {dft₁-cong} {twid-CM} xs
               ( twid-CM α _
               ⊡ cong (twid α) 
                 ( sym (proj₂-remQuot-⊕ ((i₁ ⊗ i₂) ⟨ CM ⟩) CMᵗ CMᵗ)
-                ⊡ proj₂-remQuot-cong {l} {transp s₂} {transp s₁} {(((i₁ ⊗ i₂) ⟨ CM ⟩) ⟨ CMᵗ ⊕ CMᵗ ⟩)} {(((i₁ ⟨ CMᵗ ⟩) ⊗ (i₂ ⟨ CMᵗ ⟩)) ⟨ CM ⟩)} (CMᵗ-lemma₂ _ _)
+                ⊡ proj₂-remQuot-cong {l} {transp s₂} {transp s₁} {(((i₁ ⊗ i₂) ⟨ CM ⟩) ⟨ CMᵗ ⊕ CMᵗ ⟩)} {(((i₁ ⟨ CMᵗ ⟩) ⊗ (i₂ ⟨ CMᵗ ⟩)) ⟨ CM ⟩)} (CMᵗ-lemma₁ _ _)
                 )
               )
               (cong (fft {l} dft₁ twid {s₁} _) (
