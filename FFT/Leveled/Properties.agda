@@ -9,6 +9,7 @@ open Change-Major change-major
 open FFT-Specification spec
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; trans; sym; cong₂)
+open Eq.≡-Reasoning
 
 open Cplx cplx
 
@@ -124,6 +125,145 @@ cmfft₂≡cmfft₁ {l} {s₁ ⊗ s₂} {dft₁} {twid} {dft₁-cong} {twid-♭}
         ⊡ CM-flatten-comm _ _
       )
     )
+
+
+------------------------------------------------------------------------
+-- Currently cmfft is related to nothing... this should fix this...  ---
+------------------------------------------------------------------------
+
+CMᵗ-lemma₁ : {s₁ s₂ : S (ss l)} (i₁ : P s₁) (i₂ : P s₂) →
+            ((i₁ ⊗ i₂) ⟨ CM ∙ (CMᵗ ⊕ CMᵗ) ⟩) ≡ ((i₁ ⊗ i₂) ⟨ CMᵗ ⟩)
+
+CMᵗ-lemma₂ : {s₁ s₂ : S (ss l)} (i₁ : P s₁) (i₂ : P s₂) →
+             (((i₁ ⊗ i₂) ⟨ CM ⟩) ⟨ CMᵗ ⊕ CMᵗ ⟩) ≡
+             (((i₁ ⟨ CMᵗ ⟩) ⊗ (i₂ ⟨ CMᵗ ⟩)) ⟨ CM ⟩)
+  {-
+      (
+        begin
+          (i₁ ⊗ i₂) ⟨ CM ∙ CMᵗ ⊕ CMᵗ ⟩
+        ≡⟨ ? ⟩
+          (i₁ ⊗ i₂) ⟨ CMᵗ ⟩
+        ∎
+      )
+  -}
+
+cmfft₁≡fft₁ : ∀ {s : S (ss l)}
+            → ∀ {dft : {s : S l} → Ar s ℂ → Ar s ℂ}
+            → ∀ {twid : ∀ {r : L} → ∀ {s p : S r} → P s → P p → ℂ}
+            → ∀ {dft-cong : ∀ {p : S l} → (a b : Ar p ℂ) → (prf : ∀ i → a i ≡ b i) → ∀ i → dft a i ≡ dft b i}
+            → ∀ {twid-CM : ∀ {r : L} → ∀ {s p : S (ss r)} → ∀ (i : P s) (j : P p) → twid i j ≡ twid i (j ⟨ CMᵗ ⟩)}
+            → ∀ (xs : Ar s ℂ)
+            → ∀ (i : P s)
+            → cmfft {l} dft twid CM xs i ≡ fft {l} dft twid xs (i ⟨ CMᵗ ⟩)
+cmfft₁≡fft₁ {l} {ι _} _ (ι _) = refl
+cmfft₁≡fft₁ {l} {s₁ ⊗ s₂} {dft₁} {twid} {dft₁-cong} {twid-CM} xs (i₁ ⊗ i₂) =
+  begin 
+    cmfft dft₁ twid CM xs (i₁ ⊗ i₂)
+  ≡⟨⟩
+    unnest {l}
+      (λ i → 
+        cmfft dft₁ twid CM
+          (λ j → twid j i * cmfft dft₁ twid CM (λ j₁ → xs (j₁ ⊗ j)) i)
+      )
+      ((i₁ ⊗ i₂) ⟨ CM ∙ swap ⟩)
+  ≡⟨ remQuot-splits-proof 
+      {_} {_} {_} {_} 
+      {unnest {l} _} 
+      {unnest {l} _}
+      (λ j₁ j₂ → 
+          cmfft₁≡fft₁ {twid = twid} {dft₁-cong} {twid-CM} _ j₂
+        ⊡ fft-cong 
+            dft₁-cong 
+            {s₂} 
+            _ 
+            _ 
+            (λ β → 
+              cong₂ 
+                _*_
+                refl
+                (cmfft₁≡fft₁ {twid = twid} {dft₁-cong} {twid-CM} _ j₁)
+            ) 
+            (j₂ ⟨ CMᵗ ⟩)
+      )
+      ((i₁ ⊗ i₂) ⟨ CM ∙ swap ⟩)  
+    ⟩
+    unnest
+      (λ β φ →
+         fft dft₁ twid
+           (λ α →
+                twid α β 
+              * fft dft₁ twid (λ j₁ → xs (j₁ ⊗ α)) (β ⟨ CMᵗ ⟩)
+           )
+           (φ ⟨ CMᵗ ⟩)
+      )
+      ((i₁ ⊗ i₂) ⟨ CM ∙ swap ⟩)
+
+  ≡⟨ cong 
+      (unnest {l} _) 
+      (sym $ cong (_⟨ swap ⟩) (⊗-combine-remQuot s₁ ((i₁ ⊗ i₂) ⟨ CM ⟩))) ⟩
+    fft 
+      dft₁ 
+      twid 
+      (λ α → 
+          twid α (proj₂ (⊗-remQuot s₁ ((i₁ ⊗ i₂) ⟨ CM ⟩))) 
+        * fft dft₁ twid (λ δ → xs (δ ⊗ α)) (proj₂ (⊗-remQuot s₁ ((i₁ ⊗ i₂) ⟨ CM ⟩)) ⟨ CMᵗ ⟩)
+      ) 
+      (proj₁ (⊗-remQuot s₁ ((i₁ ⊗ i₂) ⟨ CM ⟩)) ⟨ CMᵗ ⟩)
+  ≡⟨ cong (fft {l} dft₁ twid {s₂} _) 
+        ( sym (proj₁-remQuot-⊕ ((i₁ ⊗ i₂) ⟨ CM ⟩) CMᵗ CMᵗ)
+        ⊡ proj₁-remQuot-cong {l} {transp s₂} {transp s₁} {(i₁ ⊗ i₂) ⟨ CM ∙ CMᵗ ⊕ CMᵗ ⟩} {(i₁ ⊗ i₂) ⟨ CMᵗ ⟩} (CMᵗ-lemma₁ _ _)
+        )
+    ⟩
+  _ ≡⟨ fft-cong dft₁-cong {s₂} _ _ 
+          (λ α → 
+            cong₂ _*_
+              ( twid-CM α _
+              ⊡ cong (twid α) 
+                ( sym (proj₂-remQuot-⊕ ((i₁ ⊗ i₂) ⟨ CM ⟩) CMᵗ CMᵗ)
+                ⊡ proj₂-remQuot-cong {l} {transp s₂} {transp s₁} {(((i₁ ⊗ i₂) ⟨ CM ⟩) ⟨ CMᵗ ⊕ CMᵗ ⟩)} {(((i₁ ⟨ CMᵗ ⟩) ⊗ (i₂ ⟨ CMᵗ ⟩)) ⟨ CM ⟩)} (CMᵗ-lemma₂ _ _)
+                )
+              )
+              (cong (fft {l} dft₁ twid {s₁} _) (
+                ( sym (proj₂-remQuot-⊕ ((i₁ ⊗ i₂) ⟨ CM ⟩) CMᵗ CMᵗ)
+                ⊡ proj₂-remQuot-cong {l} {transp s₂} {transp s₁} {(i₁ ⊗ i₂) ⟨ CM ∙ CMᵗ ⊕ CMᵗ ⟩} {(i₁ ⊗ i₂) ⟨ CMᵗ ⟩} (CMᵗ-lemma₁ _ _)
+                )
+              ))
+          ) 
+          (proj₁ (⊗-remQuot (transp s₁) (((i₁ ⟨ CMᵗ ⟩) ⊗ (i₂ ⟨ CMᵗ ⟩)) ⟨ CM ⟩))) 
+      ⟩
+    fft 
+      dft₁ 
+      twid 
+      (λ α → 
+          twid α (proj₂ (⊗-remQuot (transp s₁) ((i₁ ⊗ i₂) ⟨ CMᵗ ⟩))) 
+        * fft dft₁ twid (λ δ → xs (δ ⊗ α)) (proj₂ (⊗-remQuot (transp s₁) ((i₁ ⊗ i₂) ⟨ CMᵗ ⟩)))
+      ) 
+      (proj₁ (⊗-remQuot (transp s₁) ((i₁ ⊗ i₂) ⟨ CMᵗ ⟩)))
+  ≡⟨ cong 
+        (unnest {l} (λ β φ → fft dft₁ twid (λ α → twid α β * fft dft₁ twid (λ δ → xs (δ ⊗ α)) β) φ)) 
+        ( cong (_⟨ swap ⟩) ( ⊗-combine-remQuot (transp s₁) ((i₁ ⊗ i₂) ⟨ CMᵗ ⟩))) 
+      ⟩
+    unnest 
+      (λ β φ → 
+        fft dft₁ twid 
+          (λ α → 
+              twid α β 
+            * fft dft₁ twid (λ δ → xs (δ ⊗ α)) β
+          )
+          φ
+      )
+      ((i₁ ⊗ i₂) ⟨ CMᵗ ∙ swap ⟩)
+  ≡⟨⟩
+    fft dft₁ twid xs ((i₁ ⊗ i₂) ⟨ CMᵗ ⟩)
+  ∎
+  
+
+
+
+
+
+
+
 
 
 
