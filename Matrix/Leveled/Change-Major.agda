@@ -17,14 +17,21 @@ private
   
 record Change-Major : Set₁ where
   field
-    CM : ∀ {s p : S (ss l)} → Reshape (s ⊗ p) (p ⊗ s)
+    BaseCM : ∀ {s p : S (ss zz)} → Reshape (ν (u-flatten-z (flatten-z s) ● u-flatten-z (flatten-z p))) (ν (u-flatten-z (flatten-z p) ● u-flatten-z (flatten-z s)))
     
+  CM : ∀ {s p : S (ss l)} → Reshape (s ⊗ p) (p ⊗ s)
+  CM {zz  } {s} {p} = (rev flatten-zᵣ) 
+                    ∙ BaseCM {s} {p}
+                    ∙ flatten-zᵣ
+  CM {ss l} {s} {p} = (rev flatten-zᵣ) 
+                    ∙ CM {l}
+                    ∙ flatten-zᵣ
+
 
   CMᵗ : ∀ {s : S l} → Reshape (transp s) s
   CMᵗ {.zz} {ν x} = eq
   CMᵗ {.(ss _)} {ι s} = eq
   CMᵗ {.(ss _)} {s ⊗ s₁} = CMᵗ ⊕ CMᵗ ∙ CM
-
 
 
 

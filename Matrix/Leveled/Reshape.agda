@@ -9,7 +9,7 @@ module Matrix.Leveled.Reshape (M : Mon) where
   open Eq.≡-Reasoning
   open import Function
   open import Algebra.Definitions
-  open import Data.Product hiding (map; swap; zipWith)
+  open import Data.Product hiding (map; swap)
   open import Data.Product.Properties
 
   private
@@ -135,15 +135,21 @@ module Matrix.Leveled.Reshape (M : Mon) where
   ν-flattenᵣ {.zz} {ν x} = eq
   ν-flattenᵣ {.(ss _)} {ι s} = down ν-flattenᵣ
 
+  u-flatten-z : S zz → U
+  u-flatten-z (ν x) = x
 
+  u-flatten-z-id : ∀ {s : S zz} → Reshape s (ν (u-flatten-z s))
+  u-flatten-z-id {ν x} = eq
 
+  flatten-z : S (ss l) → S l
+  flatten-z {l} (ι x) = x
+  flatten-z {zz} (x ⊗ y) = ν (u-flatten-z (flatten-z x) ● u-flatten-z (flatten-z y))
+  flatten-z {ss l} (x ⊗ y) = (flatten-z x) ⊗ (flatten-z y)
 
-
-
-
-
-
-
+  flatten-zᵣ : ∀ {s : S (ss l)} → Reshape s (flatten-z s)
+  flatten-zᵣ {l} {ι s} = down eq
+  flatten-zᵣ {zz} {s ⊗ s₁} = flat ∙ ((up u-flatten-z-id ∙ flatten-zᵣ) ⊕ (up u-flatten-z-id ∙ flatten-zᵣ))
+  flatten-zᵣ {ss l} {s ⊗ s₁} = flatten-zᵣ ⊕ flatten-zᵣ
 
   ⊗-remQuot : ∀ {s : S (ss l)} (p : S (ss l)) → P (s ⊗ p) → P s × P p
   ⊗-combine : ∀ {s p : S (ss l)} → P s → P p → P (s ⊗ p)
@@ -163,6 +169,40 @@ module Matrix.Leveled.Reshape (M : Mon) where
   ⊗-remQuot-combine i₁ i₂ = refl
   ⊗-combine-remQuot _ (i₁ ⊗ i₂) = refl
 
+  remQuot-splits-proof : ∀ {X : Set}
+                      → ∀ {s p : S (ss l)}
+                      → ∀ {xs ys : Ar (s ⊗ p) X}
+                      → ∀ (prf : ∀ (i : P s) (j : P p) → xs (i ⊗ j) ≡ ys (i ⊗ j))
+                      → ∀ (i : P (s ⊗ p)) → xs i ≡ ys i
+  remQuot-splits-proof prf (i₁ ⊗ i₂) = prf i₁ i₂
+
+  proj₁-remQuot-⊕ : ∀ {l₁ : L} {s₁ s₂ : S (ss l₁)}
+                  → ∀ {l₂ : L} {p₁ p₂ : S (ss l₂)}
+                  → ∀ (i : P (s₁ ⊗ s₂))
+                  → ∀ (r₁ : Reshape p₁ s₁)
+                  → ∀ (r₂ : Reshape p₂ s₂)
+                  → proj₁ (⊗-remQuot p₂ (i ⟨ r₁ ⊕ r₂ ⟩)) ≡ (proj₁ (⊗-remQuot s₂ i)) ⟨ r₁ ⟩ 
+  proj₁-remQuot-⊕ (i₁ ⊗ i₂) r₁ r₂ = refl
+
+  proj₂-remQuot-⊕ : ∀ {l₁ : L} {s₁ s₂ : S (ss l₁)}
+                  → ∀ {l₂ : L} {p₁ p₂ : S (ss l₂)}
+                  → ∀ (i : P (s₁ ⊗ s₂))
+                  → ∀ (r₁ : Reshape p₁ s₁)
+                  → ∀ (r₂ : Reshape p₂ s₂)
+                  → proj₂ (⊗-remQuot p₂ (i ⟨ r₁ ⊕ r₂ ⟩)) ≡ (proj₂ (⊗-remQuot s₂ i)) ⟨ r₂ ⟩ 
+  proj₂-remQuot-⊕ (i₁ ⊗ i₂) _ _ = refl
+
+  proj₁-remQuot-cong : ∀ {s p : S (ss l)}
+                     → ∀ {i j : P (s ⊗ p)} 
+                     → (prf : i ≡ j)
+                     → proj₁ (⊗-remQuot p i) ≡ proj₁ (⊗-remQuot p j)
+  proj₁-remQuot-cong refl = refl
+
+  proj₂-remQuot-cong : ∀ {s p : S (ss l)}
+                     → ∀ {i j : P (s ⊗ p)} 
+                     → (prf : i ≡ j)
+                     → proj₂ (⊗-remQuot p i) ≡ proj₂ (⊗-remQuot p j)
+  proj₂-remQuot-cong refl = refl
 
 
 
