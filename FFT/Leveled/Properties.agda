@@ -134,7 +134,6 @@ cmfft₂≡cmfft₁ {l} {s₁ ⊗ s₂} {dft₁} {twid} {dft₁-cong} {twid-♭}
 CMᵗ-lemma₁ : {s₁ s₂ : S (ss l)} (i₁ : P s₁) (i₂ : P s₂) →
             ((i₁ ⊗ i₂) ⟨ CM ∙ (CMᵗ ⊕ CMᵗ) ⟩) ≡ ((i₁ ⊗ i₂) ⟨ CMᵗ ⟩)
 CMᵗ-lemma₁ {l} {s₁} {s₂} i₁ i₂ = ?
-
   {-
       (
         begin
@@ -145,7 +144,7 @@ CMᵗ-lemma₁ {l} {s₁} {s₂} i₁ i₂ = ?
       )
   -}
 
-cmfft₁≡fft₁ : ∀ {s : S (ss l)}
+cmfft≡fft : ∀ {s : S (ss l)}
             → ∀ {dft : {s : S l} → Ar s ℂ → Ar s ℂ}
             → ∀ {twid : ∀ {r : L} → ∀ {s p : S r} → P s → P p → ℂ}
             → ∀ {dft-cong : ∀ {p : S l} → (a b : Ar p ℂ) → (prf : ∀ i → a i ≡ b i) → ∀ i → dft a i ≡ dft b i}
@@ -153,8 +152,8 @@ cmfft₁≡fft₁ : ∀ {s : S (ss l)}
             → ∀ (xs : Ar s ℂ)
             → ∀ (i : P s)
             → cmfft {l} dft twid CM xs i ≡ fft {l} dft twid xs (i ⟨ CMᵗ ⟩)
-cmfft₁≡fft₁ {l} {ι _} _ (ι _) = refl
-cmfft₁≡fft₁ {l} {s₁ ⊗ s₂} {dft₁} {twid} {dft₁-cong} {twid-CM} xs (i₁ ⊗ i₂) =
+cmfft≡fft {l} {ι _} _ (ι _) = refl
+cmfft≡fft {l} {s₁ ⊗ s₂} {dft₁} {twid} {dft₁-cong} {twid-CM} xs (i₁ ⊗ i₂) =
   begin 
     cmfft dft₁ twid CM xs (i₁ ⊗ i₂)
   ≡⟨⟩
@@ -169,7 +168,7 @@ cmfft₁≡fft₁ {l} {s₁ ⊗ s₂} {dft₁} {twid} {dft₁-cong} {twid-CM} xs
       {unnest {l} _} 
       {unnest {l} _}
       (λ j₁ j₂ → 
-          cmfft₁≡fft₁ {twid = twid} {dft₁-cong} {twid-CM} _ j₂
+          cmfft≡fft {twid = twid} {dft₁-cong} {twid-CM} _ j₂
         ⊡ fft-cong 
             dft₁-cong 
             {s₂} 
@@ -179,7 +178,7 @@ cmfft₁≡fft₁ {l} {s₁ ⊗ s₂} {dft₁} {twid} {dft₁-cong} {twid-CM} xs
               cong₂ 
                 _*_
                 refl
-                (cmfft₁≡fft₁ {twid = twid} {dft₁-cong} {twid-CM} _ j₁)
+                (cmfft≡fft {twid = twid} {dft₁-cong} {twid-CM} _ j₁)
             ) 
             (j₂ ⟨ CMᵗ ⟩)
       )
@@ -256,8 +255,26 @@ cmfft₁≡fft₁ {l} {s₁ ⊗ s₂} {dft₁} {twid} {dft₁-cong} {twid-CM} xs
   ∎
   
 
+-- We can now relate any fft to cmfft, and any level cmfft to the level below it
 
+fftn : ∀ {s : S (ss (ss zz))} → Ar s ℂ → Ar s ℂ
+fftn {s} xs = reshape (CMᵗ ∙ rev transpᵣ)
+            ( post-ufft (reshape CMᵗ
+                        ∘ pre-ufft dft (λ j₁ j₂ → twiddles (j₁ ⟨ transpᵣ ⟩) j₂) 
+                        ∘ reshape (rev transpᵣ)
+                        )
+                        (λ j₁ j₂ → twiddles j₁ (j₂ ⟨ transpᵣ ⟩)) {s} xs)
 
+-- Big mamma: 
+-- Note: This could probably be generalised over level L, I would just need to
+--       generalise a few of the proofs it depends on :)
+
+fftn≡dft : ∀ {s : S (ss (ss zz))} 
+         → ∀ (xs : Ar s ℂ)
+         → ∀ (i : P s)
+         → fftn xs i ≡ dft (reshape (flatten-zᵣ ∙ flatten-zᵣ) xs) (i ⟨ rev flatten-zᵣ ∙ rev flatten-zᵣ ⟩)
+fftn≡dft {ι s} xs (ι i) = ?
+fftn≡dft {s₁ ⊗ s₂} xs (i₁ ⊗ i₂) = ?
 
 
 
