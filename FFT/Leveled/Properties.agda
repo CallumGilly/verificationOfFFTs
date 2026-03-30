@@ -131,6 +131,7 @@ remove-reshape-lvl {X} {l} {r} {s} {p} {xs} {ys} {resh₁} {resh₂} prf i = ?
 --CMᵗ {.zz} {ν x} = eq
 --CMᵗ {.(ss _)} {ι s} = eq
 --CMᵗ {.(ss _)} {s₁ ⊗ s₂} = CM ∙ (CMᵗ ⊕ CMᵗ)
+{-
 
 thm₁ : ∀ {dft : {s : S l} → Ar s ℂ → Ar s ℂ}
      → ∀ {twid : ∀ {s p : S (ss l)} → P s → P p → ℂ}
@@ -143,6 +144,7 @@ thm₁ {zz} {dft₁} {twid} {s₁ ⊗ s₂} xs (i₁ ⊗ i₂) = ?
 thm₁ {ss l} {dft₁} {twid} {s₁ ⊗ s₂} xs (i₁ ⊗ i₂) = ?
   --  cong ((flip unnest) (((i₁ ⊗ i₂) ⟨ CM ⟩) ⟨ swap ⟩)) ?
   --⊡ ?
+  -}
 
 
 remQuot-splits-proof : ∀ {X : Set}
@@ -172,16 +174,13 @@ cong-proj₁-remQuot : ∀ {s p : S (ss l)}
                    → ∀ {i j : P (s ⊗ p)} 
                    → (prf : i ≡ j)
                    → proj₁ (⊗-remQuot p i) ≡ proj₁ (⊗-remQuot p j)
+cong-proj₁-remQuot refl = refl
 
-helper₁ : {s₁ s₂ : S (ss (ss l))}
-          {xs : Ar (s₁ ⊗ s₂) ℂ} {i₁ : P s₁} {i₂ : P s₂} →
-          (proj₁ (⊗-remQuot s₁ ((i₁ ⊗ i₂) ⟨ CM ⟩)) ⟨ rev flatten-zᵣ ⟩) ≡
-          proj₁
-          (⊗-remQuot (flatten-z s₁)
-           (((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩))
-helper₁ {l} {s₁} {s₂} {xs} {i₁} {i₂} = 
-      ? --sym (proj₁-remQuot-⊕ ((i₁ ⊗ i₂) ⟨ (rev flatten-zᵣ ⊕ rev flatten-zᵣ) ∙ CM ⟩) ? ?)
-    ⊡ ?
+cong-proj₂-remQuot : ∀ {s p : S (ss l)}
+                   → ∀ {i j : P (s ⊗ p)} 
+                   → (prf : i ≡ j)
+                   → proj₂ (⊗-remQuot p i) ≡ proj₂ (⊗-remQuot p j)
+cong-proj₂-remQuot refl = refl
 
 lemma₃ : ∀ {s₁ s₂ : S (ss (ss l))}
        → ∀ (i₁ : P s₁)
@@ -189,7 +188,8 @@ lemma₃ : ∀ {s₁ s₂ : S (ss (ss l))}
        →  ((((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩) ⟨ (flatten-zᵣ {_} {s₂}) ⊕ (flatten-zᵣ {_} {s₁}) ⟩) ⟨ rev flatten-zᵣ ⟩
         ≡
           ((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩
-lemma₃ {l} {s₁} {s₂} i₁ i₂ =
+lemma₃ {l} {s₁} {s₂} i₁ i₂ rewrite rev-eq (_⊕_ {_} {_} {s₂} {s₁} flatten-zᵣ flatten-zᵣ) ((i₁ ⊗ i₂) ⟨ rev flatten-zᵣ ⊕ rev flatten-zᵣ ∙ CM ⟩)  = refl
+  {-
     begin
      ((((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩) ⟨ (flatten-zᵣ {_} {s₂}) ⊕ (flatten-zᵣ {_} {s₁}) ⟩) ⟨ rev flatten-zᵣ ⟩
     ≡⟨⟩
@@ -201,6 +201,23 @@ lemma₃ {l} {s₁} {s₂} i₁ i₂ =
     ≡⟨⟩
      ((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩
     ∎
+    -}
+
+helper₁ : {s₁ s₂ : S (ss (ss l))}
+          {xs : Ar (s₁ ⊗ s₂) ℂ} {i₁ : P s₁} {i₂ : P s₂} →
+          (proj₁ (⊗-remQuot s₁ ((i₁ ⊗ i₂) ⟨ CM ⟩)) ⟨ rev flatten-zᵣ ⟩) ≡
+          proj₁
+          (⊗-remQuot (flatten-z s₁)
+           ((i₁ ⊗ i₂) ⟨ rev flatten-zᵣ ⊕ rev flatten-zᵣ ∙ CM ⟩))
+helper₁ {l} {s₁} {s₂} {xs} {i₁} {i₂} = 
+      sym (proj₁-remQuot-⊕ ((i₁ ⊗ i₂) ⟨ CM ⟩) (rev flatten-zᵣ) (rev flatten-zᵣ))
+    ⊡ cong-proj₁-remQuot 
+        {_} 
+        {flatten-z s₂}
+        {flatten-z s₁} 
+        {((i₁ ⊗ i₂) ⟨ CM ∙ (rev flatten-zᵣ ⊕ rev flatten-zᵣ) ⟩)} 
+        {((i₁ ⊗ i₂) ⟨ (rev flatten-zᵣ ⊕ rev flatten-zᵣ) ∙ CM ⟩)} 
+        (lemma₃ i₁ i₂)
 
 cmfft-icong : ∀ {s : S (ss l)}
              → ∀ {dft₁ : {s : S l} → Ar s ℂ → Ar s ℂ}
@@ -219,17 +236,18 @@ cmfft-icong _ _ _ refl = refl
                 → ∀ {p₄ : S (ss l₃)} → ∀ (r₄ : Reshape p₄ s₂ )
                 → ∀ (i : P (p₁ ⊗ p₂))
                 → i ⟨ ((r₁ ⊕ r₂) ∙ (r₃ ⊕ r₄)) ⟩ ≡ i ⟨ ((r₁ ∙ r₃) ⊕ (r₂ ∙ r₄)) ⟩
+⊕-distributes-∙ r₁ r₂ r₃ r₄ (i₁ ⊗ i₂) = refl
 
 thm₂ : ∀ {s : S (ss (ss l))}
      → ∀ {dft : {s : S l} → Ar s ℂ → Ar s ℂ}
      → ∀ {twid : ∀ {r : L} → ∀ {s p : S r} → P s → P p → ℂ}
      → ∀ {dft-cong : ∀ {p : S l} → (a b : Ar p ℂ) → (prf : ∀ i → a i ≡ b i) → ∀ i → dft a i ≡ dft b i}
-     --→ ∀ {twid-thm : ∀ {r : L} → ∀ {s : S (ss r)} → ∀ {p : S r} → ∀ (i : P s) → ∀ (j : P p) → twid i j ≡ twid (i ⟨ flattenᵣ ⟩) j} 
+     → ∀ {twid-♭ : ∀ {r : L} → ∀ {s p : S (ss r)} → ∀ (i : P s) (j : P p) → twid i j ≡ twid (i ⟨ rev flatten-zᵣ ⟩) (j ⟨ rev flatten-zᵣ ⟩)}
      → ∀ (xs : Ar s ℂ)
      → ∀ (i : P s)
      → cmfft {ss l} (cmfft dft twid CM) twid CM {s} xs i ≡ cmfft {l} dft twid CM {flatten-z s} (reshape flatten-zᵣ xs) (i ⟨ rev flatten-zᵣ ⟩)
 thm₂ {l} {ι s} {dft₁} {twid} xs (ι i) = refl
-thm₂ {l} {s₁ ⊗ s₂} {dft₁} {twid} {dft₁-cong} xs i@(i₁ ⊗ i₂) = 
+thm₂ {l} {s₁ ⊗ s₂} {dft₁} {twid} {dft₁-cong} {twid-♭} xs i@(i₁ ⊗ i₂) = 
     remQuot-splits-proof 
         {xs = unnest (λ i₃ →
                cmfft (cmfft dft₁ twid CM) twid
@@ -244,11 +262,11 @@ thm₂ {l} {s₁ ⊗ s₂} {dft₁} {twid} {dft₁-cong} xs i@(i₁ ⊗ i₂) =
         } 
         {unnest _} 
         (λ j₁ j₂ → 
-            thm₂ {_} {_} {_} {twid} {dft₁-cong} _ j₂
+            thm₂ {_} {_} {_} {twid} {dft₁-cong} {twid-♭} _ j₂
           ⊡ cmfft-cong CM dft₁-cong _ _ (λ k₁ → 
               cong₂ _*_
                 refl
-                (thm₂ {_} {s₁} {_} {twid} {dft₁-cong} _ j₁)
+                (thm₂ {_} {s₁} {_} {twid} {dft₁-cong} {twid-♭} _ j₁)
             ) (j₂ ⟨ rev flatten-zᵣ ⟩)
         ) 
         (((((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩) ⟨ flatten-zᵣ ⊕ flatten-zᵣ ⟩) ⟨ swap ⟩)
@@ -276,7 +294,9 @@ thm₂ {l} {s₁ ⊗ s₂} {dft₁} {twid} {dft₁-cong} xs i@(i₁ ⊗ i₂) =
             (λ β → 
               cong₂ 
                 _*_ 
-                ? -- Pretty reasonable property for twid onces revEQ is applied
+                ( twid-♭ (β ⟨ flatten-zᵣ ⟩) (proj₂ (⊗-remQuot s₁ ((((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩) ⟨ flatten-zᵣ ⊕ flatten-zᵣ ⟩)))
+                ⊡ cong₂ twid (rev-eq {_} {_} {s₂} flatten-zᵣ β) (sym (proj₂-remQuot-⊕ ((((i₁ ⟨ rev flatten-zᵣ ⟩) ⊗ (i₂ ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩) ⟨ flatten-zᵣ ⊕ flatten-zᵣ ⟩) (rev flatten-zᵣ) (rev flatten-zᵣ)))
+                )
                 (cmfft-icong {twid = twid} (λ δ → xs ((δ ⟨ flatten-zᵣ ⟩) ⊗ (β ⟨ flatten-zᵣ ⟩))) _ _ ( 
                     --( cong 
                     --      (_⟨ rev (flatten-zᵣ {ss l} {s₁}) ⟩) 
@@ -428,6 +448,7 @@ p-transp-lower : ∀ {s : S (ss (ss l))} → (all : All (ss l) ι-flat s) →  P
 p-transp-lower (ι x) (ι x₁) = x₁ ⟨ transpᵣ ⟩ 
 p-transp-lower (all ⊗ all₁) (x ⊗ x₁) = p-transp-lower all₁ x ⊗ p-transp-lower all x₁
 
+{-
 lemma₂ : ∀ {l : L} 
       → {s : S (ss (ss l))}
       → ∀ (dft₁ : {s : S l} → Ar s ℂ → Ar s ℂ)
@@ -447,6 +468,7 @@ lemma₂ : ∀ {l : L}
   -- This case is simply cmfft≡dft for level l which should be okay
 lemma₂ {l} {ι s} dft₁ dft-cong₁ twid xs i = ?
 lemma₂ {l} {s ⊗ s₁} dft₁ dft-cong₁ twid xs i = ?
+-}
 
 
 

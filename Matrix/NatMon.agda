@@ -43,8 +43,6 @@ pair-from : ∀ {a : ℕ} {b : ℕ} → Fin (suc a) × Fin (suc b) → Fin (suc 
 pair-from {a} {b} (fst , snd) = 
         cast (sym (∘-suc-lemma₁ {a} {b}))
         (combine fst snd)
-
-
     
 -- Taken from the master branch of std library - not in my version
 cast-involutive : ∀ {m n} → .(eq₁ : m ≡ n) .(eq₂ : n ≡ m) →
@@ -66,8 +64,6 @@ to-from {a} {b} {x₁ , x₂} rewrite
     U    = ℕ
   ; El   = Fin ∘ suc
   ; ε    = 0
-  --; _●_  = λ a b → (Nat.pred a) * (Nat.pred b)
-  --; _●_  = λ a b → ((a * b) ∸ a) ∸ b
   ; _●_ = λ a b → (a * b) + a + b
   ; unit-law  = 1↔⊤
   ; pair-law  = λ a b → record 
@@ -80,37 +76,3 @@ to-from {a} {b} {x₁ , x₂} rewrite
   ; comm = λ {u₁} {u₂} → ∘-suc-lemma₂ u₂ u₁
   }
 
-{-
-open import Matrix.Leveled.Change-Major ℕ-Mon
-open import Matrix.Leveled.Base ℕ-Mon
-open import Matrix.Leveled.Reshape ℕ-Mon
-
---Horrid:
-change-majorᵣ : ∀ {l : L} → {s : S l} → Reshape (transp s) s
-change-majorᵣ {.zz} {ν x} = eq
-change-majorᵣ {.(ss _)} {ι s} = eq
-change-majorᵣ {.(ss _)} {s₁ ⊗ s₂} = (
-    (rev u-flattenᵣ) 
-  ∙ ((subst 
-        (λ t → Reshape (ι (ν (u-flatten s₂ * u-flatten s₁ + u-flatten s₂ + u-flatten s₁))) t) 
-        (cong ι (cong ν (∘-suc-lemma₂ (u-flatten s₁) (u-flatten s₂))))
-        eq
-     ) 
-  ∙ u-flattenᵣ)) 
-  ∙ (change-majorᵣ ⊕ change-majorᵣ)
-
-private
-  variable
-    X : Set
-    l : L
-
---Goal Type : Reshape
---            (ι (ν (u-flatten s₂ * u-flatten s₁ + u-flatten s₂ + u-flatten s₁)))
---            (ι (ν (u-flatten s₁ * u-flatten s₂ + u-flatten s₁ + u-flatten s₂)))
-Leveled-CM : CM
-Leveled-CM = record 
-  { change-majorᵣ = change-majorᵣ
-  ; preserves-flat = ?
-  ; helper = ?
-  }
--}
