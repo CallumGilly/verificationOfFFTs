@@ -47,7 +47,7 @@ record FFT-Specification : Set where
     dft≡fft : ∀ {s : S (ss zz)}
             → ∀ (xs : Ar s ℂ)
             → ∀ (i : P s)
-            → dft (reshape ν-flattenᵣ xs) (i ⟨ rev ν-flattenᵣ ⟩) --(reshape u-flattenᵣ xs) (i ⟨ rev u-flattenᵣ ⟩)
+            → dft {flatten-z s} (reshape flatten-zᵣ xs) (i ⟨ rev flatten-zᵣ ⟩)
             ≡ reshape CMᵗ (fft {zz} dft twiddles {s} xs) i
             --≡ reshape change-majorᵣ (fft {zz} (λ{ {ν a} → dft}) twiddles {s} xs) i
 

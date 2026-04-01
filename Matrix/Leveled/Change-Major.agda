@@ -34,6 +34,8 @@ record Change-Major : Set₁ where
   CMᵗ {.(ss _)} {s ⊗ s₁} = CMᵗ ⊕ CMᵗ ∙ CM
 
 
+--tm : Change-Major
+--Change-Major.BaseCM tm = subst (λ t → Reshape ? ?) refl eq 
 
 {-
 ν-eq : ∀ (u₁ u₂ : U) → (u₁ ≡ u₂) → P (ι (ν u₁)) → P (ι (ν u₂))
