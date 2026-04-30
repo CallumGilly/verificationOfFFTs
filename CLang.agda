@@ -192,6 +192,14 @@ Following FFTN (fftn.c:157)
   >>> pretwid ⦃ nzs ⊗ nzp ⦄ (pred₁ ⊗ pred₂)
   >>> part (`uffti′ {p} nzp pred₂) (bothᵣ idh (right idh))
 
+fft′ : ∀ {s : Shape} → Inp (ar s ℝ) (ar s ℝ)
+fft′ {ι _}   = dft 
+fft′ {s ⊗ p} = 
+      part fft′ (bothᵣ idh (left  idh))
+  >>> pretwid
+  >>> part fft′ (bothᵣ idh (right idh))
+  >>> copy swap
+
 `uffti : NonZeroₛ s → ?SIMD s → Inp (ar (ι 2 ⊗ s) R) (ar (ι 2 ⊗ (s ᵗ)) R)
 `uffti {s} nz-s pred = `uffti′ nz-s pred
                   >>> copy (eq ⊕  recursive-transposeᵣ)

@@ -590,7 +590,7 @@ fftn≡dft {s₁ ⊗ s₂} xs (i₁ ⊗ i₂) =
               ) 
               (α₁ ⟨ rev CMᵗ ⟩)
           ) 
-          ((i₁ ⊗ i₂) ⟨ rev flatten-zᵣ ∙ CMᵗ ⟩)
+          ((i₁ ⊗ i₂) ⟨ rev flatten-zᵣ ∙ (_∙_ {_} {_} {_} {_} {s₁ ⊗ s₂} {_} flatten-zᵣ (CMᵗ ∙ rev flatten-zᵣ)) ⟩)
   -- Go back from CMFFT to FFT
   ≡⟨ remQuot-splits-proof 
         {xs = unnest _}
