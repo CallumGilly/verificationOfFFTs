@@ -368,12 +368,14 @@ destructDFT {N} nz-N _ _ with nonZero? N
 ... | yes _ = refl
 
 fft≅dft : 
-    ∀ (arr : Ar s ℂ) 
-  → FFT arr 
-    ≅ 
+    ∀ {s : Shape}
+  → ∀ (arr : Ar s ℂ) 
+  → ∀ (i : Position (recursive-transpose s))
+  → FFT arr i
+    ≡ 
     ( (reshape ♯) 
     ∘ DFT
-    ∘ (reshape flatten-reindex)) arr
+    ∘ (reshape flatten-reindex)) arr i
 fft≅dft {ι n} _ (ι _) with nonZero? n 
 ... | _ = refl
 fft≅dft {r₁ ⊗ r₂} arr (j₁ ⊗ j₀) with 
