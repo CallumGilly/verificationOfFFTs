@@ -67,6 +67,43 @@ unnest-transp-lemma : ∀ {X : Set}
                   → unnest (λ α₁ α₂ → f α₁ α₂) (i ⟨ rev transpᵣ ⟩) 
                   ≡ unnest (λ α₁ α₂ → f (α₂ ⟨ rev transpᵣ ⟩) (α₁ ⟨ rev transpᵣ ⟩)) i 
 unnest-transp-lemma (_ ⊗ _) _ = refl
+
+unnest-⊕-lemma : ∀ {X : Set}
+               → {s₁ s₂ p₁ p₂ : S (ss l)}
+               → ∀ (i : P (s₁ ⊗ s₂))
+               → ∀ (r₁ : Reshape p₁ s₁)
+               → ∀ (r₂ : Reshape p₂ s₂)
+               → ∀ (f : P p₁ → P p₂ → X)
+               → unnest (λ α₁ α₂ → f (α₁ ⟨ r₁ ⟩) (α₂ ⟨ r₂ ⟩)) i
+               ≡ unnest (λ α₁ α₂ → f α₁ α₂) (i ⟨ r₁ ⊕ r₂ ⟩)
+unnest-⊕-lemma (_ ⊗ _) _ _ _ = refl
+
+unnest-CM-lemma : ∀ {X : Set}
+                → {s p : S (ss l)}
+                → ∀ (i : P (s ⊗ p))
+                → ∀ (f : P p → P s → X)
+                → unnest (λ α₁ α₂ → f α₁ α₂) (i ⟨ CM ⟩)
+                ≡ ?
+
+--lemmatmp : ∀ {s : S (ss l)} → ∀ (i : P (transp s)) → i ⟨ rev CMᵗ ∙ rev flatten-zᵣ ⟩ ≡ i ⟨ rev flatten-zᵣ ∙ CMᵗ ⟩ 
+
+-- This needs some kind of knowledge of the unnest
+lemma : ∀ {X : Set}
+      → ∀ {s p : S (ss (ss zz))} 
+      → ∀ (i : P s) (j : P p)
+      → ∀ (f : P (flatten-z p) → P (flatten-z s) → X)
+      → unnest 
+          (λ α₁ α₂ → f
+            (α₁ ⟨ rev CMᵗ ∙ rev flatten-zᵣ ⟩)
+            (α₂ ⟨ rev CMᵗ ∙ rev flatten-zᵣ ⟩) 
+          ) ((i ⊗ j) ⟨ CMᵗ ⟩)
+        ≡ unnest
+          (λ α₁ α₂ → f
+            (α₁ ⟨ rev CMᵗ ⟩)
+            (α₂ ⟨ rev CMᵗ ⟩)
+          ) ((i ⊗ j) ⟨ rev flatten-zᵣ ∙ CMᵗ ⟩)
+lemma {X} {s} {p} i j f = ?
+
 {-
 cmfft-dftcong : ∀ {s : S (ss l)} 
               → ∀ {dft₁ dft₂ : {s : S l} → Ar s ℂ → Ar s ℂ}
@@ -503,7 +540,6 @@ fftn≡dft {s₁ ⊗ s₂} xs (i₁ ⊗ i₂) =
               (α₂ ⟨ transpᵣ ∙ rev CMᵗ ∙ rev flatten-zᵣ ⟩ )
         )
         ((i₁ ⊗ i₂) ⟨ CMᵗ ∙ rev transpᵣ ⟩ )
- 
     ⟩
         unnest 
           (λ α₁ α₂ → 
@@ -546,51 +582,271 @@ fftn≡dft {s₁ ⊗ s₂} xs (i₁ ⊗ i₂) =
               (α₂ ⟨ rev transpᵣ ∙ transpᵣ ∙ rev CMᵗ ∙ rev flatten-zᵣ ⟩)
           )
           ((i₁ ⊗ i₂) ⟨ CMᵗ ⟩ )
-  ≡⟨ ? ⟩ -- reveq × 3
-        unnest 
-          (λ α₂ α₁ → 
-            cmfft 
-              {zz}
-              dft 
-              twiddles 
-              CM 
-              (λ β →
-                  twiddles (β ⟨ flatten-zᵣ ⟩) α₁ 
-                * cmfft
-                    {zz}
-                    dft
-                    twiddles
-                    CM
-                    (λ δ → xs ((δ ⟨ flatten-zᵣ ⟩) ⊗ (β ⟨ flatten-zᵣ ⟩))) 
-                    (α₁ ⟨ rev CMᵗ ∙ rev flatten-zᵣ ⟩)
+  ≡⟨ remQuot-splits-proof 
+      {xs = unnest _}
+      {unnest _}
+      (λ α₁ α₂ → 
+        cmfft-icong {_} {_} {_} {twiddles} _ 
+            ((((α₁ ⟨ rev transpᵣ ⟩) ⟨ transpᵣ ⟩) ⟨ rev CMᵗ ⟩) ⟨ rev flatten-zᵣ ⟩)
+            ((α₁ ⟨ rev CMᵗ ⟩) ⟨ rev flatten-zᵣ ⟩) 
+            (cong (_⟨ rev flatten-zᵣ ⟩) (cong (_⟨ rev CMᵗ ⟩) (rev-eq′ transpᵣ α₁)))
+        ⊡ cmfft-cong _ dft-cong _ _ (λ β → 
+            cong₂
+              _*_
+              (cong (twiddles _) (rev-eq′ transpᵣ α₂))
+              (cmfft-icong {_} {_} {_} {twiddles} _ 
+                ((((α₂ ⟨ rev transpᵣ ⟩) ⟨ transpᵣ ⟩) ⟨ rev CMᵗ ⟩) ⟨ rev flatten-zᵣ
+             ⟩) 
+                ((α₂ ⟨ rev CMᵗ ⟩) ⟨ rev flatten-zᵣ ⟩) 
+                (cong (_⟨ rev flatten-zᵣ ⟩) (cong (_⟨ rev CMᵗ ⟩) (rev-eq′ transpᵣ α₂)))
               )
-              (α₂ ⟨ rev CMᵗ ∙ rev flatten-zᵣ ⟩)
-          )
-          ((i₁ ⊗ i₂) ⟨ CMᵗ ⟩)
-  ≡⟨ ? ⟩ 
-    -- Swap arrond rev CMᵗ and rev flatten-zᵣ - and then ∎?
-  _ ≡⟨ ? ⟩ 
-    -- Move flattening inside the unnest
-        unnest 
+          ) (α₁ ⟨ rev CMᵗ ∙ rev flatten-zᵣ ⟩)
+      )
+      ((i₁ ⊗ i₂) ⟨ CMᵗ ⟩)  
+    ⟩ -- reveq × 3
+      unnest 
           (λ α₁ α₂ → 
             cmfft 
               {zz}
               dft 
               twiddles 
               CM 
-              (λ β → 
-                  twiddles β α₂ 
-                * cmfft 
+              (λ β →
+                  twiddles (β ⟨ flatten-zᵣ ⟩) α₂
+                * cmfft
                     {zz}
-                    dft 
-                    twiddles 
-                    CM 
+                    dft
+                    twiddles
+                    CM
                     (λ δ → xs ((δ ⟨ flatten-zᵣ ⟩) ⊗ (β ⟨ flatten-zᵣ ⟩))) 
-                    (α₂ ⟨ rev CMᵗ ⟩)
-              ) 
-              (α₁ ⟨ rev CMᵗ ⟩)
-          ) 
-          ((i₁ ⊗ i₂) ⟨ rev flatten-zᵣ ∙ (_∙_ {_} {_} {_} {_} {s₁ ⊗ s₂} {_} flatten-zᵣ (CMᵗ ∙ rev flatten-zᵣ)) ⟩)
+                    (α₂ ⟨ rev CMᵗ ∙ rev flatten-zᵣ ⟩)
+              )
+              (α₁ ⟨ rev CMᵗ ∙ rev flatten-zᵣ ⟩)
+          )
+          ((i₁ ⊗ i₂) ⟨ CMᵗ ⟩)
+  ≡⟨ ? ⟩ -- Pull (rev CMᵗ ∙ rev flatten-zᵣ) out of unnest, twiddles needs some fixing in the process
+      unnest 
+          (λ α₁ α₂ → 
+            cmfft 
+              {zz}
+              dft 
+              twiddles 
+              CM 
+              (λ β →
+                  twiddles (β ⟨ flatten-zᵣ ⟩) (α₂ ⟨ rev (rev CMᵗ ∙ rev flatten-zᵣ) ⟩)
+                * cmfft
+                    {zz}
+                    dft
+                    twiddles
+                    CM
+                    (λ δ → xs ((δ ⟨ flatten-zᵣ ⟩) ⊗ (β ⟨ flatten-zᵣ ⟩))) 
+                    α₂
+              )
+              α₁
+          )
+          ((i₁ ⊗ i₂) ⟨ CMᵗ ∙ ((rev CMᵗ ∙ rev flatten-zᵣ) ⊕ (rev CMᵗ ∙ rev flatten-zᵣ)) ⟩)
+  ≡⟨⟩
+      unnest 
+          (λ α₁ α₂ → 
+            cmfft 
+              {zz}
+              dft 
+              twiddles 
+              CM 
+              (λ β →
+                  twiddles (β ⟨ flatten-zᵣ ⟩) (α₂ ⟨ rev (rev CMᵗ ∙ rev flatten-zᵣ) ⟩)
+                * cmfft
+                    {zz}
+                    dft
+                    twiddles
+                    CM
+                    (λ δ → xs ((δ ⟨ flatten-zᵣ ⟩) ⊗ (β ⟨ flatten-zᵣ ⟩))) 
+                    α₂
+              )
+              α₁
+          )
+          ((i₁ ⊗ i₂) ⟨ (CMᵗ ⊕ CMᵗ ∙ CM) ∙ ((rev CMᵗ ∙ rev flatten-zᵣ) ⊕ (rev CMᵗ ∙ rev flatten-zᵣ)) ⟩)
+  ≡⟨ ? ⟩ -- (CMᵗ ⊕ CMᵗ ∙ CM) ≡ CM ∙ CMᵗ ⊕ CMᵗ 
+      unnest 
+          (λ α₁ α₂ → 
+            cmfft 
+              {zz}
+              dft 
+              twiddles 
+              CM 
+              (λ β →
+                  twiddles (β ⟨ flatten-zᵣ ⟩) (α₂ ⟨ rev (rev CMᵗ ∙ rev flatten-zᵣ) ⟩)
+                * cmfft
+                    {zz}
+                    dft
+                    twiddles
+                    CM
+                    (λ δ → xs ((δ ⟨ flatten-zᵣ ⟩) ⊗ (β ⟨ flatten-zᵣ ⟩))) 
+                    α₂
+              )
+              α₁
+          )
+          ((i₁ ⊗ i₂) ⟨ CM ∙ CMᵗ ⊕ CMᵗ ∙ ((rev CMᵗ ∙ rev flatten-zᵣ) ⊕ (rev CMᵗ ∙ rev flatten-zᵣ)) ⟩)
+  ≡⟨ ? ⟩ -- (a ∙ b) ⊕ (c ∙ d) ≡ (a ⊕ c) ∙ (b ⊕ d)
+      unnest 
+          (λ α₁ α₂ → 
+            cmfft 
+              {zz}
+              dft 
+              twiddles 
+              CM 
+              (λ β →
+                  twiddles (β ⟨ flatten-zᵣ ⟩) (α₂ ⟨ rev (rev CMᵗ ∙ rev flatten-zᵣ) ⟩)
+                * cmfft
+                    {zz}
+                    dft
+                    twiddles
+                    CM
+                    (λ δ → xs ((δ ⟨ flatten-zᵣ ⟩) ⊗ (β ⟨ flatten-zᵣ ⟩))) 
+                    α₂
+              )
+              α₁
+          )
+          ((i₁ ⊗ i₂) ⟨ CM ∙ CMᵗ ⊕ CMᵗ ∙ (rev CMᵗ ⊕ rev CMᵗ) ∙ (rev flatten-zᵣ ⊕ rev flatten-zᵣ) ⟩)
+  ≡⟨ ? ⟩ -- Rev eq 
+      unnest 
+          (λ α₁ α₂ → 
+            cmfft 
+              {zz}
+              dft 
+              twiddles 
+              CM 
+              (λ β →
+                  twiddles (β ⟨ flatten-zᵣ ⟩) (α₂ ⟨ rev (rev CMᵗ ∙ rev flatten-zᵣ) ⟩)
+                * cmfft
+                    {zz}
+                    dft
+                    twiddles
+                    CM
+                    (λ δ → xs ((δ ⟨ flatten-zᵣ ⟩) ⊗ (β ⟨ flatten-zᵣ ⟩))) 
+                    α₂
+              )
+              α₁
+          )
+          ((i₁ ⊗ i₂) ⟨ CM ∙ (rev flatten-zᵣ ⊕ rev flatten-zᵣ) ⟩)
+  ≡⟨⟩ 
+      unnest 
+          (λ α₁ α₂ → 
+            cmfft 
+              {zz}
+              dft 
+              twiddles 
+              CM 
+              (λ β →
+                  twiddles (β ⟨ flatten-zᵣ ⟩) (α₂ ⟨ rev (rev CMᵗ ∙ rev flatten-zᵣ) ⟩)
+                * cmfft
+                    {zz}
+                    dft
+                    twiddles
+                    CM
+                    (λ δ → xs ((δ ⟨ flatten-zᵣ ⟩) ⊗ (β ⟨ flatten-zᵣ ⟩))) 
+                    α₂
+              )
+              α₁
+          )
+          ((i₁ ⊗ i₂) ⟨ rev flatten-zᵣ ∙ CM ∙ flatten-zᵣ ∙ rev flatten-zᵣ ⟩)
+  ≡⟨ ? ⟩ -- Twiddle fuckery
+      unnest 
+          (λ α₁ α₂ → 
+            cmfft 
+              {zz}
+              dft 
+              twiddles 
+              CM 
+              (λ β →
+                  twiddles β α₂
+                * cmfft
+                    {zz}
+                    dft
+                    twiddles
+                    CM
+                    (λ δ → xs ((δ ⟨ flatten-zᵣ ⟩) ⊗ (β ⟨ flatten-zᵣ ⟩))) 
+                    α₂
+              )
+              α₁
+          )
+          ((i₁ ⊗ i₂) ⟨ rev flatten-zᵣ ∙ CM ∙ flatten-zᵣ ∙ rev flatten-zᵣ ⟩)
+  ≡⟨ ? ⟩ -- flatten-zᵣ ∙ rev flatten-zᵣ ≡ eq
+      unnest 
+        (λ α₁ α₂ → cmfft 
+          {zz}
+          dft 
+          twiddles 
+          CM
+          (λ β → 
+              twiddles β α₂ 
+            * cmfft 
+                {zz}
+                dft 
+                twiddles 
+                CM
+                (λ δ → xs ((δ ⟨ flatten-zᵣ ⟩) ⊗ (β ⟨ flatten-zᵣ ⟩))) 
+                α₂ 
+          ) α₁ 
+        ) 
+        ((i₁ ⊗ i₂) ⟨ rev flatten-zᵣ ∙ CM ⟩) 
+  ≡⟨ ? ⟩ -- Bottom up, rev-eq×2 & twiddle _ i ≡ twiddle _ (i ⟨ CMᵗ ⟩)
+      unnest 
+        (λ α₁ α₂ → cmfft 
+          {zz}
+          dft 
+          twiddles 
+          CM
+          (λ β → 
+              twiddles β (α₂ ⟨ CMᵗ ⟩)
+            * cmfft 
+                {zz}
+                dft 
+                twiddles 
+                CM
+                (λ δ → xs ((δ ⟨ flatten-zᵣ ⟩) ⊗ (β ⟨ flatten-zᵣ ⟩))) 
+                (α₂ ⟨ CMᵗ ∙ rev CMᵗ ⟩)
+          ) (α₁ ⟨ CMᵗ ∙ rev CMᵗ ⟩)
+        ) 
+        ((i₁ ⊗ i₂) ⟨ rev flatten-zᵣ ∙ CM ⟩) 
+  ≡⟨ ? ⟩ -- Bottom up, Push CMᵗ inside
+      unnest 
+        (λ α₁ α₂ → cmfft 
+          {zz}
+          dft 
+          twiddles 
+          CM
+          (λ β → 
+              twiddles β α₂
+            * cmfft 
+                {zz}
+                dft 
+                twiddles 
+                CM
+                (λ δ → xs ((δ ⟨ flatten-zᵣ ⟩) ⊗ (β ⟨ flatten-zᵣ ⟩))) 
+                (α₂ ⟨ rev CMᵗ ⟩)
+          ) (α₁ ⟨ rev CMᵗ ⟩)
+        ) 
+        ((i₁ ⊗ i₂) ⟨ rev flatten-zᵣ ∙ CM ∙ (CMᵗ ⊕ CMᵗ) ⟩) 
+  ≡⟨ ? ⟩ -- Bottom up, (CMᵗ ⊕ CMᵗ) ∙ CM ≡ CM ∙ (CMᵗ ⊕ CMᵗ)
+      unnest 
+        (λ α₁ α₂ → cmfft 
+          {zz}
+          dft 
+          twiddles 
+          CM
+          (λ β → 
+              twiddles β α₂
+            * cmfft 
+                {zz}
+                dft 
+                twiddles 
+                CM
+                (λ δ → xs ((δ ⟨ flatten-zᵣ ⟩) ⊗ (β ⟨ flatten-zᵣ ⟩))) 
+                (α₂ ⟨ rev CMᵗ ⟩)
+          ) (α₁ ⟨ rev CMᵗ ⟩)
+        ) 
+        ((i₁ ⊗ i₂) ⟨ rev flatten-zᵣ ∙ (CMᵗ ⊕ CMᵗ) ∙ CM ⟩) 
   -- Go back from CMFFT to FFT
   ≡⟨ remQuot-splits-proof 
         {xs = unnest _}
@@ -643,4 +899,89 @@ fftn≡dft {s₁ ⊗ s₂} xs (i₁ ⊗ i₂) =
   ≡⟨ sym (dft≡fft {_} (reshape flatten-zᵣ xs) ((i₁ ⊗ i₂) ⟨ rev flatten-zᵣ ⟩)) ⟩
     dft (reshape (flatten-zᵣ ∙ flatten-zᵣ) xs) ((i₁ ⊗ i₂) ⟨ rev flatten-zᵣ ∙ rev flatten-zᵣ ⟩)
   ∎
+{-
 
+  ≡⟨ ? ⟩ 
+    -- Swap arrond rev CMᵗ and rev flatten-zᵣ - and then ∎?
+  --_ ≡⟨ ? ⟩ 
+    -- Move flattening inside the unnest
+        unnest 
+          (λ α₁ α₂ → 
+            cmfft 
+              {zz}
+              dft 
+              twiddles 
+              CM 
+              (λ β → 
+                  twiddles β α₂ 
+                * cmfft 
+                    {zz}
+                    dft 
+                    twiddles 
+                    CM 
+                    (λ δ → xs ((δ ⟨ flatten-zᵣ ⟩) ⊗ (β ⟨ flatten-zᵣ ⟩))) 
+                    (α₂ ⟨ rev CMᵗ ⟩)
+              ) 
+              (α₁ ⟨ rev CMᵗ ⟩)
+          ) 
+          ((i₁ ⊗ i₂) ⟨ rev flatten-zᵣ ∙ (_∙_ {_} {_} {_} {_} {s₁ ⊗ s₂} {_} flatten-zᵣ (((rev flatten-zᵣ) ⊕ (rev flatten-zᵣ)) ∙ CMᵗ)) ⟩)
+          -}
+          {-
+      unnest 
+
+        (λ α₁ α₂ → cmfft 
+          {zz}
+          dft 
+          twiddles 
+          CM
+          (λ β → 
+              twiddles β (α₂ ⟨ CMᵗ ⟩)
+            * cmfft 
+                {zz}
+                dft 
+                twiddles 
+                CM
+                (λ δ → xs ((δ ⟨ flatten-zᵣ ⟩) ⊗ (β ⟨ flatten-zᵣ ⟩))) 
+                α₂
+          ) α₁ 
+        ) 
+        ((i₁ ⊗ i₂) ⟨ rev flatten-zᵣ ∙ CM ⟩) 
+  ≡⟨ ? ⟩ 
+      unnest 
+        (λ α₁ α₂ → cmfft 
+          {zz}
+          dft 
+          twiddles 
+          CM
+          (λ β → 
+              twiddles β (α₂ ⟨ CMᵗ ⟩)
+            * cmfft 
+                {zz}
+                dft 
+                twiddles 
+                CM
+                (λ δ → xs ((δ ⟨ flatten-zᵣ ⟩) ⊗ (β ⟨ flatten-zᵣ ⟩))) 
+                (α₂ ⟨ CMᵗ ∙ rev CMᵗ ⟩)
+          ) (α₁ ⟨ CMᵗ ∙ rev CMᵗ ⟩)
+        ) 
+        ((i₁ ⊗ i₂) ⟨ rev flatten-zᵣ ∙ CM ⟩) 
+  ≡⟨ ? ⟩ 
+      unnest 
+        (λ α₁ α₂ → cmfft 
+          {zz}
+          dft 
+          twiddles 
+          CM
+          (λ β → 
+              twiddles β α₂
+            * cmfft 
+                {zz}
+                dft 
+                twiddles 
+                CM
+                (λ δ → xs ((δ ⟨ flatten-zᵣ ⟩) ⊗ (β ⟨ flatten-zᵣ ⟩))) 
+                (α₂ ⟨ rev CMᵗ ⟩)
+          ) (α₁ ⟨ rev CMᵗ ⟩)
+        ) 
+        ((i₁ ⊗ i₂) ⟨ rev flatten-zᵣ ∙ CM ∙ CMᵗ ⊕ CMᵗ ⟩) 
+        -}
