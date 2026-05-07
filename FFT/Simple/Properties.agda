@@ -450,4 +450,3 @@ fft≅dft {r₁ ⊗ r₂} arr (j₁ ⊗ j₀) with
     _ ≡⟨ sym (destructDFT (m*n≢0 _ _ ⦃ nz-#r₂ᵗ ⦄ ⦃ nz-#r₁ᵗ ⦄) _ _) ⟩
     _ ∎
 
-CMFFT≡FFT

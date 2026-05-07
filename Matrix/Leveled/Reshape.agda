@@ -291,3 +291,19 @@ module Matrix.Leveled.Reshape (M : Mon) where
   raise-Ar : ∀ {s : S} → ∀ {X : Set} → (El (lower-S s) → X) → Ar s X
   raise-Ar xs = xs ∘ lower-P
   -}
+
+
+
+
+
+
+
+    --twiddles-transₗ-lemma : ∀ {s p : S (ss l)}
+    --                      → ∀ (i : P s)
+    --                      → ∀ (j : P p)
+    --                      → twiddles (i ⟨ transpᵣ ∙ transpᵣ ⟩) j
+    --                      ≡ twiddles i j
+
+    --                      → ∀ (j : P p)
+    --                      → 
+

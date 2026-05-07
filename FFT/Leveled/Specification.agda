@@ -32,6 +32,32 @@ record FFT-Specification : Set where
              → ∀ i → dft xs i ≡ dft ys i
   
     twiddles : ∀ {l : L} → ∀ {s p : S (ss l)} → P s → P p → ℂ
+
+
+    twiddles-CMᵗᵣ-lemma : ∀ {s p : S (ss l)}
+                          → ∀ (i : P s)
+                          → ∀ (j : P p)
+                          → twiddles i (j ⟨ CMᵗ ⟩)
+                          ≡ twiddles i j
+
+    twiddles-flatten-zᵣ-lemma : ∀ {s p : S (ss (ss l))}
+                              → ∀ (i : P (flatten-z s))
+                              → ∀ (j : P (flatten-z p))
+                              → twiddles {_} {s} {p} (i ⟨ flatten-zᵣ ⟩) (j ⟨ flatten-zᵣ ⟩)
+                              ≡ twiddles i j
+  
+    twiddles-rev-flatten-zᵣ-lemma : ∀ {s p : S (ss (ss l))}
+                              → ∀ (i : P s)
+                              → ∀ (j : P p)
+                              → twiddles (i ⟨ rev flatten-zᵣ ⟩) (j ⟨ rev flatten-zᵣ ⟩)
+                              ≡ twiddles i j
+
+    twiddles-transₗ-lemma : ∀ {s p : S (ss l)}
+                          → ∀ (i : P s)
+                          → ∀ (j : P p)
+                          → twiddles (i ⟨ transpᵣ ∙ transpᵣ ⟩) j
+                          ≡ twiddles i j
+
     
     {-
     I really like this relation, but I think it is too high level and would 
