@@ -136,7 +136,7 @@ module Matrix.Leveled.Reshape (M : Mon) where
   ν-flattenᵣ {.(ss _)} {ι s} = down ν-flattenᵣ
 
   u-flatten-z : S zz → U
-  u-flatten-z (ν x) = x
+  u-flatten-z (ν x) = u-flatten (ν x)
 
   u-flatten-z-id : ∀ {s : S zz} → Reshape s (ν (u-flatten-z s))
   u-flatten-z-id {ν x} = eq
@@ -204,6 +204,16 @@ module Matrix.Leveled.Reshape (M : Mon) where
                      → proj₂ (⊗-remQuot p i) ≡ proj₂ (⊗-remQuot p j)
   proj₂-remQuot-cong refl = refl
 
+
+  ⊕-distributes-∙ : ∀ {l₁ l₂ l₃ : L} 
+                  → ∀ {p₁ p₂ : S (ss l₁)}
+                  → ∀ {s₁ : S (ss l₂)} → ∀ (r₁ : Reshape s₁ p₁ )
+                  → ∀ {s₂ : S (ss l₂)} → ∀ (r₂ : Reshape s₂ p₂ )
+                  → ∀ {p₃ : S (ss l₃)} → ∀ (r₃ : Reshape p₃ s₁ )
+                  → ∀ {p₄ : S (ss l₃)} → ∀ (r₄ : Reshape p₄ s₂ )
+                  → ∀ (i : P (p₁ ⊗ p₂))
+                  → i ⟨ ((r₁ ⊕ r₂) ∙ (r₃ ⊕ r₄)) ⟩ ≡ i ⟨ ((r₁ ∙ r₃) ⊕ (r₂ ∙ r₄)) ⟩
+  ⊕-distributes-∙ r₁ r₂ r₃ r₄ (i₁ ⊗ i₂) = refl
 
 
 

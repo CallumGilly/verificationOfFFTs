@@ -41,5 +41,10 @@ module Matrix.Leveled.Base (M : Mon) where
 
   unnest : {s p : S (ss l)} → Ar s (Ar p X) → Ar (s ⊗ p) X 
   unnest xs (i ⊗ j) = xs i j
+
+  length : (S l) → U
+  length (ν x) = x
+  length (ι x) = length x
+  length (s ⊗ p) = length s ● length p
   
  

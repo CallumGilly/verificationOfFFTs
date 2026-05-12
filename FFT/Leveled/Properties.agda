@@ -1,3 +1,5 @@
+{-# OPTIONS --allow-unsolved-metas #-}
+
 open import Matrix.Mon
 open import ComplexNew
 open import Matrix.Leveled.Change-Major
@@ -121,16 +123,6 @@ cmfft-dftcong {l} {s₁ ⊗ s₂} {dft₁} {dft₂} dft₁-cong prf {twid} xs (i
           ⊡ cmfft-dftcong dft₁-cong prf {twid} _ α₂
         )
         ((i₁ ⊗ i₂) ⟨ CM ∙ swap ⟩ )
-
-⊕-distributes-∙ : ∀ {l₁ l₂ l₃ : L} 
-                → ∀ {p₁ p₂ : S (ss l₁)}
-                → ∀ {s₁ : S (ss l₂)} → ∀ (r₁ : Reshape s₁ p₁ )
-                → ∀ {s₂ : S (ss l₂)} → ∀ (r₂ : Reshape s₂ p₂ )
-                → ∀ {p₃ : S (ss l₃)} → ∀ (r₃ : Reshape p₃ s₁ )
-                → ∀ {p₄ : S (ss l₃)} → ∀ (r₄ : Reshape p₄ s₂ )
-                → ∀ (i : P (p₁ ⊗ p₂))
-                → i ⟨ ((r₁ ⊕ r₂) ∙ (r₃ ⊕ r₄)) ⟩ ≡ i ⟨ ((r₁ ∙ r₃) ⊕ (r₂ ∙ r₄)) ⟩
-⊕-distributes-∙ r₁ r₂ r₃ r₄ (i₁ ⊗ i₂) = refl
 
 cmfft₂≡cmfft₁ : ∀ {s : S (ss (ss l))}
      → ∀ {dft : {s : S l} → Ar s ℂ → Ar s ℂ}

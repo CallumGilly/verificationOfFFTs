@@ -126,7 +126,7 @@ module Matrix.Simple.cm where
   rev-eq₃ a b c i = cong (λ x → x ⟨ b ∙ c ⟩) (rev-eq a i)
 
   thm : ∀ {s p} → (i : P (transp s)) (j : P (transp p))
-      → (i ⊗ j) ⟨ cm₂ ∙ (cm ⊕ cm) ⟩ ≡ ((i ⊗ j) ⟨ cm ⟩)
+      → (i ⊗ j) ⟨ cm₂ ∙ (cm ⊕ cm) ⟩ ≡ ((i ⊗ j) ⟨ (cm ⊕ cm) ∙ cm₂ ⟩)
   thm {s} {p} i j 
     rewrite
         flat-cm i
