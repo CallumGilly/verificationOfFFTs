@@ -8,9 +8,10 @@ open import Matrix.Mon
 open import Matrix.NatMon
 open import Matrix.Leveled ℕ-Mon
 open Mon ℕ-Mon
-open import FFT.Leveled.Specification cplx ℕ-Mon Leveled-CM
+open import FFT.Leveled.Specification cplx ℕ-Mon ? -- Leveled-CM
 open import FFT.Leveled.FFT cplx ℕ-Mon
 --open CM Leveled-CM
+open Change-Major ?
 open import Data.Fin hiding (_+_; pred)
 
 import Relation.Binary.PropositionalEquality as Eq
@@ -98,22 +99,24 @@ dft : {n : U} →
       Ar (ι (ν n)) ℂ
 dft {n} xs (ι j) = sum (λ k → xs (ι k) * twiddles n (ι k) (ι j))
 
+{-
 dftffttmp : {s
              : S (ss zz)}
             (xs : Ar s ℂ) (i : P s) →
             dft (reshape u-flattenᵣ xs) (i ⟨ rev u-flattenᵣ ⟩)
             ≡
-            reshape (change-majorᵣ )
+            reshape CMᵗ --(CMᵗ ?)
             (fft
              (dft) (std-twiddles) xs)
             i
 dftffttmp {ι (ν x)} xs (ι (ν i)) = refl
 dftffttmp {s ⊗ s₁} xs (i ⊗ i₁) = ?
+-}
 
 ℕ-dft : FFT-Specification
 ℕ-dft = record 
-      { dft = dft
+      { dft = ? --dft
       ; dft-cong = ?
       ; twiddles = std-twiddles
-      ; dft≡fft = dftffttmp
+      ; dft≡fft = ? --dftffttmp
       }

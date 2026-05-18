@@ -1,3 +1,5 @@
+{-# OPTIONS --without-K #-}
+
 module Matrix.Mon where
 
 open import Function

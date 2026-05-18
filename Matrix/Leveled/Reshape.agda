@@ -1,3 +1,5 @@
+{-# OPTIONS --without-K #-}
+
 open import Matrix.Mon
 
 module Matrix.Leveled.Reshape (M : Mon) where
@@ -31,6 +33,8 @@ module Matrix.Leveled.Reshape (M : Mon) where
     flat   : ∀ {m n} → Reshape (ι (ν m) ⊗ ι (ν n)) (ν (m ● n))
     unflat : ∀ {m n} → Reshape (ν (m ● n)) (ι (ν m) ⊗ ι (ν n))
     swap   : ∀ {s p : S (ss l)} → Reshape (s ⊗ p) (p ⊗ s)
+    assoₗ  : ∀ {s p q : S (ss l)} → Reshape ((s ⊗ p) ⊗ q) (s ⊗ (p ⊗ q))
+    assoᵣ : ∀ {s p q : S (ss l)} → Reshape (s ⊗ (p ⊗ q)) ((s ⊗ p) ⊗ q)
     
   _⟨_⟩ : {s : S l} {p : S r} → P s → Reshape p s → P p
   i ⟨ eq ⟩ = i
@@ -41,6 +45,9 @@ module Matrix.Leveled.Reshape (M : Mon) where
   ν x ⟨ flat ⟩ = let em , en = (Inverse.to $ pair-law _ _) x in (ι (ν em) ⊗ ι (ν en))
   (ι (ν x₁) ⊗ ι (ν x₂)) ⟨ unflat ⟩ = ν ((Inverse.from $ pair-law _ _) (x₁ , x₂)) 
   (i₁ ⊗ i₂) ⟨ swap ⟩ = i₂ ⊗ i₁
+  (i ⊗ (i₁ ⊗ i₂)) ⟨ assoₗ ⟩ = (i ⊗ i₁) ⊗ i₂
+  ((i ⊗ i₁) ⊗ i₂) ⟨ assoᵣ ⟩ = i ⊗ (i₁ ⊗ i₂)
+
 
   reshape : {s : S l}{p : S r} → Reshape s p → Ar s X → Ar p X
   reshape r a i = a (i ⟨ r ⟩)
@@ -54,6 +61,8 @@ module Matrix.Leveled.Reshape (M : Mon) where
   rev flat = unflat
   rev unflat = flat
   rev swap = swap
+  rev assoₗ = assoᵣ
+  rev assoᵣ = assoₗ
 
   rev-eq′ : ∀ {s : S l} {p : S r}
          → ∀ (r : Reshape s p)
@@ -69,6 +78,8 @@ module Matrix.Leveled.Reshape (M : Mon) where
     in cong₂ _⊗_ (cong ι (cong ν (,-injectiveˡ inv))) (cong ι (cong ν (,-injectiveʳ inv)))
   rev-eq′ unflat (ν x) = cong ν (Inverse.inverse (pair-law _ _) .proj₂ refl)
   rev-eq′ swap (i₁ ⊗ i₂) = refl
+  rev-eq′ assoₗ ((i ⊗ i₁) ⊗ i₂) = refl
+  rev-eq′ assoᵣ (i ⊗ (i₁ ⊗ i₂)) = refl
 
   rev-rev : ∀ {s : S l} {p : S r}
          → ∀ (r : Reshape s p)
@@ -82,6 +93,8 @@ module Matrix.Leveled.Reshape (M : Mon) where
   rev-rev flat i = refl
   rev-rev unflat i = refl
   rev-rev swap i = refl
+  rev-rev assoₗ i = refl
+  rev-rev assoᵣ i = refl
   
   rev-eq : ∀ {s : S l} {p : S r}
          → ∀ (r : Reshape s p)
@@ -216,6 +229,57 @@ module Matrix.Leveled.Reshape (M : Mon) where
   ⊕-distributes-∙ r₁ r₂ r₃ r₄ (i₁ ⊗ i₂) = refl
 
 
+  ⊕-rev-eq-lemma : ∀ {l₁ l₂ : L}
+                 → ∀ {s₁ p₁ : S (ss l₁)}
+                 → ∀ {s₂ p₂ : S (ss l₂)}
+                 → ∀ (i : P (s₁ ⊗ p₁)) 
+                 → ∀ (r₁ : Reshape s₂ s₁)
+                 → ∀ (r₂ : Reshape p₂ p₁)
+                 → i ⟨ (r₁ ∙ rev r₁) ⊕ (r₂ ∙ rev r₂) ⟩ ≡ i
+  ⊕-rev-eq-lemma (i ⊗ j) r₁ r₂ rewrite 
+      rev-eq r₁ i 
+    | rev-eq r₂ j = refl
+
+
+  unnest-swap-lemma : ∀ {X : Set}
+                    → ∀ {s p : S (ss l)} 
+                    → ∀ (i : P (s ⊗ p))
+                    → ∀ (f : P p → P s → X)
+                    → unnest (λ α₁ α₂ → f α₁ α₂) (i ⟨ swap ⟩) 
+                    ≡ unnest (λ α₁ α₂ → f α₂ α₁) i 
+  unnest-swap-lemma (_ ⊗ _) _ = refl
+
+  unnest-transp-lemma : ∀ {X : Set}
+                    → ∀ {s p : S (ss l)} 
+                    → ∀ (i : P (transp (s ⊗ p)))
+                    → ∀ (f : P s → P p → X)
+                    → unnest (λ α₁ α₂ → f α₁ α₂) (i ⟨ rev transpᵣ ⟩) 
+                    ≡ unnest (λ α₁ α₂ → f (α₂ ⟨ rev transpᵣ ⟩) (α₁ ⟨ rev transpᵣ ⟩)) i 
+  unnest-transp-lemma (_ ⊗ _) _ = refl
+
+  unnest-⊕-lemma : ∀ {X : Set}
+                 → {s₁ s₂ p₁ p₂ : S (ss l)}
+                 → ∀ (i : P (s₁ ⊗ s₂))
+                 → ∀ (r₁ : Reshape p₁ s₁)
+                 → ∀ (r₂ : Reshape p₂ s₂)
+                 → ∀ (f : P p₁ → P p₂ → X)
+                 → unnest (λ α₁ α₂ → f (α₁ ⟨ r₁ ⟩) (α₂ ⟨ r₂ ⟩)) i
+                 ≡ unnest (λ α₁ α₂ → f α₁ α₂) (i ⟨ r₁ ⊕ r₂ ⟩)
+  unnest-⊕-lemma (_ ⊗ _) _ _ _ = refl
+
+  unnest-⊕-rev-lemma : ∀ {X : Set}
+                       → ∀ {l₁ l₂ : L}
+                       → {s₁ s₂ : S (ss l₁)}
+                       → {p₁ p₂ : S (ss l₂)}
+                       → ∀ (i : P (s₁ ⊗ s₂))
+                       → ∀ (r₁ : Reshape p₁ s₁)
+                       → ∀ (r₂ : Reshape p₂ s₂)
+                       → ∀ (f : P s₁ → P s₂ → X)
+                       → unnest (λ α₁ α₂ → f α₁ α₂) i
+                       ≡ unnest (λ α₁ α₂ → f (α₁ ⟨ rev r₁ ⟩) (α₂ ⟨ rev r₂ ⟩)) (i ⟨ r₁ ⊕ r₂ ⟩)
+  unnest-⊕-rev-lemma (i₁ ⊗ i₂) r₁ r₂ f rewrite 
+      rev-eq r₁ i₁ 
+    | rev-eq r₂ i₂ = refl
 
 
 

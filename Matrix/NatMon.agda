@@ -1,4 +1,3 @@
-{-# OPTIONS --allow-unsolved-metas #-}
 module Matrix.NatMon where
 
 import Relation.Binary.PropositionalEquality as Eq
@@ -11,7 +10,7 @@ open import Data.Unit
 open import Data.Fin hiding (_+_)
 open import Data.Nat as Nat
 open import Data.Nat.Properties
-open import Data.Product hiding (swap; map; map₁; map₂; zipWith)
+open import Data.Product hiding (swap; map; map₁; map₂)
 
 open import Matrix.Mon
 import Data.Fin as Fin

@@ -54,57 +54,6 @@ cmfft-icong : ∀ {s : S (ss l)}
              → cmfft dft₁ twid CM xs i ≡ cmfft dft₁ twid CM xs j
 cmfft-icong _ _ _ refl = refl
 
-unnest-swap-lemma : ∀ {X : Set}
-                  → ∀ {s p : S (ss l)} 
-                  → ∀ (i : P (s ⊗ p))
-                  → ∀ (f : P p → P s → X)
-                  → unnest (λ α₁ α₂ → f α₁ α₂) (i ⟨ swap ⟩) 
-                  ≡ unnest (λ α₁ α₂ → f α₂ α₁) i 
-unnest-swap-lemma (_ ⊗ _) _ = refl
-
-unnest-transp-lemma : ∀ {X : Set}
-                  → ∀ {s p : S (ss l)} 
-                  → ∀ (i : P (transp (s ⊗ p)))
-                  → ∀ (f : P s → P p → X)
-                  → unnest (λ α₁ α₂ → f α₁ α₂) (i ⟨ rev transpᵣ ⟩) 
-                  ≡ unnest (λ α₁ α₂ → f (α₂ ⟨ rev transpᵣ ⟩) (α₁ ⟨ rev transpᵣ ⟩)) i 
-unnest-transp-lemma (_ ⊗ _) _ = refl
-
-unnest-⊕-lemma : ∀ {X : Set}
-               → {s₁ s₂ p₁ p₂ : S (ss l)}
-               → ∀ (i : P (s₁ ⊗ s₂))
-               → ∀ (r₁ : Reshape p₁ s₁)
-               → ∀ (r₂ : Reshape p₂ s₂)
-               → ∀ (f : P p₁ → P p₂ → X)
-               → unnest (λ α₁ α₂ → f (α₁ ⟨ r₁ ⟩) (α₂ ⟨ r₂ ⟩)) i
-               ≡ unnest (λ α₁ α₂ → f α₁ α₂) (i ⟨ r₁ ⊕ r₂ ⟩)
-unnest-⊕-lemma (_ ⊗ _) _ _ _ = refl
-
-unnest-⊕-rev-lemma : ∀ {X : Set}
-                     → ∀ {l₁ l₂ : L}
-                     → {s₁ s₂ : S (ss l₁)}
-                     → {p₁ p₂ : S (ss l₂)}
-                     → ∀ (i : P (s₁ ⊗ s₂))
-                     → ∀ (r₁ : Reshape p₁ s₁)
-                     → ∀ (r₂ : Reshape p₂ s₂)
-                     → ∀ (f : P s₁ → P s₂ → X)
-                     → unnest (λ α₁ α₂ → f α₁ α₂) i
-                     ≡ unnest (λ α₁ α₂ → f (α₁ ⟨ rev r₁ ⟩) (α₂ ⟨ rev r₂ ⟩)) (i ⟨ r₁ ⊕ r₂ ⟩)
-unnest-⊕-rev-lemma (i₁ ⊗ i₂) r₁ r₂ f rewrite 
-    rev-eq r₁ i₁ 
-  | rev-eq r₂ i₂ = refl
-
-⊕-rev-eq-lemma : ∀ {l₁ l₂ : L}
-               → ∀ {s₁ p₁ : S (ss l₁)}
-               → ∀ {s₂ p₂ : S (ss l₂)}
-               → ∀ (i : P (s₁ ⊗ p₁)) 
-               → ∀ (r₁ : Reshape s₂ s₁)
-               → ∀ (r₂ : Reshape p₂ p₁)
-               → i ⟨ (r₁ ∙ rev r₁) ⊕ (r₂ ∙ rev r₂) ⟩ ≡ i
-⊕-rev-eq-lemma (i ⊗ j) r₁ r₂ rewrite 
-    rev-eq r₁ i 
-  | rev-eq r₂ j = refl
-
 cmfft-dftcong : ∀ {s : S (ss l)} 
               → ∀ {dft₁ dft₂ : {s : S l} → Ar s ℂ → Ar s ℂ}
               → ∀ (dft₁-cong : {s : S l} (a b : P s → ℂ) → ((i : P s) → a i ≡ b i) → (i : P s) → dft₁ a i ≡ dft₁ b i)

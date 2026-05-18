@@ -1,3 +1,5 @@
+{-# OPTIONS --without-K #-}
+
 open import Matrix.Mon
 module Matrix.Leveled.Base (M : Mon) where
 

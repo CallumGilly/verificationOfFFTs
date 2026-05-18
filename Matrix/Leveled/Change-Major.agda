@@ -1,4 +1,5 @@
 {-# OPTIONS --allow-unsolved-metas #-}
+{-# OPTIONS --without-K #-}
 
 open import Matrix.Mon
 
@@ -41,6 +42,7 @@ record Change-Major : Set₁ where
     private
       infix 4 _⊡_
       _⊡_ = trans
+
     
     -- As well as defining CM with flatten-zᵣ - we should also be able to define
     -- CM with u-flatten and prove they are equivalent
@@ -49,7 +51,13 @@ record Change-Major : Set₁ where
                     ∙ BaseCM {ι (ν (u-flatten s))} {ι (ν (u-flatten p))}
                     ∙ ν-flattenᵣ
 
-    --lemma₂ : ∀ {s : S (ss (ss l))} → ∀ {i : P s} → i ⟨ rev flatten-zᵣ ⟩ ⟨ rev ν-flattenᵣ ⟩ ≡ i ⟨ rev ν-flattenᵣ ⟩
+    {-
+    lemma₂ : ∀ {s : S (ss (ss l))} 
+           → ∀ {i : P s} 
+           → i ⟨ rev flatten-zᵣ ⟩ ⟨ rev ν-flattenᵣ ⟩ 
+             ≡ 
+             ? --i ⟨ rev ν-flattenᵣ ⟩
+    -}
 
     CM-CM′ : ∀ {s p : S (ss l)} (i : P (s ⊗ p)) → i ⟨ CM ⟩ ≡ i ⟨ CM′ ⟩
     CM-CM′ {zz} {s} {p} (i ⊗ j) = ?
@@ -102,6 +110,30 @@ record Change-Major : Set₁ where
       reindex : ∀ {m n : U} → (m ≡ n) → Reshape (ι (ν m)) (ι (ν n))
       reindex {m} prf = subst (λ t → Reshape (ι (ν m)) (ι (ν t))) prf eq
 
+      reindex′ : {s₁ : S l} {s₂ : S l} → (s₁ ≡ s₂) → Reshape s₁ s₂
+      reindex′ {_} {s₁} {s₂} prf = subst (λ t → Reshape s₁ t) prf eq
+
+    -- Not true as r := CMᵗ ∙ transpᵣ : Reshape s s, and yet reorders the elements preventing this from holding
+    -- eq-lemma : ∀ {l : L} → ∀ {s : S l} → ∀ (r : Reshape s s) → ∀ i → i ⟨ r ⟩ ≡ i
+
+    helper : ∀ {lₛ lₚ lₖ : L} {s : S lₛ} {p : S lₚ} {k : S lₖ}
+           → (r₁ r₂ : Reshape s p) 
+           → (r     : Reshape k s)
+           → (∀ i → i ⟨ r₁ ∙ r ⟩ ≡ i ⟨ r₂ ∙ r ⟩)
+           → ∀ i → i ⟨ r₁ ⟩ ≡ i ⟨ r₂ ⟩
+    helper {lₛ} {lₚ} {s} {p} r₁ r₂ r prf i = ?
+
+    rshpEq : ∀ {lₛ lₚ : L} {s₁ s₂ : S lₛ} {p₁ p₂ : S lₚ}
+           → (r₁ : Reshape s₁ p₁)
+           → (r₂ : Reshape s₂ p₂)
+           → (s₁≡s₂ : s₁ ≡ s₂)
+           → (p₁≡p₂ : p₁ ≡ p₂)
+           → (∀ i → i ⟨ r₁ ∙ rev ν-flattenᵣ ⟩ ≡ i ⟨ reindex′ (sym p₁≡p₂) ∙ r₂ ∙ rev ν-flattenᵣ ∙ reindex′ (cong ν (cong u-flatten s₁≡s₂)) ⟩)
+           → (∀ i → i ⟨ r₁ ⟩ ≡ i ⟨ reindex′ (sym p₁≡p₂) ∙ r₂ ∙ reindex′ s₁≡s₂ ⟩)
+    rshpEq {lₛ} {lₚ} {s₁} {.s₁} {p₁} {.p₁} r₁ r₂ refl refl prf i = 
+      let tmo = prf i
+      in helper r₁ r₂ (rev ν-flattenᵣ) prf i
+
     semi-flatten : S (ss l) → S (ss l)
     semi-flatten = ι ∘ flatten-z 
 
@@ -135,13 +167,15 @@ record Change-Major : Set₁ where
     CM-lemma₂ : ∀ {s p : S (ss (ss l))} 
               → (i : P s) (j : P p) 
               → ((i ⟨ rev flatten-zᵣ ⟩) ⊗ (j ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩ ≡ (i ⊗ j) ⟨ CM ⟩ ⟨ rev flatten-zᵣ ⟩
-    CM-lemma₂ i j  = ?
+    CM-lemma₂ {l} {s} {p} i j = sym (⊕-rev-eq-lemma _ _ _)
+                              ⊡ sym (⊕-distributes-∙ _ _ _ _ (((i ⟨ rev flatten-zᵣ ⟩) ⊗ (j ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩))
     --CM-lemma₃ : ∀ {s : S (ss (ss l))} (i : P (s)) → i ⟨ CMᵗ ⟩ ⟨ flatten-zᵣ {_} {?} ⟩ ≡ i ⟨ flatten-zᵣ ⟩ ⟨ CMᵗ ⟩ ⟨ ? ⟩
 
     CMᵗ-lemma : ∀ {s p : S (ss l)} 
               → ∀ (i : P (transp (s ⊗ p)))
               → i ⟨ CM ∙ (CMᵗ ⊕ CMᵗ) ⟩ ≡ i ⟨ (CMᵗ ⊕ CMᵗ) ∙ CM ⟩
-    CMᵗ-lemma {l} {s} {p} (i ⊗ j) = ?
+    CMᵗ-lemma {zz} {s} {p} (i ⊗ j) = ?
+    CMᵗ-lemma {ss l} {s} {p} (i ⊗ j) = ?
     --CMᵗ-lemma {zz} {s} {p} (i ⊗ j) = ?
     --CMᵗ-lemma {ss l} {s} {p} (i ⊗ j)  = ?
     
