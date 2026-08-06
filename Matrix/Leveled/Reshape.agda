@@ -281,7 +281,25 @@ module Matrix.Leveled.Reshape (M : Mon) where
       rev-eq r₁ i₁ 
     | rev-eq r₂ i₂ = refl
 
+  
+  resh-length : ∀ {l l′ : L} {s : S l} {s′ : S l′} → Reshape s s′ → length s ≡ length s′
+  resh-length eq = refl
+  resh-length (x ∙ x₁) = resh-length x₁ ⊡ resh-length x 
+  resh-length (x ⊕ x₁) = cong₂ _●_ (resh-length x) (resh-length x₁)
+  resh-length (up x) rewrite resh-length x = refl
+  resh-length (down x) rewrite resh-length x = refl
+  resh-length flat = refl
+  resh-length unflat = refl
+  resh-length swap = comm
+  resh-length assoₗ = sym asso
+  resh-length assoᵣ = asso
 
+
+  resh₂-length : ∀ {l₁ l₂ l₃ : L} {s : S l} {s₁ : S l₁} {s₂ : S l₂} 
+               → Reshape s s₁
+               → Reshape s₂ s 
+               → length s₁ ≡ length s₂
+  resh₂-length {l} {l₁} {l₂} {l₃} {s} {s₁} {s₂} r₁ r₂ rewrite resh-length (rev r₁) | resh-length (rev r₂) =  refl
 
 
 

@@ -49,4 +49,5 @@ module Matrix.Leveled.Base (M : Mon) where
   length (ι x) = length x
   length (s ⊗ p) = length s ● length p
   
- 
+  iota : ∀ {n : U} → Ar (ι (ν n)) U
+  iota (ι (ν x)) = toU x

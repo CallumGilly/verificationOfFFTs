@@ -15,6 +15,8 @@ record Mon : Set₁ where
     U : Set
     El : U → Set
 
+    toU : {u : U} → El u → U
+
     ε : U
     _●_ : U → U → U
 
@@ -25,3 +27,4 @@ record Mon : Set₁ where
     
     -- This does restrict out ability to use ⊗ as ●, but I think thats okay with Levels 
     comm : ∀ {u₁ u₂ : U} → (u₁ ● u₂) ≡ (u₂ ● u₁)
+    asso : ∀ {u₁ u₂ u₃ : U} → u₁ ● (u₂ ● u₃) ≡ (u₁ ● u₂) ● u₃

@@ -59,6 +59,16 @@ to-resh {l} {_ ⊗ _} {.(_ ⊗ _)} (bᵣ (st x) q⊂s) = assoₗ ∙ ((assoᵣ �
 -- Ah...
 --from : ∀ {s q : S (ss l)} → Reshape s (q ⊗ (inv-⊂ q⊂s)) → q ⊂ s
 
+{-
+open import Data.Empty
+
+-- Interesting property...
+s⊂s⇒⊥ : ∀ {s : S l} → s ⊂ s → ⊥
+s⊂s⇒⊥ (le (st x)) = ?
+s⊂s⇒⊥ (ri (st x)) = ?
+s⊂s⇒⊥ (bₗ x _) = s⊂s⇒⊥ x
+s⊂s⇒⊥ (bᵣ _ x) = s⊂s⇒⊥ x
+-}
 
 
 

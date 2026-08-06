@@ -33,6 +33,9 @@ opaque
   ∘-suc-lemma₂ : ∀ (a b : ℕ) → b * a + b + a ≡ a * b + a + b
   ∘-suc-lemma₂ = solve 2 (λ :a :b → :b :* :a :+ :b :+ :a := :a :* :b :+ :a :+ :b) refl
 
+  ∘-suc-lemma₃ : ∀ (u₁ u₂ u₃ : ℕ) → u₁ * (u₂ * u₃ + u₂ + u₃) + u₁ + (u₂ * u₃ + u₂ + u₃) ≡ (u₁ * u₂ + u₁ + u₂) * u₃ + (u₁ * u₂ + u₁ + u₂) + u₃
+  ∘-suc-lemma₃ = solve 3 (λ :u₁ :u₂ :u₃ → :u₁ :* (:u₂ :* :u₃ :+ :u₂ :+ :u₃) :+ :u₁ :+ (:u₂ :* :u₃ :+ :u₂ :+ :u₃) := (:u₁ :* :u₂ :+ :u₁ :+ :u₂) :* :u₃ :+ (:u₁ :* :u₂ :+ :u₁ :+ :u₂) :+ :u₃) refl
+
 pair-to : ∀ {a : ℕ} {b : ℕ} → Fin (suc (a * b + a + b)) → Fin (suc a) × Fin (suc b) 
 pair-to {a} {b} = 
         remQuot {suc a} (suc b) 
@@ -62,6 +65,7 @@ to-from {a} {b} {x₁ , x₂} rewrite
 ℕ-Mon = record {
     U    = ℕ
   ; El   = Fin ∘ suc
+  ; toU  = toℕ
   ; ε    = 0
   ; _●_ = λ a b → (a * b) + a + b
   ; unit-law  = 1↔⊤
@@ -73,5 +77,6 @@ to-from {a} {b} {x₁ , x₂} rewrite
                 ; inverse   = (λ{refl → to-from}) , λ{refl → from-to}
                 }
   ; comm = λ {u₁} {u₂} → ∘-suc-lemma₂ u₂ u₁
+  ; asso = λ {u₁} {u₂} {u₃} → ∘-suc-lemma₃ u₁ u₂ u₃
   }
 

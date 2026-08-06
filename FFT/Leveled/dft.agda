@@ -7,6 +7,7 @@ open Cplx cplx
 open import Matrix.Mon
 open import Matrix.NatMon
 open import Matrix.Leveled ℕ-Mon
+open import Matrix.Leveled.NatMon-Sum cplx
 open Mon ℕ-Mon
 open import FFT.Leveled.Specification cplx ℕ-Mon ? -- Leveled-CM
 open import FFT.Leveled.FFT cplx ℕ-Mon
@@ -63,33 +64,18 @@ private
     n : U
     X : Set
 
-{- 
-I could define sum via foldr
-I should defined sum via foldr
-I have previously had issues defining sum via foldr
-So I will use this for now, but may have to make an ↔ relation with foldr sum
--}
-head₁  : Ar (ν (suc n)) X → X
-head₁ xs = xs (ν zero)
-
-tail₁ : Ar (ν (suc n)) X → Ar (ν n) X
-tail₁ xs (ν x) = xs (ν (suc x))
-
-sum : ∀ {n : U} → Ar (ν n) ℂ → ℂ
-sum {zero} xs = xs (ν zero)
-sum {suc n} xs = head₁ xs + (sum (tail₁ xs))
-
 -- Be careful here, given i : Fin ∘ suc
-iota : ∀ {n : U} → Ar (ι (ν n)) ℕ
-iota (ι (ν x)) = toℕ x
+--iota : ∀ {n : U} → Ar (ι (ν n)) ℕ
+--iota (ι (ν x)) = toℕ x
 
 twiddles : ∀ {l : L} → ∀ {s p : S (ss l)} → ℕ → P s → P p → ℂ
 twiddles {l} {s} {p} n i j = -ω n ((iota (i ⟨ rev u-flattenᵣ ⟩)) *ₙ (iota (j ⟨ rev u-flattenᵣ ⟩)))
 
 size : ∀ {l : L} → S l → ℕ
-size (ν x) = x
-size (ι x) = size x
-size (x₁ ⊗ x₂) = size x₁ *ₙ size x₂
+size = length
+--size (ν x) = x
+--size (ι x) = size x
+--size (x₁ ⊗ x₂) = size x₁ *ₙ size x₂
 
 std-twiddles : ∀ {l : L} → ∀ {s p : S (ss l)} → P s → P p → ℂ
 std-twiddles {_} {s} {p} i j = twiddles (size s *ₙ size p) i j
