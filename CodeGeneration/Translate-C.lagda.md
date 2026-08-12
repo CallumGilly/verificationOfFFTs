@@ -344,7 +344,6 @@ cplx-memory-lifetime (ν n) f = do
   let memory-free = free-op memory-name
   return $ memory-alloc >: ops >: memory-free
 ```
-
 # C Translation
 
 Finally we can move to our C translation, this works in two steps. 
@@ -393,16 +392,169 @@ resh-ix (down r) (ι i) = resh-ix r i
 resh-ix swap (i ⊗ j) = j ⊗ i
 resh-ix assoₗ ((i₁ ⊗ i₂) ⊗ i₃) = i₁ ⊗ (i₂ ⊗ i₃)
 resh-ix assoᵣ (i₁ ⊗ (i₂ ⊗ i₃)) = (i₁ ⊗ i₂) ⊗ i₃
----- These (mainly unflat) are non-trivial - Can I work with a subset of reshapes?
-resh-ix flat (ι (ν b) ⊗ ι (ν b₁)) = placeholder-Ix _
-resh-ix unflat (ν x) = placeholder-Ix _
+-- These need mod, just needs a moment of thinking
+resh-ix (flat {m} {n}) (ι (ν b) ⊗ ι (ν b₁)) = ν (printf "((%u * %s) + %s)" m b b₁) --placeholder-Ix _
+resh-ix (unflat {m} {n}) (ν x) = ι (ν (printf "(%s / %u)" x m )) ⊗ ι (ν (printf "(%s %% %u)" x m)) --placeholder-Ix _
 
 --resh-ix-pointer : ∀ {s s′ : S l} → Reshape s s′ → Ix s → Pointer (length s′)
 --resh-ix-pointer r i = ix-pointer (resh-ix r i)
 ```
+# New Attempts
 
 ```agda
-translateInp₁′ : ∀ {ITy OTy : Ty} {s : S l} → Num ITy → Ix s → Inp translate-Ty (ix s ⇒ ITy) (ix s ⇒ ITy) → State ℕ (translate-Ty ITy)
+module _ where
+  variable 
+    ℓ ℓ′ : L
+    s s′ k : S ℓ
+    r : Reshape s s′
+
+  record AR′ (s : S ℓ) : Set where
+    field
+      name : String
+
+      p : S ℓ
+      sel : Sel s p
+
+    to-str : (Ix s) → String 
+    to-str i = ix-to-str {_} {p} (sel-to-ix sel i) name
+  open AR′
+
+  {-
+  updateSel : Reshape s s′ → Sel s k →  Sel s′ k
+  updateSel r idh = ?
+  updateSel r (left x sel₁) = ?
+  updateSel r (right x sel₁) = ?
+  updateSel r (both sel₁ sel₂) = ?
+  updateSel r (chain sel₁ sel₂) = ?
+
+  updateAr : ∀ {s s′ : S ℓ} → Reshape s s′ → AR′ s → AR′ s′
+  updateAr x ar = record 
+                  { AR′ ar
+                  ; sel = ?
+                  }
+
+  -}
+  --step₁ : .( r : Reshape s s′ ) → Inp translate-Ty s s′ r → (translate-Ty (ix s ⇒ C))
+  --step₁ : .( r : Reshape s s′ ) → Inp translate-Ty s s′ r → (translate-Ty (ix s′ ⇒ C))
+
+  -- This AR should NOT remain a string, but for this stage it should be enough to work with
+
+  step₁ : .( r : Reshape s s′ ) → {- AR′ s -} String → Inp translate-Ty s s′ r → (translate-Ty (ix s ⇒ C))
+  step₁ _ ar (compose r₁ inp₁ r₂ inp₂) i = do
+    α ← step₁ r₁ ar inp₁ i
+    β ← step₁ r₂ ar inp₂ (resh-ix r₁ i)
+    return $ α ++ "\n" ++ β
+  step₁ _ ar (view` r e) i = do 
+    inside-view ← step₁ eq ar e i
+    
+    return inside-view
+    {-
+    -- IFF we didn't have i here, we would have to do two loops here, 
+        -- copy out into external memory
+        -- copy from this external memory back into the memory we work on
+    -- We can't change compose such that we give it the reshapes and it changes 
+    -- where we write to, as we would get read after write
+
+    let message = printf "// Index: %s;\n // Reshaped index: %s\n" (ix-to-str i (ar )) (ix-to-str (resh-ix r i) (ar ))
+    return $ "// view\n" ++ message
+    -}
+  step₁ _ _ (copyOut` r₁ r₂ inp) i = do 
+    -- Loop to copy to external memory
+    -- Inner inplace operation
+    -- Loop to copy back
+    return $ "// copyOut\n"
+  step₁ _ _ (part` s⊂p inp) i = do
+    -- Single loop into hyperplane
+    return "// part\n"
+  step₁ {_} {s} _ _ (imap` x) i = do
+    -- Single loop applying arit at each step
+    return ? --"// imap\n"
+  step₁ _ _ (mapSum` x) i = 
+    return "// mapSum\n"
+
+  step₂ : (translate-Ty (ix s ⇒ C)) → State ℕ String
+  step₂ xs = do
+    i ← new-Ix _
+    x ← xs i
+    return $ loopnest i x
+
+  show-inp : Inp translate-Ty s s′ r → String
+  show-inp {_} {_} {_} {r} inp = runState show-inp′ 0 .proj₂ 
+     where
+       show-inp′ : State ℕ String
+       show-inp′ = do
+         let f = step₁ r "MemName" inp
+         x ← step₂ f
+         return $ x
+
+  mini : Inp translate-Ty s (transp s) (rev transpᵣ)
+  mini = view` (rev transpᵣ) (imap` (`λ a ⇒ `λ b ⇒ var b)) 
+```
+
+# Main Attempt
+
+```agda
+--translateInp′ : {s s′ : S l} .{r : Reshape s s′} → AR (ix s ⇒ C) → Ix s → Inp translate-Ty s s′ r → State ℕ (AR (ix s′ ⇒ C) × translate-Ty C)
+{-
+translateInp₁′ : {s s′ : S l} .{r : Reshape s s′} → AR (ix s ⇒ C) → Ix s → Inp translate-Ty s s′ r → State ℕ (AR (ix s′ ⇒ C) × translate-Ty C)
+translateInp₁′ ar@(arr ref sel) i (compose a inp₁ b inp₂) = do 
+  ar₁ , e₁ ← translateInp₁′ ar i inp₁
+  ar₂ , e₂ ← translateInp₁′ ar₁ (resh-ix a i) inp₂
+  return $ ar₂ , (e₁ <+> "\n" <+> e₂)
+-- translateInp₁′ (arr ref sel) i (view` r) = return $ (arr ref idh) , "" --TODO
+translateInp₁′ tmp@(arr ref sel) i (copyOut` {s = s} {p} {q} r₁ r₂ inp) = do 
+  let comment₁ = "//copyOut` Start"
+
+  memory-name ← fresh-var
+  let memory-alloc = assignment (complex-type <+> "*" ++ memory-name) $ "(" ++ complex-type <+> "*)" ++ calloc-op complex-type (suc (length s))
+
+  copy-out-iter ← new-Ix s
+  let copy-out-op = loopnest copy-out-iter $ assignment (ix-to-str (resh-ix r₁ copy-out-iter) memory-name) (ix-to-str (sel-to-ix sel (ι copy-out-iter)) ref)
+
+  -- TODO
+  iter ← new-Ix p
+  some , inner ← translateInp₁′ (arr memory-name idh) iter inp
+
+  copy-in-iter ← new-Ix q
+  let copy-in-op  = loopnest copy-in-iter $ assignment (ix-to-str (sel-to-ix sel (resh-ix (up r₂) copy-in-iter) ) ref) (ix-to-str copy-in-iter memory-name)
+
+  let comment₂ = "//copyOut` End\n"
+
+  return (tmp , comment₁ >∷ memory-alloc >: copy-out-op >∷ inner >∷ copy-in-op >∷ comment₂)
+translateInp₁′ ar@(arr ref sel) i (part` p⊂s inp) = do
+  -- First we create a selection into the section of the array we want to work 
+  -- with, with an iterator for the outer loop
+  iter , inner-sel ← ⊂-to-sel p⊂s
+  -- Then we generate the body of the loop, using that selection into the array
+  tmp-iter ← new-Ix (inv-⊂ p⊂s)
+  _ , inner ← translateInp₁′ (arr ref (chain inner-sel sel)) tmp-iter inp
+  return $ ar , (loopnest iter $ loopnest tmp-iter inner) 
+
+translateInp₁′ ar@(arr {s = s} {p} ref sel) i (imap` arit) = do
+  ix-p ← new-Ix p
+
+  current-x ← sel-to-str sel ref ix-p
+  arit-string ← translate-Arit C (app (app arit (var ix-p)) (var current-x))
+  return $ ar , (loopnest ix-p (current-x <+> "=" <+> arit-string ++ ";"))
+translateInp₁′ ar@(arr ref sel) i (mapSum` {u} arit) = do
+  -- For sum I need to allocate some memory to work in, this should be the 
+  -- same size and shape of s
+  iter₁ ← new-Ix _
+  iter₂ ← new-Ix _
+  airt ← translate-Arit (arr C) (app (app arit (var (sel-to-str sel ref))) (var iter₁))
+  let f = λ tmp-name → ((loopnest iter₁ $ (ix-to-str iter₁ tmp-name) <+> "+=" <+> airt) >: (loopnest iter₂ $ assignment (ix-to-str (sel-to-ix sel iter₂) ref) (ix-to-str iter₂ tmp-name <+> ";\n")))
+  lifetime ← cplx-memory-lifetime (ν u) f
+  return $ ar , lifetime --(lifetime , loc)
+
+translateInp₂ : ∀ {s s′ : S l} .(r : Reshape s s′) → AR (ix s ⇒ C) → Inp translate-Ty s s′ r → String  → String × String
+translateInp₂ {s = s} _ ARτ inp name = runState (
+        do
+            iter ← new-Ix s
+            _ , code ← translateInp₁′ ARτ iter inp
+            return $ "" , loopnest iter code
+      ) 0 .proj₂
+      -}
+{-
 translateInp₁′ x i (compose x₁ x₂) = do
   a ← translateInp₁′ ? i ?
   return ?
@@ -464,13 +616,6 @@ translateInp₁ (num (arr C)) loc@(arr {s = s} name sel) (mapSum` {u} arit) = do
   lifetime ← cplx-memory-lifetime (ν u) f
   return (lifetime , loc)
 
-translateInp₂ : ∀ {ITy OTy : Ty} → FNum ITy → AR ITy  → Inp translate-Ty ITy OTy → String  → String × String
-translateInp₂ {ITy} {OTy} fnum ARτ inp name = runState (
-        do
-            --let arg = ?
-            code , memLoc ← translateInp₁ {ITy = ITy} {OTy} fnum ARτ inp
-            return $ code , code
-      ) 0 .proj₂
 
 --→(FNum ITy) → (Num OTy) → (Inp ITy OTy) → ?
 
@@ -483,16 +628,26 @@ pre-ufft-test : String
 pre-ufft-test =
   let fun = pre-ufft` dft` in
     proj₁ $ translateInp₂ (num (arr C)) (arr {_} {_} {ι (ν 3) ⊗ (ι (ν 4) ⊗ ι (ν 5))} "mem_loc" idh) fun "fun_name"
+-}
 
+{-
 fftn-test : String
 fftn-test =
   let shp = (ι (ι (ν 2) ⊗ (ι (ν 3)))) ⊗ (ι (ι (ν 4) ⊗ ι (ν 5))) in
   let fun = fftn` shp in
-  proj₁ $ translateInp₂ (num (arr C)) (arr {_} {_} {shp} "mem_loc" idh) fun "fun_name"
+  proj₂ $ translateInp₂ eq (arr "ArName" idh) fun "Fun_Name" --(arr {_} {_} {shp} "mem_loc" idh) fun "fun_name"
+  -}
+
+fftn-test′ : String
+fftn-test′ =
+  let shp = (ι (ι (ν 2) ⊗ (ι (ν 3)))) ⊗ (ι (ι (ν 4) ⊗ ι (ν 5))) in
+  let fun = fftn` shp in
+  show-inp {_} {_} {_} {eq} fun
 
 entry : String
 --entry = proj₁ $ translateInp₂ (num (arr C)) (arr {_} {_} {ι (ν 3)} "mem_loc" idh) dft` "fun_name"
-entry = fftn-test
+entry = show-inp {_} {(ι (ν 2) ⊗ ι (ν 3))} {_} {transpᵣ} mini --fftn-test′
+
 
   --let fun = pre-ufft` {_} {translate-Ty} dft` in
 

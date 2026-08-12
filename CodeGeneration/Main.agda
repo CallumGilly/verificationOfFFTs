@@ -3,7 +3,7 @@
 module CodeGeneration.Main where
 
 open import CodeGeneration.DSL
-open import CodeGeneration.Translate-Agda
+--open import CodeGeneration.Translate-Agda
 open import CodeGeneration.Translate-C
 
 

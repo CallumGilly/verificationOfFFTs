@@ -18,6 +18,8 @@ open import Data.Nat
 open import Data.Fin
 open import Relation.Binary.PropositionalEquality
 open import Function.Base
+
+_⊡_ = trans
 ```
 TODO: I need to provide an implementation of CM-base for the naturals.
 ```agda
@@ -150,28 +152,32 @@ memCompatible (eqSize x x₁) rewrite memCompatible x₁ = refl
 
 We can then define the set of In-Place operations `Inp`.
 
+We restrict these to currently operate over one shape level `l`
 ```agda
 infixl 2 _>>>_
---- Change this to Shape to Shape
-data Inp (ctxt : Ty → Set) : Ty → Ty → Set₁ where
-  compose : Inp ctxt τ δ → {memCompat τ δ} → Inp ctxt δ σ → {memCompat δ σ} → Inp ctxt τ σ
-  view` : (r : Reshape s p) → Inp ctxt (ar s τ) (ar p τ)
-  copyOut` : ∀ {s p q : S (ss l)} → Reshape s p → Reshape q s → Inp ctxt (ar p τ) (ar q τ) → Inp ctxt (ar (ι s) τ) (ar (ι s) τ)
-  part`    : ∀ {s p : S (ss l)} → (s⊂p : s ⊂ p) → Inp ctxt (ar (inv-⊂ s⊂p) τ) (ar (inv-⊂ s⊂p) τ) → Inp ctxt (ar p τ) (ar p τ)
-  imap`    : Arit ctxt (ix s ⇒ C ⇒ C) → Inp ctxt (ar s C) (ar s C)
-  mapSum`  : ∀ {u : ℕ} → Arit ctxt ((ar (ι (ν u)) C) ⇒ ix (ι (ν u)) ⇒ ix (ι (ν u)) ⇒ C) → Inp ctxt (ar (ι (ν u)) C) (ar (ι (ν u)) C)
+open import Data.Default
+
+data Inp (ctxt : Ty → Set) : {l : L} (s : S l) → (s′ : S l) → .(Reshape s s′) → Set₁ where
+  compose : ∀ {s₁ s₂ s₃ : S l} → (r₁ : Reshape s₁ s₂) → Inp ctxt s₁ s₂ r₁ → (r₂ : Reshape s₂ s₃) → Inp ctxt s₂ s₃ r₂ →  Inp ctxt s₁ s₃ (r₂ ∙ r₁)
+  -- Restricted
+  view` : ∀ {s s′ : S l} → (r : Reshape s s′) → Inp ctxt s s eq → Inp ctxt s s′ r
+  copyOut` : {s p q : S (ss l)} → (r₁ : Reshape s p) → (r₂ : Reshape q s) → Inp ctxt p q (rev r₂ ∙ rev r₁) → Inp ctxt (ι s) (ι s) eq
+  part`    : ∀ {s p : S (ss l)} → (s⊂p : s ⊂ p) → Inp ctxt (inv-⊂ s⊂p) (inv-⊂ s⊂p) eq → Inp ctxt p p eq
+  imap`    : Arit ctxt (ix s ⇒ C ⇒ C) → Inp ctxt s s eq
+  mapSum`  : ∀ {u : ℕ} → Arit ctxt ((ar (ι (ν u)) C) ⇒ ix (ι (ν u)) ⇒ ix (ι (ν u)) ⇒ C) → Inp ctxt (ι (ν u)) (ι (ν u)) eq
+  --nop      : ∀ {s : S l} → Inp ctxt s s eq
+  
+_>>>_ : ∀ {ctxt : Ty → Set} 
+      → ∀ {l : L}
+      → ∀ {s : S l}
+      → Inp ctxt s s eq → Inp ctxt s s eq → Inp ctxt s s eq
+_>>>_ {ctxt} {_} {s} e₁ e₂ = compose eq e₁ eq e₂
 ```
 
-Syntax sugar for composition
-```agda
-_>>>_ : Inp ctxt τ τ → Inp ctxt τ τ → Inp ctxt τ τ
-_>>>_ a b = compose a {eq} b {eq}
-```
+Within these in place operations, we can then represent twiddles...
 
-In place of the above two (`dft` and `twid`), we could have some kind of 
-"expression" language in which we can represent the dft, twid and more...
 ```agda
-twid` : {s s′ p p′ : S (ss l)} {ctxt : Ty → Set} → Reshape s′ s → Reshape p′ p → Inp ctxt (ar (s ⊗ p) C) (ar (s ⊗ p) C)
+twid` : {s s′ p p′ : S (ss l)} {ctxt : Ty → Set} → (r₁ : Reshape s′ s) → (r₂ : Reshape p′ p) → Inp ctxt (s ⊗ p) (s ⊗ p) eq
 twid` {l} {s} {s′} {p} {p′} r₁ r₂ = 
       imap` 
         (`λ x ⇒ `λ y ⇒ 
@@ -184,44 +190,9 @@ twid` {l} {s} {s′} {p} {p′} r₁ r₂ =
 
 ```agda
 --ndft` : ∀ {n : ℕ} → Inp (ar (ι (ν n)) C) (ar (ι (ν n)) C)
-dft` : ∀ {s : S zz} {ctxt : Ty → Set} → Inp ctxt (ar (ι s) C) (ar (ι s) C)
+dft` : ∀ {s : S zz} {ctxt : Ty → Set} → Inp ctxt (ι s) (ι s) eq
 dft` {ν u} = mapSum` {u = u} $ `λ xs ⇒ `λ j ⇒ `λ k ⇒ (app (var xs) (var k)) *C (ω` (sizeN (var j)) ((posiN (var k) eq) *N (posiN (var j) eq)))
-
-{-
-dft` = mapSum` {τ = C} $ lam $ lam $ lam $ (app (var $ there $ there $ here) (var here)) *C ω` (sizeN (var here)) ((posiN (var here) (rev u-flattenᵣ)) *N (posiN (var $ there $ here) (rev u-flattenᵣ)))
--}
 ```
-
-If we want expressions to be an in place operation, there input and output 
-should be of the same type, but we also want to be able to map expressions over data.
-```agda
-{-
-  expr` : E ε (τ ⇒ τ) → Inp τ τ 
-  exprCpy` : E ε (ar s τ ⇒ ix s ⇒ τ) → Inp (ar s τ) (ar s τ)
-
-data E (ctxt : Ctxt) : Ty → Set
-data E ctxt where
-  ` : ? → E ctxt τ
-  `lam : E (ctxt ▹ τ) σ → E ctxt (τ ⇒ σ)
-  `$   : E ctxt (τ ⇒ σ) → E ctxt τ → E ctxt σ
-  _`+_ : E ctxt C → E ctxt C → E ctxt C
-  _`*_ : E ctxt C → E ctxt C → E ctxt C
-  `resh  : ∀ {s s′ : S l} → E ctxt (ix s) → Reshape s′ s → E ctxt (ix s′)
-  `index : E ctxt (ix s) → E ctxt N
-  `size  : E ctxt (ix s) → E ctxt N
-  `twiddle : E ctxt N → E ctxt (ix s) → E  ctxt (ix s)
-  `itter : (s : S l) → E ctxt (ix s ⇒ τ) → E ctxt (τ)
-  -}
-```
-
-# Minimum Operation
-One of the smallest operations is the identity function:
-
-```agda
---id` : ∀ {s : S l} → Inp (ar s τ) (ar s τ)
---id` {l} {τ} {s} = ? --exprCpy` ? (`lam λ a → `lam λ b → `$ {_} {?} {_} a b )
-```
-
 
 # Defining the FFT
 
@@ -233,8 +204,8 @@ I call it `pre-ufft`, if the output needs to be transposed, I call it `post-ufft
 Both are defined here
 
 ```agda
-pre-ufft`  : ∀ {ctxt : Ty → Set} → ∀ (lower-ft : ∀ {p : S l} → Inp ctxt (ar (ι p) C) (ar (ι p) C))
-          → ∀ {s : S (ss l)} → Inp ctxt (ar s C) (ar s C)
+pre-ufft`  : ∀ {ctxt : Ty → Set} → ∀ (lower-ft : ∀ {p : S l} → Inp ctxt (ι p) (ι p) eq)
+          → ∀ {s : S (ss l)} → Inp ctxt s s eq
 pre-ufft` lower-ft {ι s} = lower-ft
 pre-ufft` {_} {ctxt} lower-ft {s ⊗ p} = part` (le sid) (pre-ufft` lower-ft {p})       -- Left ufft
                              >>> twid` {_} {s} {transp s} {p} {p} transpᵣ eq  -- Twiddles 
@@ -244,8 +215,8 @@ pre-ufft` {_} {ctxt} lower-ft {s ⊗ p} = part` (le sid) (pre-ufft` lower-ft {p}
 The output of the following `post-ufft` would need to be transposed then 
 change majored to be correct.
 ```agda
-post-ufft` : ∀ {ctxt : Ty → Set} → ∀ (lower-ft : ∀ {p : S l} → Inp ctxt (ar (ι p) C) (ar (ι p) C))
-          → ∀ {s : S (ss l)} → Inp ctxt (ar s C) (ar s C)
+post-ufft` : ∀ {ctxt : Ty → Set} → ∀ (lower-ft : ∀ {p : S l} → Inp ctxt (ι p) (ι p) eq)
+          → ∀ {s : S (ss l)} → Inp ctxt s s eq
 post-ufft` lower-ft {ι s} = lower-ft 
 post-ufft` lower-ft {s ⊗ p} = part` (ri sid) (post-ufft` lower-ft {s})     -- Right ufft
                               >>> twid` {_} {s} {s} {p} {transp p} eq transpᵣ -- Twiddles 
@@ -256,9 +227,13 @@ post-ufft` lower-ft {s ⊗ p} = part` (ri sid) (post-ufft` lower-ft {s})     -- 
 We can then define `fftn` in our DSL.
 
 ```agda
-fftn` : ∀ {ctxt : Ty → Set} → (s : S (ss (ss zz))) → Inp ctxt (ar s C) (ar s C)
-fftn` s = post-ufft` (copyOut` (rev transpᵣ) CMᵗ (pre-ufft` dft`)) 
-     >>> view` (CMᵗ ∙ rev transpᵣ)
+fftn` : ∀ {ctxt : Ty → Set} → (s : S (ss (ss zz))) → Inp ctxt s s eq
+fftn` s = 
+     -- compose eq (post-ufft` (copyOut` (rev transpᵣ) CMᵗ (pre-ufft` dft`))) (CMᵗ ∙ rev transpᵣ) nop
+     
+     view` (CMᵗ ∙ rev transpᵣ) (post-ufft` (copyOut` (rev transpᵣ) CMᵗ (pre-ufft` dft`)))
+{-
+-}
 ```
 
 And then see how that looks for some shapes (Contains holes so commented)
