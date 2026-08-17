@@ -55,18 +55,86 @@ fresh-var = do
   return $ show-var n
 ```
 
-I then define how each type will be represented within C.
-
+# Indices
+```agda
+module _ where
+```
 To represent indices I need to create a representation of indexes where each 
 leaf of the shape tree is a variable (or stringified operation).
 
 ```agda
-data Ix : S ℓ → Set where
-  ν : ∀ {n : ℕ} → String → Ix (ν n)
-  ι : ∀ {s : S ℓ} → Ix s → Ix (ι s)
-  _⊗_ : ∀ {s p : S (ss ℓ)} → Ix s → Ix p → Ix (s ⊗ p)
+  data Ix : S ℓ → Set where
+    ν : ∀ {n : ℕ} → String → Ix (ν n)
+    ι : ∀ {s : S ℓ} → Ix s → Ix (ι s)
+    _⊗_ : ∀ {s p : S (ss ℓ)} → Ix s → Ix p → Ix (s ⊗ p)
 
--- Split translate-inp such that we eval and then to-string such that we can compose 
+```
+
+For this Ix type I create a function to make an Ix instance where every leaf 
+is a new variable (for use when generating loop nests).
+```agda
+  new-Ix : ∀ (s : S ℓ) → State ℕ (Ix s)
+  new-Ix (ν n) = do
+      ix-n ← fresh-var
+      return (ν ix-n)
+  new-Ix (ι s) = do
+      ix-s ← new-Ix s
+      return (ι ix-s)
+  new-Ix (s ⊗ p) = do
+      ix-s ← new-Ix s
+      ix-p ← new-Ix p
+      return (ix-s ⊗ ix-p)
+```
+
+We also need a way to reshape IX then get the flat position.
+We can also then create a function to get this position after a reshape has been applied
+```agda
+  ix-flat-index : Ix s → String
+  ix-flat-index (ν i) = i
+  ix-flat-index (ι i) = ix-flat-index i
+  ix-flat-index (_⊗_ {s = s} {p} i j) = parensIfSpace 
+                                        $   (ix-flat-index i) 
+                                        <+> "+" 
+                                        <+> parensIfSpace 
+                                            ( (showℕ $ length s) 
+                                            <+> "*" 
+                                            <+> ix-flat-index j
+                                            )
+```
+
+I had the thought of creating a small dsl for pointer arithmetic to make it 
+harder to cock up, but I think I'm being a bit thick atm trying to convert ix 
+to a pointer representation
+```agda
+  resh-ix : ∀ {ℓ ℓ′ : L} {s : S ℓ} {s′ : S ℓ′} → Reshape s s′ → Ix s → Ix s′
+  resh-ix eq i = i
+  resh-ix (r ∙ r₁) i = resh-ix r (resh-ix r₁ i)
+  resh-ix (r ⊕ r₁) (i ⊗ j) = resh-ix r i ⊗ resh-ix r₁ j
+  resh-ix (up r) i = ι (resh-ix r i)
+  resh-ix (down r) (ι i) = resh-ix r i
+  resh-ix swap (i ⊗ j) = j ⊗ i
+  resh-ix assoₗ ((i₁ ⊗ i₂) ⊗ i₃) = i₁ ⊗ (i₂ ⊗ i₃)
+  resh-ix assoᵣ (i₁ ⊗ (i₂ ⊗ i₃)) = (i₁ ⊗ i₂) ⊗ i₃
+  -- These need mod, just needs a moment of thinking
+  resh-ix (flat {m} {n}) (ι (ν b) ⊗ ι (ν b₁)) = ν (printf "((%u * %s) + %s)" m b b₁)
+  resh-ix (unflat {m} {n}) (ν x) = ι (ν (printf "(%s / %u)" x m )) ⊗ ι (ν (printf "(%s %% %u)" x m))
+```
+
+We then create a converter from ix to subscripts to allow us to stringify them.
+```agda
+  ix-to-subscripts : Ix s → String
+  ix-to-subscripts (ν i) = "[" ++ i ++ "]"
+  ix-to-subscripts (ι i) = ix-to-subscripts i
+  ix-to-subscripts (i ⊗ j) = ix-to-subscripts i ++ ix-to-subscripts j
+
+  ix-to-str : Ix s → String → String
+  ix-to-str i name = name ++ (ix-to-subscripts i)
+
+```
+
+# Translate Ty
+We can then start giving Ty it's semantics within C
+```
 translate-Ty : Ty → Set
 translate-Ty C = String
 translate-Ty N = String
@@ -74,124 +142,86 @@ translate-Ty (ix s) = Ix s
 translate-Ty (τ ⇒ σ) = translate-Ty τ → State ℕ (translate-Ty σ)
 ```
 
-For this Ix type I create a function to make an Ix instance where every leaf 
-is a new variable (for use when generating loop nests).
-```agda
-new-Ix : ∀ (s : S ℓ) → State ℕ (Ix s)
-new-Ix (ν n) = do
-    ix-n ← fresh-var
-    return (ν ix-n)
-new-Ix (ι s) = do
-    ix-s ← new-Ix s
-    return (ι ix-s)
-new-Ix (s ⊗ p) = do
-    ix-s ← new-Ix s
-    ix-p ← new-Ix p
-    return (ix-s ⊗ ix-p)
-```
+# Length helper
 
+We then need a small helper to get the length of shapes, this needs `suc` as we
+treat `ν` as `Fin ∘ suc`
 ```agda
 clen : S ℓ → ℕ
 clen = suc ∘ length
 ```
 
-We also need a way to reshape IX then get the flat position.
-We can also then create a function to get this position after a reshape has been applied
-```agda
-ix-flat-index : Ix s → String
-ix-flat-index (ν i) = i
-ix-flat-index (ι i) = ix-flat-index i
-ix-flat-index (_⊗_ {s = s} {p} i j) = parensIfSpace $ (ix-flat-index i) <+> "+" <+> parensIfSpace ((showℕ $ length s) <+> "*" <+> ix-flat-index j)
-```
 
-I had the thought of creating a small dsl for pointer arithmetic to make it 
-harder to cock up, but I think I'm being a bit thick atm trying to convert ix 
-to a pointer representation
-```agda
-resh-ix : ∀ {ℓ ℓ′ : L} {s : S ℓ} {s′ : S ℓ′} → Reshape s s′ → Ix s → Ix s′
-resh-ix eq i = i
-resh-ix (r ∙ r₁) i = resh-ix r (resh-ix r₁ i)
-resh-ix (r ⊕ r₁) (i ⊗ j) = resh-ix r i ⊗ resh-ix r₁ j
-resh-ix (up r) i = ι (resh-ix r i)
-resh-ix (down r) (ι i) = resh-ix r i
-resh-ix swap (i ⊗ j) = j ⊗ i
-resh-ix assoₗ ((i₁ ⊗ i₂) ⊗ i₃) = i₁ ⊗ (i₂ ⊗ i₃)
-resh-ix assoᵣ (i₁ ⊗ (i₂ ⊗ i₃)) = (i₁ ⊗ i₂) ⊗ i₃
--- These need mod, just needs a moment of thinking
-resh-ix (flat {m} {n}) (ι (ν b) ⊗ ι (ν b₁)) = ν (printf "((%u * %s) + %s)" m b b₁) --placeholder-Ix _
-resh-ix (unflat {m} {n}) (ν x) = ι (ν (printf "(%s / %u)" x m )) ⊗ ι (ν (printf "(%s %% %u)" x m)) --placeholder-Ix _
-
-```
-
+# Arithmetic Evaluator
 We can then create an evaluator and translator for our Airthmetic operations.
 Our evaluator is going to evaluate all lambda calculus, while the translator 
 will stringify this into something which can be used in C. 
 
 ```agda
-arit-eval : ∀ {τ : Ty} → Arit translate-Ty τ → State ℕ (translate-Ty τ)
-arit-eval (var x) = return x
-arit-eval (lam x) = return (arit-eval ∘ x)
-arit-eval (app f x) = do
-  f′ ← arit-eval f
-  x′ ← arit-eval x
-  f′ x′
-arit-eval (sizeN {s = s} x) =
-  return $ printf "%u" $ clen s
-arit-eval (posiN i r) = do
-  i′ ← arit-eval i
-  return $ ix-flat-index (resh-ix (rev r) i′)
-arit-eval (spliₗ x) = do
-  (i ⊗ _) ← arit-eval x
-  return i
-arit-eval (spliᵣ x) = do
-  (_ ⊗ i) ← arit-eval x
-  return i
-arit-eval (x *N y) = do
-  x′ ← arit-eval x
-  y′ ← arit-eval y
-  return $ parens $ x′ <+> "*" <+> y′
-arit-eval (x *C y) = do
-  x′ ← arit-eval x
-  y′ ← arit-eval y
-  return $ parens $ x′ <+> "*" <+> y′
-arit-eval (ω` x y) = do
-  x′ ← arit-eval x
-  y′ ← arit-eval y
-  return $ parens $ "omega(" ++ x′ ++ "," <+> y′ ++ ")"
+module _ where
+  arit-eval : ∀ {τ : Ty} → Arit translate-Ty τ → State ℕ (translate-Ty τ)
+  arit-eval (var x) = return x
+  arit-eval (lam x) = return (arit-eval ∘ x)
+  arit-eval (app f x) = do
+    f′ ← arit-eval f
+    x′ ← arit-eval x
+    f′ x′
+  arit-eval (sizeN {s = s} x) =
+    return $ printf "%u" $ clen s
+  arit-eval (posiN i r) = do
+    i′ ← arit-eval i
+    return $ ix-flat-index (resh-ix (rev r) i′)
+  arit-eval (spliₗ x) = do
+    (i ⊗ _) ← arit-eval x
+    return i
+  arit-eval (spliᵣ x) = do
+    (_ ⊗ i) ← arit-eval x
+    return i
+  arit-eval (x *N y) = do
+    x′ ← arit-eval x
+    y′ ← arit-eval y
+    return $ parens $ x′ <+> "*" <+> y′
+  arit-eval (x *C y) = do
+    x′ ← arit-eval x
+    y′ ← arit-eval y
+    return $ parens $ x′ <+> "*" <+> y′
+  arit-eval (ω` x y) = do
+    x′ ← arit-eval x
+    y′ ← arit-eval y
+    return $ parens $ "omega(" ++ x′ ++ "," <+> y′ ++ ")"
 ```
 
 We can then create a function which takes this evaluated form into string form.
 This feels wrong however, as the array case is blatantly useless.......
 ```agda
-evaled-to-str : Num τ → translate-Ty τ → State ℕ String
-evaled-to-str (C) x = return x
-evaled-to-str (N) x = return x
-evaled-to-str ((arr {s = s} num-τ)) xs = do
-  i ← new-Ix s
-  x ← xs i
-  evaled-to-str (num-τ) x
+  evaled-to-str : Num τ → translate-Ty τ → State ℕ String
+  evaled-to-str (C) x = return x
+  evaled-to-str (N) x = return x
+  evaled-to-str ((arr {s = s} num-τ)) xs = do
+    i ← new-Ix s
+    x ← xs i
+    evaled-to-str (num-τ) x
 
-translate-Arit : Num τ → Arit translate-Ty τ → State ℕ String
-translate-Arit a b = evaled-to-str a =<< arit-eval b
+  translate-Arit : Num τ → Arit translate-Ty τ → State ℕ String
+  translate-Arit a b = evaled-to-str a =<< arit-eval b
 ```
 
 One curiosity here is that the sizeN case needs the successor of length, this 
 is suspicious to me and hints that there MAY be an issue with my implementation 
 of `natMon` (where `U = Fin ∘ suc`)
 ```agda
+  module Arit-Test where
+    Test-complexMult : Arit translate-Ty C 
+    Test-complexMult = ((var "VarA") *C (var "VarB"))
+    
+    Test-size₁ : Arit translate-Ty N
+    Test-size₁ = sizeN (var (ι (ν {2} "VarA")))
 
-module Arit-Test where
-  Test-complexMult : Arit translate-Ty C 
-  Test-complexMult = ((var "VarA") *C (var "VarB"))
-  
-  Test-size₁ : Arit translate-Ty N
-  Test-size₁ = sizeN (var (ι (ν {2} "VarA")))
+    Test-size₂ : Arit translate-Ty N
+    Test-size₂ = sizeN (var (ι (ν {4} "VarA") ⊗ ι (ν {3} "VarB")))
 
-  Test-size₂ : Arit translate-Ty N
-  Test-size₂ = sizeN (var (ι (ν {4} "VarA") ⊗ ι (ν {3} "VarB")))
-
-  Test-lambda : Arit translate-Ty N
-  Test-lambda = app ( `λ x ⇒ (var x) *N (var "VarA") ) (var {translate-Ty} {N} "VarB")
+    Test-lambda : Arit translate-Ty N
+    Test-lambda = app ( `λ x ⇒ (var x) *N (var "VarA") ) (var {translate-Ty} {N} "VarB")
 
 {-
 open Arit-Test
@@ -201,15 +231,6 @@ entry = (runState (translate-Arit (num N) Test-size₂) 0) .proj₂
 
 ```
 
-
-We then create a converter from ix to subscripts to allow us to stringify them.
-```agda
-ix-to-subscripts : Ix s → String
-ix-to-subscripts (ν i) = "[" ++ i ++ "]"
-ix-to-subscripts (ι i) = ix-to-subscripts i
-ix-to-subscripts (i ⊗ j) = ix-to-subscripts i ++ ix-to-subscripts j
-```
-
 # C Helpers
 
 We can then define a set of functions which spit out some common C strings for 
@@ -217,54 +238,52 @@ us. These lay out a structure for the eventual C dsl
 
 
 ```agda
-ix-to-str : Ix s → String → String
-ix-to-str i name = name ++ (ix-to-subscripts i)
+module _ where
+  real-type : String
+  real-type = "real"
 
-real-type : String
-real-type = "real"
+  complex-type : String
+  complex-type = "complex" <+> real-type
 
-complex-type : String
-complex-type = "complex" <+> real-type
+  calloc-op : (type : String) → ℕ → String
+  calloc-op ty s = printf "calloc(%u, sizeof(%s))" s ty
 
-calloc-op : (type : String) → ℕ → String
-calloc-op ty s = printf "calloc(%u, sizeof(%s))" s ty
+  for-template : String → ℕ → String → String
+  for-template i n expr = printf "for (size_t %s = 0; %s < %u; %s++) {\n%s}\n" i i n i expr
 
-for-template : String → ℕ → String → String
-for-template i n expr = printf "for (size_t %s = 0; %s < %u; %s++) {\n%s}\n" i i n i expr
+  loopnest : Ix s → (String → String)
+  loopnest {s = ν n} (ν i) = for-template i (suc n)
+  loopnest (ι s) = loopnest s
+  loopnest (s ⊗ s₁) = loopnest s ∘ loopnest s₁
 
-loopnest : Ix s → (String → String)
-loopnest {s = ν n} (ν i) = for-template i (suc n)
-loopnest (ι s) = loopnest s
-loopnest (s ⊗ s₁) = loopnest s ∘ loopnest s₁
+  assignment : String → String → String
+  assignment = printf "%s = %s;\n"
 
-assignment : String → String → String
-assignment = printf "%s = %s;\n"
+  +assignment : String → String → String
+  +assignment = printf "%s += %s;\n"
 
-+assignment : String → String → String
-+assignment = printf "%s += %s;\n"
+  ShapeCast : S ℓ → String
+  ShapeCast = ShapeCast′ true
+    where
+      ShapeCast′ : Bool → S ℓ → String
+      ShapeCast′ isLeft (ι s) = ShapeCast′ isLeft s
+      ShapeCast′ isLeft (s₁ ⊗ s₂) = ShapeCast′ isLeft s₁ ++ ShapeCast′ false s₂
+      ShapeCast′ false (ν x) = printf "[%u]" (suc x)
+      ShapeCast′ true (ν x) = ""
 
-ShapeCast : S ℓ → String
-ShapeCast = ShapeCast′ true
-  where
-    ShapeCast′ : Bool → S ℓ → String
-    ShapeCast′ isLeft (ι s) = ShapeCast′ isLeft s
-    ShapeCast′ isLeft (s₁ ⊗ s₂) = ShapeCast′ isLeft s₁ ++ ShapeCast′ false s₂
-    ShapeCast′ false (ν x) = printf "[%u]" (suc x)
-    ShapeCast′ true (ν x) = ""
+  ArCast : Maybe String → S ℓ → String
+  ArCast nothing = parens ∘ ArCast (just "")
+  ArCast (just memName) = printf "%s (*%s)%s" complex-type memName ∘ ShapeCast
 
-ArCast : Maybe String → S ℓ → String
-ArCast nothing = parens ∘ ArCast (just "")
-ArCast (just memName) = printf "%s (*%s)%s" complex-type memName ∘ ShapeCast
+  commentBlock : String → String → String
+  commentBlock comment body = printf "//Start: %s\n%s//End: %s\n" comment body comment
 
-commentBlock : String → String → String
-commentBlock comment body = printf "//Start: %s\n%s//End: %s\n" comment body comment
-
-calloc : String → S ℓ → State ℕ (String × String × String)
-calloc type s = do  
-  memName ← fresh-var
-  let ops = assignment (ArCast (just memName) s) $ (ArCast nothing s) ++ (calloc-op type (clen s))
-  let free = printf "free(%s);\n" memName
-  return $ memName , ops , free
+  calloc : String → S ℓ → State ℕ (String × String × String)
+  calloc type s = do  
+    memName ← fresh-var
+    let ops = assignment (ArCast (just memName) s) $ (ArCast nothing s) ++ (calloc-op type (clen s))
+    let free = printf "free(%s);\n" memName
+    return $ memName , ops , free
 
 ```
 
@@ -358,29 +377,29 @@ inp→f {_} {s} {_} {r} inp function-name = runState inp→f′ 0 .proj₂
 # Testing
 
 ```agda
+module _ where
+  -- Name inspired by hit song uptown funk, which sounds similar to up-down-funk
+  funk : ∀ {s p : S ℓ} → Reshape s p → Reshape (ι s) (ι p)
+  funk r = up (down r)
 
--- Name inspired by hit song uptown funk, which sounds similar to up-down-funk
-funk : ∀ {s p : S ℓ} → Reshape s p → Reshape (ι s) (ι p)
-funk r = up (down r)
+  -- Takes an array, doubles every value and transposes the result
+  mini₁ : ∀ {s : S (ss ℓ)} → Inp translate-Ty (ι s) (ι (transp s)) (funk (rev transpᵣ))
+  mini₁ {_} {s} = copyOut` {_} {_} {s} {transp s} {s} {s} eq eq (rev transpᵣ) (imap` (`λ i ⇒ `λ x ⇒ var x *C var "2"))
 
--- Takes an array, doubles every value and transposes the result
-mini₁ : ∀ {s : S (ss ℓ)} → Inp translate-Ty (ι s) (ι (transp s)) (funk (rev transpᵣ))
-mini₁ {_} {s} = copyOut` {_} {_} {s} {transp s} {s} {s} eq eq (rev transpᵣ) (imap` (`λ i ⇒ `λ x ⇒ var x *C var "2"))
+  mini₂ : ∀ {s : S (ss ℓ)} → Inp translate-Ty (ι s) (ι (transp s)) (funk (rev transpᵣ))
+  mini₂ {_} {s} = compose (funk (rev transpᵣ)) mini₁ eq (imap` (`λ i ⇒ `λ x ⇒ var x))
 
-mini₂ : ∀ {s : S (ss ℓ)} → Inp translate-Ty (ι s) (ι (transp s)) (funk (rev transpᵣ))
-mini₂ {_} {s} = compose (funk (rev transpᵣ)) mini₁ eq (imap` (`λ i ⇒ `λ x ⇒ var x))
+  mini₃ : ∀ {s : S zz} → Inp translate-Ty (ι s) (ι s) eq
+  mini₃ {ν u} = mapSum` (`λ x ⇒ `λ i ⇒ var x)
 
-mini₃ : ∀ {s : S zz} → Inp translate-Ty (ι s) (ι s) eq
-mini₃ {ν u} = mapSum` (`λ x ⇒ `λ i ⇒ var x)
+  mini₄ : Inp translate-Ty (ι (ν 3) ⊗ ι (ν 5)) _ eq
+  mini₄ = part` (ri _⊆_.id) (imap` (`λ i ⇒ `λ x ⇒ var x *C (ω` (sizeN (var i)) (posiN (var i) eq))))
 
-mini₄ : Inp translate-Ty (ι (ν 3) ⊗ ι (ν 5)) _ eq
-mini₄ = part` (ri _⊆_.id) (imap` (`λ i ⇒ `λ x ⇒ var x *C (ω` (sizeN (var i)) (posiN (var i) eq))))
-
-fftn-test′ : String
-fftn-test′ =
-  let shp = (ι (ι (ν 2) ⊗ (ι (ν 3)))) ⊗ (ι (ι (ν 4) ⊗ ι (ν 5))) in
-  let fun = fftn` shp in
-  inp→f {_} {_} {_} {eq} fun "fftn"
+  fftn-test′ : String
+  fftn-test′ =
+    let shp = (ι (ι (ν 2) ⊗ (ι (ν 3)))) ⊗ (ι (ι (ν 4) ⊗ ι (ν 5))) in
+    let fun = fftn` shp in
+    inp→f {_} {_} {_} {eq} fun "fftn"
 
 entry : String
 --entry = proj₁ $ translateInp₂ (num (arr C)) (arr {_} {_} {ι (ν 3)} "mem_loc" idh) dft` "fun_name"
