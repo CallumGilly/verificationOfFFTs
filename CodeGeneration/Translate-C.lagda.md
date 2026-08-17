@@ -17,6 +17,7 @@ open import Data.Nat.Show using () renaming (show to showℕ)
 open import Data.String hiding (length)
 open import Data.Product
 open import Data.Maybe hiding (_>>=_)
+open import Data.Bool
 
 open import Relation.Binary.PropositionalEquality
 
@@ -87,6 +88,11 @@ new-Ix (s ⊗ p) = do
     return (ix-s ⊗ ix-p)
 ```
 
+```agda
+clen : S l → ℕ
+clen = suc ∘ length
+```
+
 We also need a way to reshape IX then get the flat position.
 We can also then create a function to get this position after a reshape has been applied
 ```agda
@@ -121,7 +127,7 @@ arit-eval (app f x) = do
   x′ ← arit-eval x
   f′ x′
 arit-eval (sizeN {s = s} x) =
-  return $ printf "%u" $ suc $ length s
+  return $ printf "%u" $ clen s
 arit-eval (posiN i r) = do
   i′ ← arit-eval i
   return $ ix-resh-flat-index i′ r
@@ -303,15 +309,18 @@ free-op : String → String
 free-op = printf "free(%s)"
 
 for-template : String → ℕ → String → String
-for-template i n expr = printf "for (size_t %s = 0; %s < %u; %s++) {\n%s\n}" i i n i expr
+for-template i n expr = printf "for (size_t %s = 0; %s < %u; %s++) {\n%s}\n" i i n i expr
 
 loopnest : ∀ {l : L} {s : S l} → Ix s → (String → String)
-loopnest {s = ν n} (ν i) = for-template i n
+loopnest {s = ν n} (ν i) = for-template i (suc n)
 loopnest (ι s) = loopnest s
 loopnest (s ⊗ s₁) = loopnest s ∘ loopnest s₁
 
 assignment : String → String → String
-assignment = printf "%s = %s"
+assignment = printf "%s = %s;"
+
++assignment : String → String → String
++assignment = printf "%s += %s;"
 
 _>:_ : String → String → String
 _>:_ = printf "%s;\n%s"
@@ -335,6 +344,7 @@ memory - eventually it may be nice to consider making this reuse the "Scratch"
 memory such that we are not constantly allocing and freeing
 ```
 -- Create
+{-
 cplx-memory-lifetime : S zz → (String → String) → State ℕ String
 cplx-memory-lifetime (ν n) f = do
   memory-name ← fresh-var
@@ -343,6 +353,7 @@ cplx-memory-lifetime (ν n) f = do
   let ops = f memory-name 
   let memory-free = free-op memory-name
   return $ memory-alloc >: ops >: memory-free
+-}
 ```
 # C Translation
 
@@ -360,23 +371,7 @@ I had the thought of creating a small dsl for pointer arithmetic to make it
 harder to cock up, but I think I'm being a bit thick atm trying to convert ix 
 to a pointer representation
 ```agda
-{-
-data Pointer : ℕ → Set where
-  var  : (n : ℕ) → String → Pointer n
-  cons : (n : ℕ) → Pointer n
-  _+`_ : ∀ {n m : ℕ} → Pointer n → Pointer m → Pointer (n + m)
-  _*`_ : ∀ {n m : ℕ} → Pointer n → Pointer m → Pointer (n * m)
 
-ix-pointer : ∀ {s : S l} → Ix s → Pointer (length s)
-ix-pointer (ν {n} i) = var (n) i
-ix-pointer (ι i) = ix-pointer i
-ix-pointer (_⊗_ {s = s} {p} i j) = let tm =  (cons (length s) *` ix-pointer j) +` (ix-pointer i) in ?
--}
-
-{-
-data ¬flat : ∀ {l l′ : L} {s : S l} {s′ : S l′} → Reshape s s′ → Set where
-  eq : ∀ {s : S l} → ¬flat {s = s} {s′ = s} eq
--}
 
 placeholder-Ix : (s : S l) → Ix s
 placeholder-Ix (ν x) = ν "PLACEHOLDER-IX"
@@ -408,87 +403,116 @@ module _ where
     s s′ k : S ℓ
     r : Reshape s s′
 
-  record AR′ (s : S ℓ) : Set where
-    field
-      name : String
 
-      p : S ℓ
-      sel : Sel s p
 
-    to-str : (Ix s) → String 
-    to-str i = ix-to-str {_} {p} (sel-to-ix sel i) name
-  open AR′
+  ShapeCast : S ℓ → String
+  ShapeCast = ShapeCast′ true
+    where
+      ShapeCast′ : Bool → S ℓ → String
+      ShapeCast′ isLeft (ι s) = ShapeCast′ isLeft s
+      ShapeCast′ isLeft (s₁ ⊗ s₂) = ShapeCast′ isLeft s₁ ++ ShapeCast′ false s₂
+      ShapeCast′ false (ν x) = printf "[%u]" (suc x)
+      ShapeCast′ true (ν x) = ""
 
-  {-
-  updateSel : Reshape s s′ → Sel s k →  Sel s′ k
-  updateSel r idh = ?
-  updateSel r (left x sel₁) = ?
-  updateSel r (right x sel₁) = ?
-  updateSel r (both sel₁ sel₂) = ?
-  updateSel r (chain sel₁ sel₂) = ?
+  ArCast : Maybe String → S ℓ → String
+  ArCast nothing = parens ∘ ArCast (just "")
+  ArCast (just memName) = printf "%s (*%s)%s" complex-type memName ∘ ShapeCast
 
-  updateAr : ∀ {s s′ : S ℓ} → Reshape s s′ → AR′ s → AR′ s′
-  updateAr x ar = record 
-                  { AR′ ar
-                  ; sel = ?
-                  }
+  commentBlock : String → String → String
+  commentBlock comment body = printf "//Start: %s\n%s//End: %s\n" comment body comment
 
-  -}
-  --step₁ : .( r : Reshape s s′ ) → Inp translate-Ty s s′ r → (translate-Ty (ix s ⇒ C))
-  --step₁ : .( r : Reshape s s′ ) → Inp translate-Ty s s′ r → (translate-Ty (ix s′ ⇒ C))
+  calloc : String → S ℓ → State ℕ (String × String)
+  calloc type s = do  
+    memName ← fresh-var
+    let ops = assignment (ArCast (just memName) s) $ (ArCast nothing s) ++ (calloc-op type (clen s))
+    return $ memName , ops
 
-  -- This AR should NOT remain a string, but for this stage it should be enough to work with
+  step₁ : .( r : Reshape s s′ ) → (Ix s → String) {-AR′ s-} → Inp translate-Ty s s′ r → (Ix s′ → String) × (State ℕ String)
+  step₁ _ ar (imap` arit) = ar , operation
+    where
+      operation = do
+        i ← new-Ix _
+        arit-string ← translate-Arit C (app (app arit (var i)) (var (ar i)))
+        return $ commentBlock "imap" $ loopnest i (assignment (ar i) arit-string)
+  step₁ _ xs (compose r₁ inp₁ r₂ inp₂) = op₂ .proj₁ , ops
+    where
+      op₁ = step₁ r₁ xs inp₁
+      op₂ = step₁ r₂ (op₁ .proj₁) inp₂
+      ops = do
+        ins₁ ← op₁ .proj₂
+        ins₂ ← op₂ .proj₂
+        return $ commentBlock "compose" $ ins₁ ++ "//Middle: compose\n" ++ ins₂
+  step₁ _ xs (mapSum` {u} arit) = xs , ops
+    where
+      ops = do
+        memName , assign ← calloc complex-type (ι (ν u))
 
-  step₁ : .( r : Reshape s s′ ) → {- AR′ s -} String → Inp translate-Ty s s′ r → (translate-Ty (ix s ⇒ C))
-  step₁ _ ar (compose r₁ inp₁ r₂ inp₂) i = do
-    α ← step₁ r₁ ar inp₁ i
-    β ← step₁ r₂ ar inp₂ (resh-ix r₁ i)
-    return $ α ++ "\n" ++ β
-  step₁ _ ar (view` r e) i = do 
-    inside-view ← step₁ eq ar e i
-    
-    return inside-view
-    {-
-    -- IFF we didn't have i here, we would have to do two loops here, 
-        -- copy out into external memory
-        -- copy from this external memory back into the memory we work on
-    -- We can't change compose such that we give it the reshapes and it changes 
-    -- where we write to, as we would get read after write
+        i ← new-Ix (ι (ν u))
+        j ← new-Ix (ι (ν u))
+        k ← new-Ix (ι (ν u))
 
-    let message = printf "// Index: %s;\n // Reshaped index: %s\n" (ix-to-str i (ar )) (ix-to-str (resh-ix r i) (ar ))
-    return $ "// view\n" ++ message
-    -}
-  step₁ _ _ (copyOut` r₁ r₂ inp) i = do 
-    -- Loop to copy to external memory
-    -- Inner inplace operation
-    -- Loop to copy back
-    return $ "// copyOut\n"
-  step₁ _ _ (part` s⊂p inp) i = do
-    -- Single loop into hyperplane
-    return "// part\n"
-  step₁ {_} {s} _ _ (imap` x) i = do
-    -- Single loop applying arit at each step
-    return ? --"// imap\n"
-  step₁ _ _ (mapSum` x) i = 
-    return "// mapSum\n"
+        op ← translate-Arit C $ app (app (app arit (`λ l ⇒ (var (xs l)))) (var i)) (var j)
+        let body = loopnest j $ loopnest i $ +assignment (ix-to-str i memName) op
 
-  step₂ : (translate-Ty (ix s ⇒ C)) → State ℕ String
-  step₂ xs = do
-    i ← new-Ix _
-    x ← xs i
-    return $ loopnest i x
+        let copyBack = loopnest k $ assignment (xs k) (ix-to-str k memName)
+        
+        return $ commentBlock "mapSum" $ assign ++ body ++ copyBack
+  step₁ _ xs (copyOut` {_} {s} {s′} {p} {q} r₁ r₂ r₃ inp) = zs , ops
+    where
+      zs = xs ∘ resh-ix (up (down (rev (r₃ ∙ r₂ ∙ r₁))))
+      ops = do
+        memName₁ , assign ← calloc complex-type p
+
+        i ← new-Ix p
+        let out-op = printf "%s = %s;\n" (ix-to-str i memName₁) (xs (resh-ix (up (rev r₁)) i))
+        let out = (loopnest i out-op) ++ "\n"
+
+        let ys , op-f = step₁ r₂ (flip ix-to-str memName₁) inp
+        op ← op-f
+        
+        memName₂ ← fresh-var
+        let re-cast = assignment (ArCast (just memName₂) s′) (ArCast nothing s′ <+> memName₁)
+
+        j ← new-Ix s′
+        let inn-op = assignment (zs (resh-ix (up eq) j)) (ix-to-str j memName₂)
+        let inn = (loopnest j inn-op) ++ "\n"
+
+        return $ commentBlock "copyOut" $ assign ++ out ++ op ++ re-cast ++ inn
+  step₁ _ xs (part` {_} {s} {p} s⊂p inp) = xs , ops
+    where
+      ops = do
+        i ← new-Ix s
+        let ys = λ j → xs (resh-ix (rev (to-resh s⊂p)) (i ⊗ j))
+
+        let _ , op-f = step₁ eq ys inp
+        op ← op-f
+
+        return $ commentBlock "part" $ loopnest i op
 
   show-inp : Inp translate-Ty s s′ r → String
   show-inp {_} {_} {_} {r} inp = runState show-inp′ 0 .proj₂ 
      where
        show-inp′ : State ℕ String
-       show-inp′ = do
-         let f = step₁ r "MemName" inp
-         x ← step₂ f
+       show-inp′ = do 
+         let _ , f = step₁ r (flip ix-to-str "memName") inp
+         x ← f
          return $ x
 
-  mini : Inp translate-Ty s (transp s) (rev transpᵣ)
-  mini = view` (rev transpᵣ) (imap` (`λ a ⇒ `λ b ⇒ var b)) 
+  funk : ∀ {s p : S l} → Reshape s p → Reshape (ι s) (ι p)
+  funk r = up (down r)
+
+  -- Takes an array, doubles every value and transposes the result
+  mini₁ : ∀ {s : S (ss ℓ)} → Inp translate-Ty (ι s) (ι (transp s)) (funk (rev transpᵣ))
+  mini₁ {_} {s} = copyOut` {_} {_} {s} {transp s} {s} {s} eq eq (rev transpᵣ) (imap` (`λ i ⇒ `λ x ⇒ var x *C var "2"))
+
+  mini₂ : ∀ {s : S (ss ℓ)} → Inp translate-Ty (ι s) (ι (transp s)) (funk (rev transpᵣ))
+  mini₂ {_} {s} = compose (funk (rev transpᵣ)) mini₁ eq (imap` (`λ i ⇒ `λ x ⇒ var x))
+
+  mini₃ : ∀ {s : S zz} → Inp translate-Ty (ι s) (ι s) eq
+  mini₃ {ν u} = mapSum` (`λ x ⇒ `λ i ⇒ var x)
+
+  mini₄ : Inp translate-Ty (ι (ν 3) ⊗ ι (ν 5)) _ eq
+  mini₄ = part` (ri _⊆_.id) (imap` (`λ i ⇒ `λ x ⇒ var x *C (ω` (sizeN (var i)) (posiN (var i) eq))))
 ```
 
 # Main Attempt
@@ -646,7 +670,10 @@ fftn-test′ =
 
 entry : String
 --entry = proj₁ $ translateInp₂ (num (arr C)) (arr {_} {_} {ι (ν 3)} "mem_loc" idh) dft` "fun_name"
-entry = show-inp {_} {(ι (ν 2) ⊗ ι (ν 3))} {_} {transpᵣ} mini --fftn-test′
+--entry = show-inp {_} {ι (ι (ν 2) ⊗ ι (ν 3))} {_} {up (down transpᵣ)} mini₂ --fftn-test′
+--entry = show-inp {_} {ι (ν 2)} {_} {eq} mini₃ 
+--entry = show-inp {_} {_} {_} {eq} mini₄
+entry = fftn-test′
 
 
   --let fun = pre-ufft` {_} {translate-Ty} dft` in

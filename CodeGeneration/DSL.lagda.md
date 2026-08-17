@@ -159,13 +159,11 @@ open import Data.Default
 
 data Inp (ctxt : Ty → Set) : {l : L} (s : S l) → (s′ : S l) → .(Reshape s s′) → Set₁ where
   compose : ∀ {s₁ s₂ s₃ : S l} → (r₁ : Reshape s₁ s₂) → Inp ctxt s₁ s₂ r₁ → (r₂ : Reshape s₂ s₃) → Inp ctxt s₂ s₃ r₂ →  Inp ctxt s₁ s₃ (r₂ ∙ r₁)
-  -- Restricted
-  view` : ∀ {s s′ : S l} → (r : Reshape s s′) → Inp ctxt s s eq → Inp ctxt s s′ r
-  copyOut` : {s p q : S (ss l)} → (r₁ : Reshape s p) → (r₂ : Reshape q s) → Inp ctxt p q (rev r₂ ∙ rev r₁) → Inp ctxt (ι s) (ι s) eq
+  --view` : ∀ {s s′ : S l} → (r : Reshape s s′) → Inp ctxt s s eq → Inp ctxt s s′ r
+  copyOut` : {s s′ p q : S (ss l)} → (r₁ : Reshape s p) → (r₂ : Reshape p q) → (r₃ : Reshape q s′) → Inp ctxt p q r₂ → Inp ctxt (ι s) (ι s′) ((up (down (r₃ ∙ r₂ ∙ r₁))))
   part`    : ∀ {s p : S (ss l)} → (s⊂p : s ⊂ p) → Inp ctxt (inv-⊂ s⊂p) (inv-⊂ s⊂p) eq → Inp ctxt p p eq
   imap`    : Arit ctxt (ix s ⇒ C ⇒ C) → Inp ctxt s s eq
   mapSum`  : ∀ {u : ℕ} → Arit ctxt ((ar (ι (ν u)) C) ⇒ ix (ι (ν u)) ⇒ ix (ι (ν u)) ⇒ C) → Inp ctxt (ι (ν u)) (ι (ν u)) eq
-  --nop      : ∀ {s : S l} → Inp ctxt s s eq
   
 _>>>_ : ∀ {ctxt : Ty → Set} 
       → ∀ {l : L}
@@ -227,13 +225,9 @@ post-ufft` lower-ft {s ⊗ p} = part` (ri sid) (post-ufft` lower-ft {s})     -- 
 We can then define `fftn` in our DSL.
 
 ```agda
-fftn` : ∀ {ctxt : Ty → Set} → (s : S (ss (ss zz))) → Inp ctxt s s eq
-fftn` s = 
-     -- compose eq (post-ufft` (copyOut` (rev transpᵣ) CMᵗ (pre-ufft` dft`))) (CMᵗ ∙ rev transpᵣ) nop
-     
-     view` (CMᵗ ∙ rev transpᵣ) (post-ufft` (copyOut` (rev transpᵣ) CMᵗ (pre-ufft` dft`)))
-{-
--}
+fftn` : ∀ {ctxt : Ty → Set} → (s : S (ss (ss zz))) → Inp ctxt (ι s) (ι s) eq
+fftn` s = copyOut` eq eq (CMᵗ ∙ rev transpᵣ) (post-ufft` (copyOut` (rev transpᵣ) eq CMᵗ (pre-ufft` dft`))) 
+      -- view` (CMᵗ ∙ rev transpᵣ) (post-ufft` (copyOut` (rev transpᵣ) CMᵗ (pre-ufft` dft`)))
 ```
 
 And then see how that looks for some shapes (Contains holes so commented)

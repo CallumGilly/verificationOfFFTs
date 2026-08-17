@@ -26,7 +26,7 @@ data _⊂_ where
   bₗ : ∀ {q₁ q₂ s₁ s₂ : S (ss l)} → q₁ ⊂ s₁ → q₂ ⊆ s₂ → (q₁ ⊗ q₂) ⊂ (s₁ ⊗ s₂) 
   bᵣ : ∀ {q₁ q₂ s₁ s₂ : S (ss l)} → q₁ ⊆ s₁ → q₂ ⊂ s₂ → (q₁ ⊗ q₂) ⊂ (s₁ ⊗ s₂)
  
--- I propose that there is some isomorphism between subshape and reshape 
+-- I propose that there is some morphism between subshape and reshape 
 -- But to make this i need to put it in the context
 
 inv-⊂ : ∀ {q s : S l} → q ⊂ s → S l
@@ -35,14 +35,10 @@ inv-⊆ : ∀ {q s : S l} → q ⊆ s → Maybe (S l)
 inv-⊆ id = nothing
 inv-⊆ (st x) = just (inv-⊂ x)
 
-destructMaybe : ∀ {A B : Set} → Maybe A → (f : A → B) → (ε : B) → B
-destructMaybe (just x) f _ = f x
-destructMaybe nothing  _ ε = ε
-
-inv-⊂ (le {s₂ = s₂} s⊆q) = destructMaybe (inv-⊆ s⊆q) (_⊗ s₂) s₂
-inv-⊂ (ri {s₁ = s₁} q⊆p) = destructMaybe (inv-⊆ q⊆p) (s₁ ⊗_) s₁
-inv-⊂ (bₗ l r) = let ⟦l⟧ = inv-⊂ l in destructMaybe (inv-⊆ r) (⟦l⟧ ⊗_) ⟦l⟧
-inv-⊂ (bᵣ l r) = let ⟦r⟧ = inv-⊂ r in destructMaybe (inv-⊆ l) (_⊗ ⟦r⟧) ⟦r⟧
+inv-⊂ (le {s₂ = s₂} s⊆q) = maybe′ (_⊗ s₂) s₂ (inv-⊆ s⊆q)
+inv-⊂ (ri {s₁ = s₁} q⊆p) = maybe′ (s₁ ⊗_) s₁ (inv-⊆ q⊆p)
+inv-⊂ (bₗ l r) = let ⟦l⟧ = inv-⊂ l in maybe′ (⟦l⟧ ⊗_) ⟦l⟧ (inv-⊆ r)
+inv-⊂ (bᵣ l r) = let ⟦r⟧ = inv-⊂ r in maybe′ (_⊗ ⟦r⟧) ⟦r⟧ (inv-⊆ l)
 
 -- This is really ugly -- could be nicer if we could go through normal form
 to-resh : ∀ {s q : S (ss l)} → (q⊂s : q ⊂ s) → Reshape s (q ⊗ (inv-⊂ q⊂s)) 
@@ -55,6 +51,32 @@ to-resh {l} {_ ⊗ _} {.(_ ⊗ _)} (bₗ q⊂s id) = assoᵣ ∙ eq ⊕ swap ∙
 to-resh {l} {_ ⊗ _} {.(_ ⊗ _)} (bₗ q⊂s (st x)) = assoₗ ∙ ((assoᵣ ∙ eq ⊕ swap ∙ assoₗ) ⊕ eq) ∙ assoᵣ ∙  to-resh q⊂s ⊕ to-resh x
 to-resh {l} {_ ⊗ _} {.(_ ⊗ _)} (bᵣ id q⊂s) = assoᵣ                     ∙ (eq ⊕ to-resh q⊂s)
 to-resh {l} {_ ⊗ _} {.(_ ⊗ _)} (bᵣ (st x) q⊂s) = assoₗ ∙ ((assoᵣ ∙ eq ⊕ swap ∙ assoₗ) ⊕ eq) ∙ assoᵣ ∙ (to-resh x ⊕ to-resh q⊂s)
+
+{-
+module _ where
+  open import Relation.Binary.PropositionalEquality
+
+  from-resh : ∀ {s q p : S (ss l)} → Reshape s (q ⊗ p) → Σ (q ⊂ s) (λ q⊂s → inv-⊂ q⊂s ≡ p)
+  proj₁ (from-resh eq) = le id
+  proj₁ (from-resh (r ∙ r₁)) = ?
+  proj₁ (from-resh (r ⊕ r₁)) = ?
+  proj₁ (from-resh (down r)) = ?
+  proj₁ (from-resh swap) = ?
+  proj₁ (from-resh assoₗ) = ?
+  proj₁ (from-resh assoᵣ) = ?
+  proj₂ (from-resh r) = ?
+
+
+resh-⊆ : ∀ {s s′ q : S (ss l)} → Reshape s s′ → s ⊆ q → s′ ⊆ q
+resh-⊆ r id = ?
+resh-⊆ r (st x) = ?
+
+resh-⊂ : ∀ {s s′ q : S (ss l)} → Reshape s s′ → s ⊂ q → s′ ⊂ q
+resh-⊂ r (le x) = le (?)
+resh-⊂ r (ri x) = ?
+resh-⊂ r (bₗ s⊂q x) = ?
+resh-⊂ r (bᵣ x s⊂q) = ?
+-}
 
 -- Ah...
 --from : ∀ {s q : S (ss l)} → Reshape s (q ⊗ (inv-⊂ q⊂s)) → q ⊂ s

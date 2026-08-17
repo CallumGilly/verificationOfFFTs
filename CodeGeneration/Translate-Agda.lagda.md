@@ -38,7 +38,7 @@ Given this we then need to create two translators - that for the set of in place
 operations and that for the set of arithmetic operations. 
 ```agda
 translate-Arit : {τ : Ty} → Arit translate-Ty τ → translate-Ty τ
-translate-Inp : ∀ {ITy OTy : Ty} → Inp translate-Ty ITy OTy → translate-Ty ITy → translate-Ty OTy
+translate-Inp : ∀ {ℓ : L} {s s′ : S ℓ} .(r : Reshape s s′) → Inp translate-Ty s s′ r → translate-Ty (ix s ⇒ C) → translate-Ty (ix s′ ⇒ C)
 ```
 
 ```agda
@@ -63,13 +63,12 @@ translate-Arit (ω` arit₁ arit₂) = -ω (translate-Arit arit₁) (translate-A
 
 ```agda
 open import Matrix.Leveled.NatMon-Sum cplx
-translate-Inp (compose inp₁ inp₂) = translate-Inp inp₂ ∘ translate-Inp inp₁
-translate-Inp (view` r) = reshape r
-translate-Inp (copyOut` r₁ r₂ inp) = reshape (up r₂) ∘ translate-Inp inp ∘ reshape (down r₁)
-translate-Inp (part` s⊂p inp) = let r = to-resh s⊂p in reshape (rev r) ∘ unnest ∘ map (translate-Inp inp) ∘ nest ∘ reshape r
-translate-Inp (imap` x) xs i = (translate-Arit x) i (xs i)
--- Need a bit of a manual check on this...
-translate-Inp (mapSum` x) xs i = sum ((translate-Arit x) xs i ∘ ι)
+translate-Inp _ (compose r₁ inp₁ r₂ inp₂) = translate-Inp r₂ inp₂ ∘ translate-Inp r₁ inp₁
+translate-Inp _ (view` r₁ inp) = reshape r₁ ∘ translate-Inp eq inp 
+translate-Inp _ (copyOut` r₁ r₂ inp) = reshape (up r₂) ∘ translate-Inp (rev r₂ ∙ rev r₁) inp ∘ reshape (down r₁)
+translate-Inp _ (part` s⊂p inp) = reshape (rev $ to-resh s⊂p) ∘ unnest ∘ map (translate-Inp eq inp) ∘ nest ∘ reshape (to-resh s⊂p)
+translate-Inp _ (imap` x) = imap $ translate-Arit x
+translate-Inp _ (mapSum` x) xs i = sum ((translate-Arit x) xs i ∘ ι)
 ```
 
 We can then see what our fftn translates into
@@ -79,8 +78,8 @@ open import Data.Fin.Base
 open import Data.Nat
 
 {-
-_ : translate-Inp (fftn` (ι (ι (ν 3) ⊗ ι (ν 4)))) ≡ fftn 
-_ = ?
+_ : ∀ xs i → translate-Inp eq (fftn` (ι (ι (ν 3) ⊗ ι (ν 4)))) xs i ≡ fftn xs i
+_ = λ xs i → ?
 -}
 
 {-
