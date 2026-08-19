@@ -80,3 +80,13 @@ to-from {a} {b} {x₁ , x₂} rewrite
   ; asso = λ {u₁} {u₂} {u₃} → ∘-suc-lemma₃ u₁ u₂ u₃
   }
 
+module _ where
+  open import Matrix.Mon.Show ℕ-Mon
+  open import Data.Nat.Show renaming (show to showℕ)
+  open import Data.Fin.Show renaming (show to show𝔽)
+
+  ℕ-Mon-Show : MonShow
+  ℕ-Mon-Show = record 
+             { showU = showℕ
+             ; showEl = show𝔽
+             }

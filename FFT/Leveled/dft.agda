@@ -1,3 +1,4 @@
+{-# OPTIONS --allow-unsolved-metas #-}
 open import ComplexNew
 
 module FFT.Leveled.dft (cplx : Cplx) where
@@ -6,61 +7,27 @@ module FFT.Leveled.dft (cplx : Cplx) where
 open Cplx cplx
 open import Matrix.Mon
 open import Matrix.NatMon
-open import Matrix.Leveled ℕ-Mon
+open import Matrix.Leveled.Base ℕ-Mon
+open import Matrix.Leveled.Reshape ℕ-Mon
+open import Matrix.Leveled.Change-Major ℕ-Mon
 open import Matrix.Leveled.NatMon-Sum cplx
+open import Matrix.Leveled.NatMon-Change-Major
 open Mon ℕ-Mon
-open import FFT.Leveled.Specification cplx ℕ-Mon ? -- Leveled-CM
+open import FFT.Leveled.Specification cplx ℕ-Mon ℕ-CM
 open import FFT.Leveled.FFT cplx ℕ-Mon
---open CM Leveled-CM
-open Change-Major ?
-open import Data.Fin hiding (_+_; pred)
+open Change-Major ℕ-CM
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; trans; sym; cong₂; subst; cong-app; cong′; icong; dcong₂)
 open Eq.≡-Reasoning
-{-
 
-  iota : Ar (ι N) ℕ
-  iota (ι i) = toℕ i
-
-  offset-prod : Position (s ⊗ p) → ℕ
-  offset-prod (k ⊗ j) = iota (k ⟨ ♯ ⟩) *ₙ iota (j ⟨ ♯ ⟩)
-
-  twiddles′ : ℕ → Position s → Position p → ℂ
-  twiddles′ n i j = -ω (suc n) ⦃ record { nonZero = tt } ⦄ (offset-prod (i ⊗ j))
-
-  twiddles : Ar (s ⊗ p) ℂ
-  twiddles {s} {p} i with nonZeroDec (s ⊗ p)
-  ... | no ¬nz = ⊥-elim (¬nz (pos⇒nz i))
-  ... | yes nz = -ω (length (s ⊗ p)) ⦃ nonZeroₛ-s⇒nonZero-s nz ⦄ (offset-prod i)
-
-  -------------------
-  --- DFT and FFT ---
-  -------------------
-
-  DFT′ : ∀ {N} → Ar (ι N) ℂ → Ar (ι N) ℂ
-  DFT′ {N} xs with nonZero? N
-  ... | no ¬nz = λ { (ι j) → ⊥-elim (¬nz (fin-nz _ j)) }
-  DFT′ {suc N} xs | yes nz = λ j → sum (λ k → xs k * twiddles′ N j k)
-
-  DFT : ∀ {N} → Ar (ι N) ℂ → Ar (ι N) ℂ
-  DFT {N} xs with nonZero? N
-  ... | no ¬nz = λ { (ι j) → ⊥-elim (¬nz (fin-nz _ j)) }
-  ... | yes nz = λ j → sum (λ k → xs k * -ω N ⦃ nz ⦄ (iota k *ₙ iota j))
--}
+open import Data.Fin hiding (_+_; pred)
 open import Data.Nat renaming (_*_ to _*ₙ_; _+_ to _+ₙ_)
 open import Data.Nat.Properties
 
-{-
-head₁ : Ar (ι (suc n)) X → X
-head₁ ar = ar (ι fzero)
-
-tail₁ : Ar (ι (suc n)) X → Ar (ι n) X
-tail₁ ar (ι x) = ar (ι (fsuc x))
--}
 private
   variable
-    l : L
+    ℓ : L
     n : U
     X : Set
 
@@ -68,41 +35,74 @@ private
 --iota : ∀ {n : U} → Ar (ι (ν n)) ℕ
 --iota (ι (ν x)) = toℕ x
 
-twiddles : ∀ {l : L} → ∀ {s p : S (ss l)} → ℕ → P s → P p → ℂ
-twiddles {l} {s} {p} n i j = -ω n ((iota (i ⟨ rev u-flattenᵣ ⟩)) *ₙ (iota (j ⟨ rev u-flattenᵣ ⟩)))
+ℕ-twiddles : ∀ {s p : S (ss ℓ)} → ℕ → P s → P p → ℂ
+ℕ-twiddles {l} {s} {p} n i j = -ω n ((iota (i ⟨ rev u-flattenᵣ ⟩)) *ₙ (iota (j ⟨ rev u-flattenᵣ ⟩)))
 
-size : ∀ {l : L} → S l → ℕ
-size = length
---size (ν x) = x
---size (ι x) = size x
---size (x₁ ⊗ x₂) = size x₁ *ₙ size x₂
 
-std-twiddles : ∀ {l : L} → ∀ {s p : S (ss l)} → P s → P p → ℂ
-std-twiddles {_} {s} {p} i j = twiddles (size s *ₙ size p) i j
+length-transp : ∀ (s : S ℓ) → length s ≡ length (transp s)
+length-transp (ν x) = refl
+length-transp (ι s) = refl
+length-transp (s₁ ⊗ s₂) rewrite length-transp s₁ | length-transp s₂ = ?
 
-dft : {n : U} →
-      Ar (ι (ν n)) ℂ →
-      Ar (ι (ν n)) ℂ
-dft {n} xs (ι j) = sum (λ k → xs (ι k) * twiddles n (ι k) (ι j))
+module ℕ-dft′ where
+  dft : ∀ {s : S zz} 
+        → Ar s ℂ 
+        → Ar s ℂ
+  dft {ν n} xs j = sum (λ k → xs k * ℕ-twiddles n (ι k) (ι j))
 
-{-
-dftffttmp : {s
-             : S (ss zz)}
-            (xs : Ar s ℂ) (i : P s) →
-            dft (reshape u-flattenᵣ xs) (i ⟨ rev u-flattenᵣ ⟩)
-            ≡
-            reshape CMᵗ --(CMᵗ ?)
-            (fft
-             (dft) (std-twiddles) xs)
-            i
-dftffttmp {ι (ν x)} xs (ι (ν i)) = refl
-dftffttmp {s ⊗ s₁} xs (i ⊗ i₁) = ?
--}
+  dft-cong : ∀ {s : S zz} (xs ys : Ar s ℂ) →
+             ((i : P s) → xs i ≡ ys i) → (i : P s) → dft xs i ≡ dft ys i
+  dft-cong {ν n} xs ys prf (ν j) = sum-cong 
+                                    {n} 
+                                    {(λ k → xs k * -ω n (iota (P.ι k) *ₙ toℕ j))} 
+                                    {(λ k → ys k * -ω n (iota (P.ι k) *ₙ toℕ j))} 
+                                    λ{ (ν i) → 
+                                      cong₂ _*_ (prf (ν i)) refl
+                                    } 
+
+  twiddles : ∀ {s p : S (ss ℓ)} → P s → P p → ℂ
+  twiddles {_} {s} {p} i j = ℕ-twiddles (length s *ₙ length p) i j
+
+  twiddles-CMᵗᵣ-lemma : ∀ {s p : S (ss ℓ)}
+                      → ∀ (i : P s) 
+                      → ∀ (j : P p) 
+                      → twiddles i (j ⟨ CMᵗ ⟩) ≡ twiddles i j
+  twiddles-CMᵗᵣ-lemma {ℓ} {s} {.(S.ι _)} i (ι j) = refl
+  twiddles-CMᵗᵣ-lemma {ℓ} {s} {(p₁ ⊗ p₂)} i (j₁ ⊗ j₂) rewrite length-transp p₁ | length-transp p₂ = cong₂ -ω ? ?
+
+  twiddles-flatten-zᵣ-lemma : ∀ {s p : S (ss (ss ℓ))}
+                            → ∀ (i : P (flatten-z s))
+                            → ∀ (j : P (flatten-z p))
+                            → twiddles {_} {s} {p} (i ⟨ flatten-zᵣ ⟩) (j ⟨ flatten-zᵣ ⟩)
+                            ≡ twiddles i j
+
+  twiddles-rev-flatten-zᵣ-lemma : {s p
+                                 : S (ss (ss ℓ))}
+                                (i : P s) (j : P p) →
+                                twiddles (i ⟨ rev flatten-zᵣ ⟩) (j ⟨ rev flatten-zᵣ ⟩) ≡
+                                twiddles i j
+  twiddles-transₗ-lemma : {s p : S (ss ℓ)}
+                        (i : P s) (j : P p) →
+                        twiddles (i ⟨ transpᵣ ∙ transpᵣ ⟩) j ≡
+                        twiddles i j
+  dft≡fft : {s : S (ss zz)}
+          (xs : Ar s ℂ) (i : P s) →
+          dft (reshape flatten-zᵣ xs) (i ⟨ rev flatten-zᵣ ⟩) ≡
+          reshape CMᵗ (fft dft twiddles xs) i
+
 
 ℕ-dft : FFT-Specification
-ℕ-dft = record 
-      { dft = ? --dft
-      ; dft-cong = ?
-      ; twiddles = std-twiddles
-      ; dft≡fft = ? --dftffttmp
-      }
+ℕ-dft = record {ℕ-dft′
+               ; twiddles-flatten-zᵣ-lemma = λ {l} {s} {p} → ℕ-dft′.twiddles-flatten-zᵣ-lemma {_} {s} {p}
+               }
+
+
+
+    --record
+        -- { -- ℕ-dft′
+        -- ; twiddles-CMᵗᵣ-lemma = ?
+        -- ; twiddles-flatten-zᵣ-lemma = ?
+        -- ; twiddles-rev-flatten-zᵣ-lemma = ?
+        -- ; twiddles-transₗ-lemma = ?
+        -- ; dft≡fft = ?
+        -- }

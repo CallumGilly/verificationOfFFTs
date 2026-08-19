@@ -116,8 +116,8 @@ to a pointer representation
   resh-ix assoₗ ((i₁ ⊗ i₂) ⊗ i₃) = i₁ ⊗ (i₂ ⊗ i₃)
   resh-ix assoᵣ (i₁ ⊗ (i₂ ⊗ i₃)) = (i₁ ⊗ i₂) ⊗ i₃
   -- These need mod, just needs a moment of thinking
-  resh-ix (flat {m} {n}) (ι (ν b) ⊗ ι (ν b₁)) = ν (printf "((%u * %s) + %s)" m b b₁)
-  resh-ix (unflat {m} {n}) (ν x) = ι (ν (printf "(%s / %u)" x m )) ⊗ ι (ν (printf "(%s %% %u)" x m))
+  resh-ix (flat {m} {n}) (ι (ν b) ⊗ ι (ν b₁)) = ν (printf "((%u * %s) + %s)" (suc m) b b₁)
+  resh-ix (unflat {m} {n}) (ν x) = ι (ν (printf "(%s / %u)" x (suc m) )) ⊗ ι (ν (printf "(%s %% %u)" x (suc m)))
 ```
 
 We then create a converter from ix to subscripts to allow us to stringify them.
@@ -188,7 +188,7 @@ module _ where
   arit-eval (ω` x y) = do
     x′ ← arit-eval x
     y′ ← arit-eval y
-    return $ parens $ "omega(" ++ x′ ++ "," <+> y′ ++ ")"
+    return $ parens $ "minus_omega(" ++ x′ ++ "," <+> y′ ++ ")"
 ```
 
 We can then create a function which takes this evaluated form into string form.
@@ -261,15 +261,15 @@ module _ where
 
   +assignment : String → String → String
   +assignment = printf "%s += %s;\n"
+  
+  ShapeCast′ : Bool → S ℓ → String
+  ShapeCast′ isLeft (ι s) = ShapeCast′ isLeft s
+  ShapeCast′ isLeft (s₁ ⊗ s₂) = ShapeCast′ isLeft s₁ ++ ShapeCast′ false s₂
+  ShapeCast′ false (ν x) = printf "[%u]" (suc x)
+  ShapeCast′ true (ν x) = ""
 
   ShapeCast : S ℓ → String
   ShapeCast = ShapeCast′ true
-    where
-      ShapeCast′ : Bool → S ℓ → String
-      ShapeCast′ isLeft (ι s) = ShapeCast′ isLeft s
-      ShapeCast′ isLeft (s₁ ⊗ s₂) = ShapeCast′ isLeft s₁ ++ ShapeCast′ false s₂
-      ShapeCast′ false (ν x) = printf "[%u]" (suc x)
-      ShapeCast′ true (ν x) = ""
 
   ArCast : Maybe String → S ℓ → String
   ArCast nothing = parens ∘ ArCast (just "")
@@ -282,7 +282,7 @@ module _ where
   calloc type s = do  
     memName ← fresh-var
     let ops = assignment (ArCast (just memName) s) $ (ArCast nothing s) ++ (calloc-op type (clen s))
-    let free = printf "free(%s);\n" memName
+    let free = "" --printf "free(%s);\n" memName
     return $ memName , ops , free
 
 ```
@@ -293,9 +293,9 @@ Finally we can move to our C translation
 
 ```agda
 step₁ : .( r : Reshape s s′ ) → (Ix s → String) → Inp translate-Ty s s′ r → (Ix s′ → String) × (State ℕ String)
-step₁ _ ar (imap` arit) = ar , operation
+step₁ _ ar (imap` arit) = ar , ops
   where
-    operation = do
+    ops = do
       i ← new-Ix _
       arit-string ← translate-Arit C (app (app arit (var i)) (var (ar i)))
       return $ commentBlock "imap" $ loopnest i (assignment (ar i) arit-string)
@@ -354,15 +354,6 @@ step₁ _ xs (part` {_} {s} {p} s⊂p inp) = xs , ops
 
       return $ commentBlock "part" $ loopnest i op
 
-show-inp : Inp translate-Ty s s′ r → String
-show-inp {_} {_} {_} {r} inp = runState show-inp′ 0 .proj₂ 
-   where
-     show-inp′ : State ℕ String
-     show-inp′ = do 
-       let _ , f = step₁ r (flip ix-to-str "memName") inp
-       x ← f
-       return $ x
-
 inp→f : Inp translate-Ty s s′ r → String → String
 inp→f {_} {s} {_} {r} inp function-name = runState inp→f′ 0 .proj₂
   where
@@ -371,7 +362,16 @@ inp→f {_} {s} {_} {r} inp function-name = runState inp→f′ 0 .proj₂
       var-name ← fresh-var
       let _ , f = step₁ r (flip ix-to-str var-name) inp
       body ← f
-      return $ printf "void %s(%s) {\n%s}" function-name (ArCast (just var-name) s) body 
+      return $ printf "void %s(%s) {\n%s}\n" function-name (ArCast (just var-name) s) body 
+
+inp-signature : Inp translate-Ty s s′ r → String → String
+inp-signature {_} {s} {_} {r} inp function-name = printf "void %s%s;\n" function-name (ArCast nothing s)
+
+sizeDef : S ℓ → String → String
+sizeDef s name =     (printf "#ifndef %s_SIZE\n" name)
+                  ++ (printf "#define %s_SIZE %u\n" name (clen s))
+                  ++ (printf "typedef complex real (*%s_TYPE)%s;\n" name (ShapeCast s))
+                  ++ "#endif\n"
 ```
 
 # Testing
@@ -395,10 +395,13 @@ module _ where
   mini₄ : Inp translate-Ty (ι (ν 3) ⊗ ι (ν 5)) _ eq
   mini₄ = part` (ri _⊆_.id) (imap` (`λ i ⇒ `λ x ⇒ var x *C (ω` (sizeN (var i)) (posiN (var i) eq))))
 
-  fftn-test′ : String
-  fftn-test′ =
-    let shp = (ι (ι (ν 2) ⊗ (ι (ν 3)))) ⊗ (ι (ι (ν 4) ⊗ ι (ν 5))) in
-    let fun = fftn` shp in
+  fftn-test-sig′ : S (ss (ss zz)) → String
+  fftn-test-sig′ s = inp-signature {_} {_} {_} {eq} (fftn` s) "fftn"
+
+  fftn-test′ : S (ss (ss zz)) → String
+  fftn-test′ s =
+    --let shp = 
+    let fun = fftn` s in
     inp→f {_} {_} {_} {eq} fun "fftn"
 
 entry : String
@@ -406,5 +409,5 @@ entry : String
 --entry = show-inp {_} {ι (ι (ν 2) ⊗ ι (ν 3))} {_} {up (down transpᵣ)} mini₂ --fftn-test′
 --entry = show-inp {_} {ι (ν 2)} {_} {eq} mini₃ 
 --entry = show-inp {_} {_} {_} {eq} mini₄
-entry = fftn-test′
+entry = fftn-test′ ((ι (ι (ν 2) ⊗ (ι (ν 3)))) ⊗ (ι (ι (ν 4) ⊗ ι (ν 5))))
 ```

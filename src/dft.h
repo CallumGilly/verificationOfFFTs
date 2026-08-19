@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "../src/minus-omega.h"
-void dft(size_t n, complex float x_0[], complex float dft[]);
+void dft(size_t n, complex real x_0[], complex real dft[]);
 
 #define DFT(n, xs, ys) \
   { \

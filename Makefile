@@ -6,7 +6,7 @@ CompileGHC: $(shell find . -name '*.agda')
 	agda --compile Implementations/FFT.agda --compile-dir=bin
 
 GenerateCCode: CompileGenerator
-	./Main > generated/tmp.c && clang-format -i generated/* && cat generated/tmp.c
+	./Main && clang-format -i generated/* 
 # 
 # CompileGCCWithoutGeneration: $(wildcard ./src/*.c)
 # 	cc -DDOUBLE_REAL $(wildcard ./src/*.c) ./generated/*.c -Wall -Wextra -Wconversion -pedantic -lm -o program
@@ -16,8 +16,8 @@ GenerateCCode: CompileGenerator
 # cache and will miss the newly created files after `make clean`
 # CompileGCC: GenerateCCode CompileGCCWithoutGeneration $(wildcard ./src/*.c)
 # 
-# CompileClang: GenerateCCode $(wildcard ./src/*.c)
-# 	clang -DDOUBLE_REAL $(wildcard ./src/*.c) ./generated/*.c -Warray-bounds-pointer-arithmetic -Wall -Wextra -Wconversion -pedantic -lm -o program
+CompileClang: GenerateCCode $(wildcard ./src/*.c)
+	clang -DDOUBLE_REAL $(wildcard ./src/*.c) ./generated/*.c -Warray-bounds-pointer-arithmetic -Wall -Wextra -Wconversion -pedantic -lm -o program
 
 clean:
 	rm -f generated/*

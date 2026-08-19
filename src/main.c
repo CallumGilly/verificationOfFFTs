@@ -1,7 +1,7 @@
 //#include "../generated/dft.h"
-#include "../generated/fft.h"
-#include "../generated/transTest.h"
-#include "../generated/fftCube.h"
+#include "../generated/FFT.h"
+// #include "../generated/transTest.h"
+// #include "../generated/fftCube.h"
 #include "./minus-omega.h"
 #include "./dft.h"
 
@@ -12,10 +12,10 @@
 #include <math.h>
 #include <time.h>
 
-void testTranspose();
+//void testTranspose();
 void testDFTFFT();
-void testDFTFFTCUBE();
-void printer(size_t n, complex real input[], real dftOutput[], real fftOutput[]);
+//void testDFTFFTCUBE();
+void printer(size_t n, complex real input[], complex real dftOutput[], complex real fftOutput[]);
 
 /*****************************************************************************/
 
@@ -25,10 +25,6 @@ void printer(size_t n, complex real input[], real dftOutput[], real fftOutput[])
 
 // Transpose Test Size
 #define TRANSPOSE_TEST_SIZE 16
-
-// `FFT Cube` Size and Shape (always 2xnxnxn
-#define FFT_CUBE_SIZE 40
-typedef real (*FFT_CUBE_TYPE)[2][4][5][2];
 
 int main (void) {
   testDFTFFT();
@@ -40,6 +36,7 @@ int main (void) {
 
 /*****************************************************************************/
 
+/*
 void testTranspose() {
   real(*input)[TRANSPOSE_TEST_SIZE] = malloc(sizeof(*input));
   memset(input, 0, sizeof(*input));
@@ -54,43 +51,36 @@ void testTranspose() {
     printf("At Pos: %zu, Got: %.0f\n", ai, creal((*input)[ai]));
   }
 }
+*/
 
 void testDFTFFT() {
-  complex real(*input)[fft_SIZE] = malloc(sizeof(*input));
+  complex real(*input)[fftn_SIZE] = malloc(sizeof(*input));
   memset(input, 0, sizeof(*input));
 
-  real(*fftMem)[2 * fft_SIZE] = malloc(sizeof(*fftMem));
-  memset(fftMem, 0, sizeof(*fftMem));
+  complex real(*fftnMem)[fftn_SIZE] = malloc(sizeof(*fftnMem));
+  memset(fftnMem, 0, sizeof(*fftnMem));
 
-  real(*splitDftMem)[2 * fft_SIZE] = malloc(sizeof(*splitDftMem));
-  memset(splitDftMem, 0, sizeof(*splitDftMem));
-
-  complex real(*dftOutput)[fft_SIZE] = malloc(sizeof(*dftOutput));
+  complex real(*dftOutput)[fftn_SIZE] = malloc(sizeof(*dftOutput));
   memset(dftOutput, 0, sizeof(*dftOutput));
-
-  real(*dftSplitOutput)[2 * fft_SIZE] = malloc(sizeof(*dftSplitOutput));
-  memset(dftSplitOutput, 0, sizeof(*dftSplitOutput));
 
   srand((unsigned int) time(NULL));
   // Garble input
   real x_r; real x_i;
-  for (size_t ai = 0; ai < fft_SIZE; ai++) {
+  for (size_t ai = 0; ai < fftn_SIZE; ai++) {
     x_r = (real)rand()/(real)((real)RAND_MAX/(400.0f));
     x_i = (real)rand()/(real)((real)RAND_MAX/(400.0f));
     (*input)[ai] = x_r + (x_i * I);
-    (*fftMem)[ai] = x_r;
-    (*fftMem)[(fft_SIZE + ai)] = x_i;
-    (*splitDftMem)[ai] = x_r;
-    (*splitDftMem)[fft_SIZE + ai] = x_i;
+    (*fftnMem)[ai] = x_r + (x_i * I);
   }
 
-  DFT(fft_SIZE, (*input), (*dftOutput));
-  SPLIT_DFT(fft_SIZE, ((real (*)[fft_SIZE])splitDftMem), ((real (*)[fft_SIZE])dftSplitOutput));
-  fft((fft_TYPE)fftMem);
+  dft(fftn_SIZE, (*input), (*dftOutput));
+  // SPLIT_DFT(fftn_SIZE, ((real (*)[fftn_SIZE])splitDftMem), ((real (*)[fftn_SIZE])dftSplitOutput));
+  fftn((fftn_TYPE)fftnMem);
 
-  printer(fft_SIZE, *input, *dftSplitOutput, *fftMem);
+  printer(fftn_SIZE, *input, *dftOutput, *fftnMem);
 }
 
+/*
 void testDFTFFTCUBE() {
   complex real(*input)[FFT_CUBE_SIZE] = malloc(sizeof(*input));
   memset(input, 0, sizeof(*input));
@@ -122,8 +112,9 @@ void testDFTFFTCUBE() {
 
   printer(FFT_CUBE_SIZE, *input, *dftSplitOutput, *fftMem);
 }
+*/
 
-void printer(size_t n, complex real input[], real dftOutput[], real fftOutput[]) {
+void printer(size_t n, complex real input[], complex real dftOutput[], complex real fftOutput[]) {
 
   printf("Index, Input-Real, Input-Imag, DFT-Real, DFT-Imag, FFT-Real, FFT-Imag, DFT-FFT-Diff-Real, DFT-FFT-Diff-Imag\n");
   for (size_t ai = 0; ai < n; ai++) {
@@ -131,12 +122,12 @@ void printer(size_t n, complex real input[], real dftOutput[], real fftOutput[])
             ai,
             creal((input)[ai]),
             cimag((input)[ai]),
-            ((dftOutput)[ai    ]),
-            ((dftOutput)[n + ai]),
-            ((fftOutput)[ai    ]),
-            ((fftOutput)[n + ai]),
-            fabs(((fftOutput)[ai    ]) - ((dftOutput)[ai    ])),
-            fabs(((fftOutput)[n + ai]) - ((dftOutput)[n + ai]))
+            creal((dftOutput)[ai    ]),
+            cimag((dftOutput)[ai    ]),
+            creal((fftOutput)[ai    ]),
+            cimag((fftOutput)[ai    ]),
+            fabs(creal((fftOutput)[ai]) - creal((dftOutput)[ai])),
+            fabs(cimag((fftOutput)[ai]) - cimag((dftOutput)[ai]))
            );
   }
 

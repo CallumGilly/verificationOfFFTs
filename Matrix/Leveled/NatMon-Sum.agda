@@ -29,3 +29,15 @@ tail₁ xs (ν x) = xs (ν (suc x))
 sum : ∀ {n : ℕ} → Ar (ν n) ℂ → ℂ
 sum {zero} xs = xs (ν zero)
 sum {suc n} xs = head₁ xs + (sum (tail₁ xs))
+
+module _ where
+  open import Relation.Binary.PropositionalEquality
+  open import Function
+
+  sum-cong : ∀ {xs ys : Ar (ν n) ℂ}
+           → (∀ (i : P (ν n)) → xs i ≡ ys i)
+           → sum xs ≡ sum ys
+  sum-cong {zero} {xs} {ys} prf = prf (ν zero) 
+  sum-cong {suc n} {xs} {ys} prf = cong₂ _+_ (prf $ ν zero) $ sum-cong λ{ (ν i) → prf $ ν (suc i)}
+           
+

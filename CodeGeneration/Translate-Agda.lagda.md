@@ -1,20 +1,22 @@
 Here I define the translation from the DSL back to standard Agda I can then 
 equate to my Agda implementation
 ```agda
+
+
 open import ComplexNew
 open import Matrix.NatMon
 open import FFT.Leveled.Specification
 open import Matrix.Leveled.NatMon-Change-Major 
-
-module CodeGeneration.Translate-Agda (cplx : Cplx) (spec : FFT-Specification cplx ℕ-Mon ℕ-CM) where
+--(spec : FFT-Specification cplx ℕ-Mon ℕ-CM)
+module CodeGeneration.Translate-Agda (cplx : Cplx)  where
 open import Function
 
 open import Data.Nat renaming (_*_ to _*ₙ_)
 
 open Cplx cplx
 
-open FFT-Specification spec
-open import FFT.Leveled.Properties cplx ℕ-Mon ℕ-CM spec
+open import FFT.Leveled.dft cplx
+open import FFT.Leveled.Properties cplx ℕ-Mon ℕ-CM ℕ-dft
 
 open import Matrix.Leveled.Base ℕ-Mon
 open import Matrix.Leveled.Reshape ℕ-Mon
@@ -64,8 +66,7 @@ translate-Arit (ω` arit₁ arit₂) = -ω (translate-Arit arit₁) (translate-A
 ```agda
 open import Matrix.Leveled.NatMon-Sum cplx
 translate-Inp _ (compose r₁ inp₁ r₂ inp₂) = translate-Inp r₂ inp₂ ∘ translate-Inp r₁ inp₁
-translate-Inp _ (view` r₁ inp) = reshape r₁ ∘ translate-Inp eq inp 
-translate-Inp _ (copyOut` r₁ r₂ inp) = reshape (up r₂) ∘ translate-Inp (rev r₂ ∙ rev r₁) inp ∘ reshape (down r₁)
+translate-Inp _ (copyOut` r₁ r₂ r₃ inp) =  reshape (up r₃) ∘ translate-Inp r₂ inp ∘ reshape (down r₁)
 translate-Inp _ (part` s⊂p inp) = reshape (rev $ to-resh s⊂p) ∘ unnest ∘ map (translate-Inp eq inp) ∘ nest ∘ reshape (to-resh s⊂p)
 translate-Inp _ (imap` x) = imap $ translate-Arit x
 translate-Inp _ (mapSum` x) xs i = sum ((translate-Arit x) xs i ∘ ι)
@@ -78,20 +79,25 @@ open import Data.Fin.Base
 open import Data.Nat
 
 {-
+_ : ?
+_ = let ab = translate-Inp eq (fftn` (ι (ι (ν 3) ⊗ ι (ν 4)))) in ?
+
+
 _ : ∀ xs i → translate-Inp eq (fftn` (ι (ι (ν 3) ⊗ ι (ν 4)))) xs i ≡ fftn xs i
 _ = λ xs i → ?
 -}
 
 {-
-_ : translate (fftn` (ι (ι (ν 3) ⊗ ι (ν 4)) ⊗ (ι (ι (ν 5) ⊗ ι (ν 6))))) ≡ fftn 
+_ : translate-Inp eq (fftn` {translate-Ty} (ι (ι (ν 3) ⊗ ι (ν 4)) ⊗ (ι (ι (ν 5) ⊗ ι (ν 6))))) ? ≡ ? 
 _ = ?
+-}
 
 prf : ∀ {s : S (ss (ss zz))}
     → ∀ (xs : Ar s ℂ)
-    → ∀ (i  : P s)
-    → translate (fftn` s) xs i ≡ fftn xs i
-prf {ι (ι s)} xs (ι (ι i)) = refl
-prf {ι (s ⊗ s₁)} xs (ι (i ⊗ i₁)) = ?
+    → ∀ (i  : P (ι s))
+    → translate-Inp eq (fftn` s) (reshape (up eq) xs) i ≡ fftn xs (i ⟨ up eq ⟩)
+prf {ι (ι (ν _))} _ (ι (ι (ι _))) = refl
+prf {ι (s₁ ⊗ s₂)} xs (ι (ι (i₁ ⊗ i₂))) = ?
 prf {s ⊗ s₁} xs i = ?
--}
+
 ```
