@@ -8,9 +8,9 @@ open import ComplexNew
 open import Implementations.Complex realImplementation using (complexImplementation; _+_i; fromℝ)
 
 open Real.Real realImplementation using (ℝ; _ᵣ; -_)
-open Cplx complexImplementation using (ℂ)
+--open Cplx complexImplementation using (ℂ)
 
-open Cplx ?
+--open Cplx ?
 
 module CodeGeneration.RunTranslate where
 
@@ -36,9 +36,9 @@ header = "#include <complex.h>\n"
       ++ "#include \"../src/minus-omega.h\"\n"
 
 
+--ℂ : Set
 
-RandAr : ∀ {ℓ : L} → (s : S ℓ) → IO (Ar s ℂ)
+--RandAr : ∀ {ℓ : L} → (s : S ℓ) → IO (Ar s ℂ)
 
-main : Main
-main = run do
-  ?
+--main : Main
+--main = run do

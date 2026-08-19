@@ -35,7 +35,7 @@ module Implementations.Real where
 
     Nm/N≡m : ∀ (N m : Float) → primFloatDiv (primFloatTimes N m) N ≡ m
 
-  module Base where
+  module _ where
     realImplementation : Real
     realImplementation = record
      { ℝ               = Float
@@ -64,9 +64,9 @@ module Implementations.Real where
      ; Nm/N≡m = Nm/N≡m
      }
 
-  open Base public
-  open Real.Real realImplementation
-  
-  showℝ : ℝ → String
-  showℝ = primShowFloat
+  module _ where
+    open Real.Real realImplementation
+    
+    showℝ : ℝ → String
+    showℝ = primShowFloat
 

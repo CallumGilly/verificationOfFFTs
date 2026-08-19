@@ -25,8 +25,6 @@ header = "#include <complex.h>\n"
 
 
 
-RandAr : ∀ {ℓ : L} → (s : S ℓ) → IO (Ar ? ?)
-
 main : Main
 main = run do
   let s = (ι ((ι (ν 2)) ⊗ (ι (ν 3)))) --((ι (ι (ν 4) ⊗ ι (ν 5))) ⊗ ι (ι (ν 3) ⊗ ι (ν 6)))
