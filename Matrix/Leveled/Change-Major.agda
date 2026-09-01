@@ -141,7 +141,7 @@ record Change-Major : Set₁ where
     semi-flattenᵣ {l} {s} = up flatten-zᵣ
 
     CMᵗ-reindex : ∀ {s : S (ss l)} → Reshape (transp s) s
-    CMᵗ-reindex {l} {s} = rev (u-flattenᵣ) ∙ reindex (♭s-sᵗ s) ∙ (u-flattenᵣ)
+    CMᵗ-reindex {l} {s} = rev (u-flattenᵣ) ∙ (reindex (♭s-sᵗ s)) ∙ (u-flattenᵣ)
 
 
     lemma : ∀ {n m k : U} 
@@ -150,26 +150,20 @@ record Change-Major : Set₁ where
           → i ⟨ reindex (p ⊡ q) ⟩ ≡ i ⟨ reindex q ⟩ ⟨ reindex p ⟩
     lemma i refl refl = refl
 
-    {-
     lemma-cong-● : ∀ {m n m′ n′ : U} 
                  → (i : P (ι (ν m)))
                  → (j : P (ι (ν n)))
                  → (p : m′ ≡ m)
                  → (q : n′ ≡ n)
-                 → ? --(i ⊗ j) ⟨ split ⟩ ⟨ reindex ? ⟩ ≡ ?
-    -}
+                 → (i ⊗ j) ⟨ down unflat ⟩ ⟨ (reindex (cong₂ _●_ p q)) ⟩ 
+                ≡ ((i ⟨ reindex p ⟩) ⊗ (j ⟨ reindex q ⟩)) ⟨ down unflat ⟩
+    lemma-cong-● i j refl refl = refl
     
-    --flat-CMᵗ : ∀ {s : S (ss l)}
-    --         → (i : P (transp s))
-    --         → i ⟨ CMᵗ ∙ flatten-zᵣ ⟩ ≡ i ⟨ flatten-zᵣ ∙ (reindex ?) ⟩
-
-    --CM-lemma₁ : ∀ {s : S (ss (ss l))} (i : P (transp s)) → i ⟨ CMᵗ ⟩ ⟨ rev flatten-zᵣ ⟩ ≡ i ⟨ rev flatten-zᵣ ⟩ ⟨ CMᵗ ⟩ ⟨ ? ⟩
     CM-lemma₂ : ∀ {s p : S (ss (ss l))} 
               → (i : P s) (j : P p) 
               → ((i ⟨ rev flatten-zᵣ ⟩) ⊗ (j ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩ ≡ (i ⊗ j) ⟨ CM ⟩ ⟨ rev flatten-zᵣ ⟩
     CM-lemma₂ {l} {s} {p} i j = sym (⊕-rev-eq-lemma _ _ _)
                               ⊡ sym (⊕-distributes-∙ _ _ _ _ (((i ⟨ rev flatten-zᵣ ⟩) ⊗ (j ⟨ rev flatten-zᵣ ⟩)) ⟨ CM ⟩))
-    --CM-lemma₃ : ∀ {s : S (ss (ss l))} (i : P (s)) → i ⟨ CMᵗ ⟩ ⟨ flatten-zᵣ {_} {?} ⟩ ≡ i ⟨ flatten-zᵣ ⟩ ⟨ CMᵗ ⟩ ⟨ ? ⟩
 
     CMᵗ-lemma : ∀ {s p : S (ss l)} 
               → ∀ (i : P (transp (s ⊗ p)))

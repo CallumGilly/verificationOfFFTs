@@ -40,9 +40,7 @@ private
 
 
 length-transp : ∀ (s : S ℓ) → length s ≡ length (transp s)
-length-transp (ν x) = refl
-length-transp (ι s) = refl
-length-transp (s₁ ⊗ s₂) rewrite length-transp s₁ | length-transp s₂ = ?
+length-transp s = resh-length {_} {_} {s} (rev transpᵣ)
 
 module ℕ-dft′ where
   dft : ∀ {s : S zz} 
@@ -68,7 +66,8 @@ module ℕ-dft′ where
                       → ∀ (j : P p) 
                       → twiddles i (j ⟨ CMᵗ ⟩) ≡ twiddles i j
   twiddles-CMᵗᵣ-lemma {ℓ} {s} {.(S.ι _)} i (ι j) = refl
-  twiddles-CMᵗᵣ-lemma {ℓ} {s} {(p₁ ⊗ p₂)} i (j₁ ⊗ j₂) rewrite length-transp p₁ | length-transp p₂ = cong₂ -ω ? ?
+  twiddles-CMᵗᵣ-lemma {ℓ} {s} {(p₁ ⊗ p₂)} i (j₁ ⊗ j₂) = cong₂ -ω (cong ((length s) *ₙ_) (resh-length {_} {_} {(transp (p₁ ⊗ p₂))} transpᵣ)) ?
+  --rewrite length-transp p₁ | length-transp p₂ = cong₂ -ω ? ?
 
   twiddles-flatten-zᵣ-lemma : ∀ {s p : S (ss (ss ℓ))}
                             → ∀ (i : P (flatten-z s))
@@ -85,6 +84,10 @@ module ℕ-dft′ where
                         (i : P s) (j : P p) →
                         twiddles (i ⟨ transpᵣ ∙ transpᵣ ⟩) j ≡
                         twiddles i j
+  twiddles-transₗ-lemma {ℓ} {s} {p} i j = cong₂ -ω 
+                                            (cong (_*ₙ _) (resh-length {_} {_} {transp (transp s)} (transpᵣ ∙ transpᵣ))) 
+                                            ?
+
   dft≡fft : {s : S (ss zz)}
           (xs : Ar s ℂ) (i : P s) →
           dft (reshape flatten-zᵣ xs) (i ⟨ rev flatten-zᵣ ⟩) ≡

@@ -2,7 +2,7 @@ Here I define the translation from the DSL into C...
 ```agda
 
 module CodeGeneration.Translate-C where
-open import Function
+open import Function 
 open import Matrix.Mon
 open import Matrix.NatMon
 
@@ -16,7 +16,7 @@ open import Data.Nat
 open import Data.Nat.Show using () renaming (show to showℕ)
 open import Data.String hiding (length)
 open import Data.Product
-open import Data.Maybe hiding (_>>=_)
+open import Data.Maybe renaming (_>>=_ to _⟫=_; zip to zipM) 
 open import Data.Bool
 
 open import Relation.Binary.PropositionalEquality
@@ -27,7 +27,7 @@ open import CodeGeneration.DSL
 
 private variable
   τ σ : Ty
-  ℓ ℓ′ : L
+  ℓ ℓ′ ℓ₁ ℓ₂ ℓ₃ ℓ₄ : L
   s s′ k : S ℓ
   r : Reshape s s′
 ```
@@ -54,6 +54,16 @@ fresh-var = do
   modify suc
   return $ show-var n
 ```
+
+# Length helper
+
+We then need a small helper to get the length of shapes, this needs `suc` as we
+treat `ν` as `Fin ∘ suc`
+```agda
+clen : S ℓ → ℕ
+clen = suc ∘ length
+```
+
 
 # Indices
 ```agda
@@ -96,10 +106,48 @@ We can also then create a function to get this position after a reshape has been
                                         $   (ix-flat-index i) 
                                         <+> "+" 
                                         <+> parensIfSpace 
-                                            ( (showℕ $ length s) 
+                                            ( (showℕ $ clen s) 
                                             <+> "*" 
                                             <+> ix-flat-index j
                                             )
+```
+
+```agda
+  data InplaceReshape : {s : S ℓ} {s′ : S ℓ′} → Reshape s s′ → Set where
+    eq     : ∀ {s  : S ℓ } → InplaceReshape {_} {_} {s} {s} eq
+    _∙_    : ∀ {s₁ : S ℓ₁} {s₂ : S ℓ₂} {s₃ : S ℓ₃}     {r₁ : Reshape s₁ s₂} {r₂ : Reshape s₂ s₃} → InplaceReshape r₁ → InplaceReshape r₂ → InplaceReshape (r₂ ∙ r₁)
+    _⊕_    : ∀ {s₁ s₂ : S (ss ℓ₁)} {s₃ s₄ : S (ss ℓ₂)} {r₁ : Reshape s₁ s₃} {r₂ : Reshape s₂ s₄} → InplaceReshape r₁ → InplaceReshape r₂ → InplaceReshape (r₁ ⊕ r₂)
+    up     : ∀ {r : Reshape s s′} → InplaceReshape r → InplaceReshape (up r)
+    down   : ∀ {r : Reshape s s′} → InplaceReshape r → InplaceReshape (down r)
+    assoₗ  : ∀ {s₁ s₂ s₃ : S (ss ℓ)} → InplaceReshape (assoₗ {ℓ} {s₁} {s₂} {s₃})
+    assoᵣ  : ∀ {s₁ s₂ s₃ : S (ss ℓ)} → InplaceReshape (assoᵣ {ℓ} {s₁} {s₂} {s₃})
+    flat   : ∀ {n m : ℕ} → InplaceReshape (flat {n} {m})
+    unflat : ∀ {n m : ℕ} → InplaceReshape (unflat {n} {m})
+
+  isInplace : ∀ {s : S ℓ} {s′ : S ℓ′} → (r : Reshape s s′) → Maybe (InplaceReshape r)
+  isInplace eq        = just eq
+  isInplace (r₁ ∙ r₂) = zipM (isInplace r₂) (isInplace r₁) ⟫= uncurry (just ∘₂′ _∙_) 
+  isInplace (r₁ ⊕ r₂) = zipM (isInplace r₁) (isInplace r₂) ⟫= uncurry (just ∘₂′ _⊕_)
+  isInplace (up   r)  = isInplace r ⟫= just ∘ up
+  isInplace (down r)  = isInplace r ⟫= just ∘ down
+  isInplace flat      = just flat
+  isInplace unflat    = just unflat
+  isInplace swap      = nothing
+  isInplace assoₗ     = just assoₗ
+  isInplace assoᵣ     = just assoᵣ
+
+  -- Helper for debugging what RESH should be doing
+  showResh : Reshape s s′ → String
+  showResh eq = "eq"
+  showResh (r₁ ∙ r₂) = parens $ (showResh r₁) <+> "∙" <+> (showResh r₂)
+  showResh (r₁ ⊕ r₂) = parens $ (showResh r₁) <+> "⊕" <+> (showResh r₂)
+  showResh (up   r) = parens $ "up"   <+> showResh r
+  showResh (down r) = parens $ "down" <+> showResh r
+  showResh flat = "flat"
+  showResh unflat = "unflat"
+  showResh swap = "swap"
+  showResh assoₗ = "assol"
+  showResh assoᵣ = "assor"
 ```
 
 I had the thought of creating a small dsl for pointer arithmetic to make it 
@@ -116,8 +164,8 @@ to a pointer representation
   resh-ix assoₗ ((i₁ ⊗ i₂) ⊗ i₃) = i₁ ⊗ (i₂ ⊗ i₃)
   resh-ix assoᵣ (i₁ ⊗ (i₂ ⊗ i₃)) = (i₁ ⊗ i₂) ⊗ i₃
   -- These need mod, just needs a moment of thinking
-  resh-ix (flat {m} {n}) (ι (ν b) ⊗ ι (ν b₁)) = ν (printf "((%u * %s) + %s)" (suc m) b b₁)
-  resh-ix (unflat {m} {n}) (ν x) = ι (ν (printf "(%s / %u)" x (suc m) )) ⊗ ι (ν (printf "(%s %% %u)" x (suc m)))
+  resh-ix (flat {m} {n}) (ι (ν i) ⊗ ι (ν j)) = ν (printf "((%u * %s) + %s)" (suc n) i j)
+  resh-ix (unflat {m} {n}) (ν x) = ι (ν (printf "(%s / %u)" x (suc n) )) ⊗ ι (ν (printf "(%s %% %u)" x (suc n)))
 ```
 
 We then create a converter from ix to subscripts to allow us to stringify them.
@@ -128,7 +176,7 @@ We then create a converter from ix to subscripts to allow us to stringify them.
   ix-to-subscripts (i ⊗ j) = ix-to-subscripts i ++ ix-to-subscripts j
 
   ix-to-str : Ix s → String → String
-  ix-to-str i name = name ++ (ix-to-subscripts i)
+  ix-to-str i name = "(*" ++ name ++ ")" ++ (ix-to-subscripts i)
 
 ```
 
@@ -141,16 +189,6 @@ translate-Ty N = String
 translate-Ty (ix s) = Ix s
 translate-Ty (τ ⇒ σ) = translate-Ty τ → State ℕ (translate-Ty σ)
 ```
-
-# Length helper
-
-We then need a small helper to get the length of shapes, this needs `suc` as we
-treat `ν` as `Fin ∘ suc`
-```agda
-clen : S ℓ → ℕ
-clen = suc ∘ length
-```
-
 
 # Arithmetic Evaluator
 We can then create an evaluator and translator for our Airthmetic operations.
@@ -269,7 +307,7 @@ module _ where
   ShapeCast′ true (ν x) = ""
 
   ShapeCast : S ℓ → String
-  ShapeCast = ShapeCast′ true
+  ShapeCast = ShapeCast′ false
 
   ArCast : Maybe String → S ℓ → String
   ArCast nothing = parens ∘ ArCast (just "")
@@ -326,17 +364,28 @@ step₁ _ xs (copyOut` {_} {s} {s′} {p} {q} r₁ r₂ r₃ inp) = zs , ops
   where
     zs = xs ∘ resh-ix (up (down (rev (r₃ ∙ r₂ ∙ r₁))))
     ops = do
-      memName₁ , assign , free ← calloc complex-type p
+      -- Create the working memory we copy in to and out of 
+      workingMem , assign , free ← calloc complex-type p
 
+      -- Copy out into the working memory, applying r₁ as we do so
       i ← new-Ix p
-      let out-op = assignment (ix-to-str i memName₁) (xs (resh-ix (up (rev r₁)) i))
+      let out-op = assignment (ix-to-str i workingMem) (xs (resh-ix (up (rev r₁)) i))
       let out = (loopnest i out-op) ++ "\n"
 
-      let ys , op-f = step₁ r₂ (flip ix-to-str memName₁) inp
+      -- Do the inside operations
+      let ys , op-f = step₁ r₂ (flip ix-to-str workingMem) inp
       op ← op-f
       
+      --let maybeIsinplace = isInplace (r₃ ∙ r₂ ∙ r₁) -- this should never be not just, unless the outer most or inner most shape is just ι
+
+      ------------- BELOW THIS LINE IS WHERE WE CURRENTLY GO WRONG ------------
+      ---------------------------- I Think ------------------------------------
+      ------------------- Or in a function called below ofc -------------------
+      -- Re cast --
       memName₂ ← fresh-var
-      let re-cast = assignment (ArCast (just memName₂) s′) (ArCast nothing s′ <+> memName₁)
+      let re-cast = "// SOMETHING GOES WRONG HERE:\n" 
+                    ++ "//" <+> (showResh r₃) ++ "\n"
+                    ++ assignment (ArCast (just memName₂) s′) (ArCast nothing s′ <+> workingMem)
 
       j ← new-Ix s′
       let inn-op = assignment (zs (resh-ix (up eq) j)) (ix-to-str j memName₂)
@@ -394,6 +443,30 @@ module _ where
 
   mini₄ : Inp translate-Ty (ι (ν 3) ⊗ ι (ν 5)) _ eq
   mini₄ = part` (ri _⊆_.id) (imap` (`λ i ⇒ `λ x ⇒ var x *C (ω` (sizeN (var i)) (posiN (var i) eq))))
+
+  open import Matrix.Leveled.NatMon-Change-Major
+  open Change-Major ℕ-CM
+
+  id` : Inp translate-Ty s s eq
+  id` = imap` (`λ i ⇒ `λ x ⇒ var x)
+  
+  test₁ : String
+  test₁ = inp→f {_} {_} {_} {eq} (test₁′ (ι (ι (ν 1)) ⊗ ι (ι (ν 1)))) "CMtTest" 
+    where
+      test₁′ : ∀ (s : S (ss (ss zz))) → Inp translate-Ty (ι (transp s)) (ι s) (funk CMᵗ)
+      test₁′ s = copyOut` eq eq CMᵗ id`
+
+  test₂ : String
+  test₂ = inp→f {_} {_} {_} {up (down CMᵗ)} (test₂′ (ι (ι (ν 1)) ⊗ ι (ι (ν 2)))) "CMtTest2" 
+    where
+      test₂′ : ∀ (s : S (ss (ss zz))) → Inp translate-Ty (ι (transp s)) (ι s) (funk CMᵗ)
+      test₂′ s = copyOut` eq eq CMᵗ id`
+
+  test₃ : String
+  test₃ = inp→f {_} {_} {_} {up (down CMᵗ)} (test₃′ (ι (ι (ν 1)) ⊗ ι (ι (ν 2)))) "tTest3" 
+    where
+      test₃′ : ∀ (s : S (ss (ss zz))) → Inp translate-Ty (ι (transp s)) (ι s) (funk CMᵗ)
+      test₃′ s = copyOut` eq eq transpᵣ id`
 
   fftn-test-sig′ : S (ss (ss zz)) → String
   fftn-test-sig′ s = inp-signature {_} {_} {_} {eq} (fftn` s) "fftn"

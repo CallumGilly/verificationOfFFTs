@@ -5,7 +5,7 @@ module Matrix.Simple.cm where
   open import Relation.Binary.PropositionalEquality
 
   open import Matrix.Simple.Base
-  open import Matrix.Simple.Reshape
+  open import Matrix.Simple.Reshape hiding (CM; CMᵗ)
 
   S = Shape
   P = Position
@@ -18,12 +18,12 @@ module Matrix.Simple.cm where
     n m k : ℕ
 
 
-  cm₂ : Reshape (s ⊗ p) (p ⊗ s)
-  cm₂ {s} = ♯ ∙ reindex (*-comm (length s) _) ∙ ♭
+  CM : Reshape (s ⊗ p) (p ⊗ s)
+  CM {s} = ♯ ∙ reindex (*-comm (length s) _) ∙ ♭
 
-  cm : Reshape s (transp s)
-  cm {ι n} = eq
-  cm {s ⊗ p} = cm ⊕ cm ∙ cm₂
+  CMᵗ : Reshape s (transp s)
+  CMᵗ {ι n} = eq
+  CMᵗ {s ⊗ p} = CMᵗ ⊕ CMᵗ ∙ CM
 
   s-sᵗ : ∀ s → length s ≡ length (transp s) 
   s-sᵗ (ι n) = refl
@@ -36,8 +36,8 @@ module Matrix.Simple.cm where
   xs-sᵗ (s ⊗ p) = cong₂ _*_ (xs-sᵗ s) (xs-sᵗ p) 
                   ⊡ *-comm (length (transp s)) _
 
-  cm-orig : Reshape s (transp s)
-  cm-orig {s} = ♯ ∙ reindex (s-sᵗ s) ∙ ♭
+  CMᵗ-orig : Reshape s (transp s)
+  CMᵗ-orig {s} = ♯ ∙ reindex (s-sᵗ s) ∙ ♭
 
   lemma : (i : P (ι n)) → (p : k ≡ m) (q : m ≡ n) → i ⟨ reindex (p ⊡ q) ⟩ ≡ i ⟨ reindex q ⟩ ⟨ reindex p  ⟩ 
   lemma i refl refl = refl
@@ -47,12 +47,12 @@ module Matrix.Simple.cm where
                  ≡ ((i ⟨ reindex p ⟩) ⊗ (j ⟨ reindex q ⟩)) ⟨ split ⟩
   lemma-cong-* i j refl refl = refl
 
-  cm-step-thm : (i : P (transp s)) → i ⟨ cm ⟩ ≡ i ⟨ cm-orig ⟩
-  cm-step-thm {ι n}   i       = refl
-  cm-step-thm {s ⊗ p} (i ⊗ j) 
+  CMᵗ-step-thm : (i : P (transp s)) → i ⟨ CMᵗ ⟩ ≡ i ⟨ CMᵗ-orig ⟩
+  CMᵗ-step-thm {ι n}   i       = refl
+  CMᵗ-step-thm {s ⊗ p} (i ⊗ j) 
     rewrite 
-        cm-step-thm i
-      | cm-step-thm j 
+        CMᵗ-step-thm i
+      | CMᵗ-step-thm j 
       | rev-eq {s = p} ♭ ((i ⟨ rev ♭ ⟩) ⟨ reindex (s-sᵗ p) ⟩)
       | rev-eq {s = s} ♭ ((j ⟨ rev ♭ ⟩) ⟨ reindex (s-sᵗ s) ⟩)
       | lemma (((i ⟨ rev ♭ ⟩) ⊗ (j ⟨ rev ♭ ⟩)) ⟨ split ⟩) (*-comm (length s) (length p))
@@ -73,13 +73,13 @@ module Matrix.Simple.cm where
            → ∀ i → i ⟨ (a ∙ rev a) ⊕ (b ∙ rev b) ⟩ ≡ i
   ⊕-rev-eq a b (i ⊗ j) = cong₂ _⊗_ (rev-eq a i) (rev-eq b j)
 
-  flat-cm : ∀ {s} 
+  flat-CMᵗ : ∀ {s} 
           → (i : P (transp s))
-          → i ⟨ cm ∙ ♯ ⟩ ≡ i ⟨ ♯ ∙ reindex (s-sᵗ s) ⟩ 
-  flat-cm {ι n} i = refl
-  flat-cm {s ⊗ p} (i ⊗ j) 
+          → i ⟨ CMᵗ ∙ ♯ ⟩ ≡ i ⟨ ♯ ∙ reindex (s-sᵗ s) ⟩ 
+  flat-CMᵗ {ι n} i = refl
+  flat-CMᵗ {s ⊗ p} (i ⊗ j) 
     rewrite 
-        cm-step-thm (i ⊗ j)
+        CMᵗ-step-thm (i ⊗ j)
       | ⊕-compose {p = ( s)}{r = (p)} 
         ♭ ♭ ♯ ♯  
         ((i ⊗ j) ⟨ ♯ ∙ reindex (s-sᵗ (s ⊗ p))  ∙ flat ⟩)
@@ -126,15 +126,15 @@ module Matrix.Simple.cm where
   rev-eq₃ a b c i = cong (λ x → x ⟨ b ∙ c ⟩) (rev-eq a i)
 
   thm : ∀ {s p} → (i : P (transp s)) (j : P (transp p))
-      → (i ⊗ j) ⟨ cm₂ ∙ (cm ⊕ cm) ⟩ ≡ ((i ⊗ j) ⟨ (cm ⊕ cm) ∙ cm₂ ⟩)
+      → (i ⊗ j) ⟨ CM ∙ (CMᵗ ⊕ CMᵗ) ⟩ ≡ ((i ⊗ j) ⟨ (CMᵗ ⊕ CMᵗ) ∙ CM ⟩)
   thm {s} {p} i j 
     rewrite
-        flat-cm i
-      | flat-cm j
+        flat-CMᵗ i
+      | flat-CMᵗ j
       | reindex-prop₁ (s-sᵗ s) (s-sᵗ p) (i ⟨ ♯ ⟩) (j ⟨ ♯ ⟩)
-      | dbl-reshape cm cm-orig cm cm-orig (cm-step-thm) (cm-step-thm) ((i ⊗ j) ⟨ cm₂ ⟩)
+      | dbl-reshape CMᵗ CMᵗ-orig CMᵗ CMᵗ-orig (CMᵗ-step-thm) (CMᵗ-step-thm) ((i ⊗ j) ⟨ CM ⟩)
       | ⊕-compose {s = p}{q = s} 
-        ♭ ♭ cm-orig cm-orig 
+        ♭ ♭ CMᵗ-orig CMᵗ-orig 
         ((i ⊗ j) ⟨ ♯ ∙ reindex (*-comm (length (transp p)) _)  ∙ flat ⟩)
       | dbl-reshape {s = p}{q = s} 
            ((♭ {transp p}) ∙ rev ♭ ∙ (reindex (s-sᵗ p)) ∙ ♭) 

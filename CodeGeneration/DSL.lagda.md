@@ -134,20 +134,6 @@ _ = ?
 -}
 ```
 
-I make a quick stop here to define the set of Ty elements which can use the 
-same memory location, to allow us to eventually daisy chain when we want to put
-ι 8 in ι 2 ⊗ ι 4 memory
-
-```agda
-data memCompat : Ty → Ty → Set where
-  eq : memCompat τ τ
-  eqSize : ∀ {l l′ : L} {s : S l} {s′ : S l′} → length s ≡ length s′ → memCompat τ σ → memCompat (ar s τ) (ar s σ)
-
-memCompatible : memCompat τ σ → τ ≡ σ
-memCompatible eq = refl
-memCompatible (eqSize x x₁) rewrite memCompatible x₁ = refl
-```
-
 # The set of in place operations
 
 We can then define the set of In-Place operations `Inp`.
@@ -158,10 +144,23 @@ infixl 2 _>>>_
 open import Data.Default
 
 data Inp (ctxt : Ty → Set) : {l : L} (s : S l) → (s′ : S l) → .(Reshape s s′) → Set₁ where
-  compose : ∀ {s₁ s₂ s₃ : S l} → (r₁ : Reshape s₁ s₂) → Inp ctxt s₁ s₂ r₁ → (r₂ : Reshape s₂ s₃) → Inp ctxt s₂ s₃ r₂ →  Inp ctxt s₁ s₃ (r₂ ∙ r₁)
+  compose : ∀ {s₁ s₂ s₃ : S l} 
+          → (r₁ : Reshape s₁ s₂) 
+          → Inp ctxt s₁ s₂ r₁ 
+          → (r₂ : Reshape s₂ s₃) 
+          → Inp ctxt s₂ s₃ r₂ 
+          → Inp ctxt s₁ s₃ (r₂ ∙ r₁)
   --view` : ∀ {s s′ : S l} → (r : Reshape s s′) → Inp ctxt s s eq → Inp ctxt s s′ r
-  copyOut` : {s s′ p q : S (ss l)} → (r₁ : Reshape s p) → (r₂ : Reshape p q) → (r₃ : Reshape q s′) → Inp ctxt p q r₂ → Inp ctxt (ι s) (ι s′) ((up (down (r₃ ∙ r₂ ∙ r₁))))
-  part`    : ∀ {s p : S (ss l)} → (s⊂p : s ⊂ p) → Inp ctxt (inv-⊂ s⊂p) (inv-⊂ s⊂p) eq → Inp ctxt p p eq
+  copyOut` : {s s′ p q : S (ss l)} 
+           → (r₁ : Reshape s p) 
+           → (r₂ : Reshape p q) 
+           → (r₃ : Reshape q s′) 
+           → Inp ctxt p q r₂ 
+           → Inp ctxt (ι s) (ι s′) ((up (down (r₃ ∙ r₂ ∙ r₁))))
+  part`    : ∀ {s p : S (ss l)} 
+           → (s⊂p : s ⊂ p) 
+           → Inp ctxt (inv-⊂ s⊂p) (inv-⊂ s⊂p) eq 
+           → Inp ctxt p p eq
   imap`    : Arit ctxt (ix s ⇒ C ⇒ C) → Inp ctxt s s eq
   mapSum`  : ∀ {u : ℕ} → Arit ctxt ((ar (ι (ν u)) C) ⇒ ix (ι (ν u)) ⇒ ix (ι (ν u)) ⇒ C) → Inp ctxt (ι (ν u)) (ι (ν u)) eq
   

@@ -1,5 +1,4 @@
 {-# OPTIONS --guardedness #-}
-
 module CodeGeneration.Main where
 
 open import Matrix.NatMon
@@ -23,11 +22,22 @@ header = "#include <complex.h>\n"
       ++ "#include <stdio.h>\n"
       ++ "#include \"../src/minus-omega.h\"\n"
 
-
-
 main : Main
 main = run do
-  let s = (ι ((ι (ν 2)) ⊗ (ι (ν 3)))) --((ι (ι (ν 4) ⊗ ι (ν 5))) ⊗ ι (ι (ν 3) ⊗ ι (ν 6)))
+  ----- Test Cases -----
+  let test₁-body = test₁
+  writeFile "./tests/test1.c" $ header ++ test₁-body
+
+  let test₂-body = test₂
+  writeFile "./tests/test2.c" $ header ++ test₂-body
+
+  let test₃-body = test₃
+  writeFile "./tests/test3.c" $ header ++ test₃-body
+  
+  
+  ----- FFTN -----
+
+  let s = (ι ((ι (ν 1)) ⊗ (ι (ν 1))))
   let DEF = sizeDef s "fftn"
   writeFile "./generated/FFT.c" $ header ++ DEF ++ (fftn-test′     s)
   writeFile "./generated/FFT.h" $ header ++ DEF ++ (fftn-test-sig′ s)

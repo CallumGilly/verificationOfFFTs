@@ -6,7 +6,7 @@ CompileGHC: $(shell find . -name '*.agda')
 	agda --compile Implementations/FFT.agda --compile-dir=bin
 
 GenerateCCode: CompileGenerator
-	./Main && clang-format -i generated/* 
+	./Main && clang-format -i generated/* && clang-format -i tests/*
 # 
 # CompileGCCWithoutGeneration: $(wildcard ./src/*.c)
 # 	cc -DDOUBLE_REAL $(wildcard ./src/*.c) ./generated/*.c -Wall -Wextra -Wconversion -pedantic -lm -o program
