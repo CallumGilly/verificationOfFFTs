@@ -1,5 +1,5 @@
 #include "../src/minus-omega.h"
-#include "./test2.c"
+#include "./test4.c"
 #include <complex.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -14,29 +14,16 @@ void PrinterA(size_t n, size_t m, complex real xs[][m]) {
   }
 }
 
-void PrinterB(size_t n, complex real xs[]) {
-  for (size_t i = 0; i < n; i++) {
-    printf("%f, ", creal(xs[i]));
-  }
-}
 int main() {
   complex real memor[][2] = {{1, 2}, {3, 4}, {5, 6}};
 
-  // for (size_t i = 0; i < 3; i++) {
-  //   for (size_t j = 0; j < (2 - 1); j++) {
-  //     printf("%f,", creal(memor[i][j]));
-  //   }
-  //   printf("%f\n", creal(memor[i][2 - 1]));
-  // }
   PrinterA(3, 2, memor);
-  PrinterB(6, memor);
   printf("Was:\n");
 
   // Force C to print in stderr the type of memor
   // printf("%d", &memor);
-  CMtTest2(&memor);
+  CMtTest4(&memor);
 
   printf("Now:\n");
-  PrinterA(2, 3, memor);
-  PrinterB(6, memor);
+  PrinterA(3, 2, memor);
 }

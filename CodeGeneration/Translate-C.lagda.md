@@ -15,7 +15,7 @@ open import Matrix.Leveled.NatMon-Change-Major
 open import Data.Nat
 open import Data.Nat.Show using () renaming (show to showℕ)
 open import Data.String hiding (length)
-open import Data.Product
+open import Data.Product hiding (swap)
 open import Data.Maybe renaming (_>>=_ to _⟫=_; zip to zipM) 
 open import Data.Bool
 
@@ -135,19 +135,53 @@ We can also then create a function to get this position after a reshape has been
   isInplace swap      = nothing
   isInplace assoₗ     = just assoₗ
   isInplace assoᵣ     = just assoᵣ
+  
+  NormResh : Reshape s s′ → Reshape s s′
+  NormResh eq = eq
+  NormResh (r₁ ∙ r₂) with NormResh r₁ 
+  NormResh (r₁ ∙ r₂) | eq with NormResh r₂
+  NormResh (r₁ ∙ r₂) | eq | eq = eq
+  NormResh (r₁ ∙ r₂) | eq | b = b
+  NormResh (r₁ ∙ r₂) | a  with NormResh r₂
+  NormResh (r₁ ∙ r₂) | a | eq = a
+  --NormResh (r₁ ∙ r₂) | flat | unflat = eq
+  --NormResh (r₁ ∙ r₂) | unflat | flat = eq -- Need to also split on s/s′
+  NormResh (r₁ ∙ r₂) | swap | swap = eq
+  NormResh (r₁ ∙ r₂) | assoₗ | assoᵣ = eq 
+  NormResh (r₁ ∙ r₂) | assoᵣ | assoₗ = eq 
+  NormResh (r₁ ∙ r₂) | up eq | down eq = eq
+  NormResh (r₁ ∙ r₂) | a | b = a ∙ b
+  NormResh (r₁ ⊕ r₂) with NormResh r₁ | NormResh r₂
+  ... | eq | eq  = eq
+  ... | a  | b  = a ⊕ b
+  NormResh (up r) = up (NormResh r)
+  NormResh (down r) = down (NormResh r)
+  NormResh flat = flat
+  NormResh unflat = unflat
+  NormResh swap = swap
+  NormResh assoₗ = assoₗ
+  NormResh assoᵣ = assoᵣ
+
+  {-
+  a : ∀ {s : S ℓ} (i : P (ι s)) → i ⟨ up eq ∙ down eq ⟩ ≡ i
+  a (ι i) = refl
+  -}
 
   -- Helper for debugging what RESH should be doing
+  showResh′ : Reshape s s′ → String
+  showResh′ eq = "eq"
+  showResh′ (r₁ ∙ r₂) = parens $ (showResh′ r₁) <+> "∙" <+> (showResh′ r₂)
+  showResh′ (r₁ ⊕ r₂) = parens $ (showResh′ r₁) <+> "⊕" <+> (showResh′ r₂)
+  showResh′ (up   r) = parens $ "up"   <+> showResh′ r
+  showResh′ (down r) = parens $ "down" <+> showResh′ r
+  showResh′ flat = "flat"
+  showResh′ unflat = "unflat"
+  showResh′ swap = "swap"
+  showResh′ assoₗ = "assol"
+  showResh′ assoᵣ = "assor"
+
   showResh : Reshape s s′ → String
-  showResh eq = "eq"
-  showResh (r₁ ∙ r₂) = parens $ (showResh r₁) <+> "∙" <+> (showResh r₂)
-  showResh (r₁ ⊕ r₂) = parens $ (showResh r₁) <+> "⊕" <+> (showResh r₂)
-  showResh (up   r) = parens $ "up"   <+> showResh r
-  showResh (down r) = parens $ "down" <+> showResh r
-  showResh flat = "flat"
-  showResh unflat = "unflat"
-  showResh swap = "swap"
-  showResh assoₗ = "assol"
-  showResh assoᵣ = "assor"
+  showResh = showResh′ ∘ NormResh
 ```
 
 I had the thought of creating a small dsl for pointer arithmetic to make it 
@@ -320,9 +354,20 @@ module _ where
   calloc type s = do  
     memName ← fresh-var
     let ops = assignment (ArCast (just memName) s) $ (ArCast nothing s) ++ (calloc-op type (clen s))
-    let free = "" --printf "free(%s);\n" memName
+    let free = printf "free(%s);\n" memName
     return $ memName , ops , free
 
+  -- Placeholder ix
+  β : Ix s 
+  β {.zz} {ν x} = ν "β"
+  β {.(ss _)} {ι s} = ι β
+  β {.(ss _)} {s₁ ⊗ s₂} = β ⊗ β
+
+
+  showIx : Ix s → String 
+  showIx {.zz} {ν n} (ν i) = printf "%s < %u, " i (suc n)
+  showIx {.(ss _)} {ι s} (ι i) = showIx i
+  showIx {.(ss _)} {s ⊗ s₁} (i₁ ⊗ i₂) = showIx i₁ ++ showIx i₂
 ```
 
 # C Translation
@@ -364,12 +409,43 @@ step₁ _ xs (copyOut` {_} {s} {s′} {p} {q} r₁ r₂ r₃ inp) = zs , ops
   where
     zs = xs ∘ resh-ix (up (down (rev (r₃ ∙ r₂ ∙ r₁))))
     ops = do
+      -- Create the working memory
+      workingMem , assign , free ← calloc complex-type p
+
+
+      i ← new-Ix (ι s)
+      let copyOutOp = loopnest i (assignment (workingMem) (xs i))
+      let copyOutComments = printf "// Copy from %s into %s performing %s as we go\n" (xs β) workingMem (showResh r₁)
+                     ++ printf "// Shape of %s \"is\" %s\n" (xs β) (ShapeCast s)
+                     ++ printf "// Shape of %s \"is\" %s\n" (workingMem) (ShapeCast p)
+                     ++ printf "// Loop with %s which becomes %s\n" (showIx i) (showIx (resh-ix (down r₁) i))
+
+      -- Do the inside operations
+      let ys , op-f = step₁ r₂ (flip ix-to-str workingMem) inp
+      op ← op-f
+
+      j ← new-Ix q
+      j′ ← new-Ix (ι s′)
+      let copyInOp = loopnest j (assignment (xs β) (workingMem))
+      let copyInComments  = "// CURRENT ISSUE: xs : Ix s → String, meaning we can't pull the name of xs, meaning we are unable to cast with it"
+                     ++ printf "// Copy from %s into %s performing %s as we go\n" workingMem  (xs β) (showResh r₃)
+                     ++ printf "// Shape of %s \"is\" %s\n" (workingMem) (ShapeCast q)
+                     ++ printf "// Shape of %s should be cast to %s\n" (xs β) (ShapeCast s′)
+                     ++ printf "// Loop with %s which becomes %s\n" (showIx j) (showIx (resh-ix (up r₃) j))
+                     ++ "// OR \n"
+                     ++ printf "// Loop with %s which becomes %s\n" (showIx (resh-ix (down (rev r₃)) j′)) (showIx j′)
+     -- let test = loopnest i ("// The opeation here needs to perform " ++ showResh r₁ ++ "\n")
+
+      let ops = assign ++ copyOutComments ++ copyOutOp ++ op ++ copyInComments ++ copyInOp ++ free
+      return $ commentBlock "copyOut" $ ops
+      {-
       -- Create the working memory we copy in to and out of 
       workingMem , assign , free ← calloc complex-type p
 
       -- Copy out into the working memory, applying r₁ as we do so
       i ← new-Ix p
-      let out-op = assignment (ix-to-str i workingMem) (xs (resh-ix (up (rev r₁)) i))
+      let out-op = "//" <+> (showResh r₁) ++ "\n"
+                  ++ assignment (ix-to-str i workingMem) (xs (resh-ix (up (rev r₁)) i))
       let out = (loopnest i out-op) ++ "\n"
 
       -- Do the inside operations
@@ -392,6 +468,7 @@ step₁ _ xs (copyOut` {_} {s} {s′} {p} {q} r₁ r₂ r₃ inp) = zs , ops
       let inn = (loopnest j inn-op)
 
       return $ commentBlock "copyOut" $ assign ++ out ++ op ++ re-cast ++ inn ++ free
+      -}
 step₁ _ xs (part` {_} {s} {p} s⊂p inp) = xs , ops
   where
     ops = do
@@ -457,16 +534,25 @@ module _ where
       test₁′ s = copyOut` eq eq CMᵗ id`
 
   test₂ : String
-  test₂ = inp→f {_} {_} {_} {up (down CMᵗ)} (test₂′ (ι (ι (ν 1)) ⊗ ι (ι (ν 2)))) "CMtTest2" 
+  test₂ = inp→f {_} {_} {_} {up (down transpᵣ)} (test₂′ (ι (ι (ν 1)) ⊗ ι (ι (ν 2)))) "CMtTest2" 
     where
-      test₂′ : ∀ (s : S (ss (ss zz))) → Inp translate-Ty (ι (transp s)) (ι s) (funk CMᵗ)
-      test₂′ s = copyOut` eq eq CMᵗ id`
+      test₂′ : ∀ (s : S (ss (ss zz))) → Inp translate-Ty (ι (transp s)) (ι s) (funk transpᵣ)
+      test₂′ s =
+                 copyOut` transpᵣ eq eq id`
+                 --copyOut` eq eq transpᵣ id`
+               --copyOut` eq eq CMᵗ id`
 
   test₃ : String
   test₃ = inp→f {_} {_} {_} {up (down CMᵗ)} (test₃′ (ι (ι (ν 1)) ⊗ ι (ι (ν 2)))) "tTest3" 
     where
       test₃′ : ∀ (s : S (ss (ss zz))) → Inp translate-Ty (ι (transp s)) (ι s) (funk CMᵗ)
       test₃′ s = copyOut` eq eq transpᵣ id`
+
+  test₄ : String
+  test₄ = inp→f {_} {_} {_} {eq} (test₄′ (ι (ι (ν 1)) ⊗ ι (ι (ν 2)))) "CMtTest4" 
+    where
+      test₄′ : ∀ (s : S (ss (ss zz))) → Inp translate-Ty (ι s) (ι s) eq
+      test₄′ s = copyOut` (rev transpᵣ) eq (transpᵣ) id`
 
   fftn-test-sig′ : S (ss (ss zz)) → String
   fftn-test-sig′ s = inp-signature {_} {_} {_} {eq} (fftn` s) "fftn"

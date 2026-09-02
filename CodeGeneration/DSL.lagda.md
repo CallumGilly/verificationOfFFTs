@@ -154,9 +154,9 @@ data Inp (ctxt : Ty → Set) : {l : L} (s : S l) → (s′ : S l) → .(Reshape 
   copyOut` : {s s′ p q : S (ss l)} 
            → (r₁ : Reshape s p) 
            → (r₂ : Reshape p q) 
-           → (r₃ : Reshape q s′) 
+           → (r₃ : Reshape q s) 
            → Inp ctxt p q r₂ 
-           → Inp ctxt (ι s) (ι s′) ((up (down (r₃ ∙ r₂ ∙ r₁))))
+           → Inp ctxt (ι s) (ι s) ((up (down (r₃ ∙ r₂ ∙ r₁))))
   part`    : ∀ {s p : S (ss l)} 
            → (s⊂p : s ⊂ p) 
            → Inp ctxt (inv-⊂ s⊂p) (inv-⊂ s⊂p) eq 

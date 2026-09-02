@@ -10,13 +10,15 @@
 
 void Printer(complex real (*xs)[m]) {
   for (size_t i = 0; i < n; i++) {
-    printf("%f,", creal(xs[i][0]));
-    printf("%f\n", creal(xs[i][1]));
+    for (size_t j = 0; j < m; j++) {
+      printf("%f,", creal(xs[i][j]));
+    }
+    printf("\n");
   }
 }
 
 int main() {
-  complex real memor[][m] = {{1, 2, 3}, {4, 5, 6}};
+  complex real memor[n][m] = {{1, 2, 3}, {4, 5, 6}};
   printf("Was:\n");
   Printer(memor);
   // CMtTest(&memor);
