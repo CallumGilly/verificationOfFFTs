@@ -1,5 +1,5 @@
 #include "../src/minus-omega.h"
-#include "./test4.c"
+#include "./test3.c"
 #include <complex.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -22,7 +22,7 @@ int main() {
 
   // Force C to print in stderr the type of memor
   // printf("%d", &memor);
-  CMtTest4(&memor);
+  CMtTest3(&memor);
 
   printf("Now:\n");
   PrinterA(2, 3, memor);

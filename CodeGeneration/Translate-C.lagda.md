@@ -405,40 +405,29 @@ step₁ xs (mapSum` {u} arit) = xs , ops
       let copyBack = loopnest k $ assignment (xs k) (ix-to-str k memName)
       
       return $ commentBlock "mapSum" $ assign ++ body ++ copyBack ++ free
-step₁ xs (copyOut` {_} {s} {p} {q} r₁ r₃ inp) = zs , ops
+step₁ xs (copyOut` {_} {s} {p} r₁ r₃ inp) = zs , ops
   where
-    zs = ? xs ∘ resh-ix (up (down (rev (r₃ ∙ r₁))))
-    ops = ? {- do
+    zs = xs ∘ resh-ix (up (down (rev (r₃ ∙ r₁))))
+    ops = do 
       -- Create the working memory
       workingMem , assign , free ← calloc complex-type p
 
 
-      i ← new-Ix (ι s)
-      let copyOutOp = loopnest i (assignment (workingMem) (xs i))
-      let copyOutComments = printf "// Copy from %s into %s performing %s as we go\n" (xs β) workingMem (showResh r₁)
-                     ++ printf "// Shape of %s \"is\" %s\n" (xs β) (ShapeCast s)
-                     ++ printf "// Shape of %s \"is\" %s\n" (workingMem) (ShapeCast p)
-                     ++ printf "// Loop with %s which becomes %s\n" (showIx i) (showIx (resh-ix (down r₁) i))
+      i ← new-Ix s
+      let copyOutOp = "//" <+> (showResh r₁) ++ "\n" 
+                   ++ loopnest i (assignment (ix-to-str (resh-ix r₁ i) workingMem) (xs (ι i)))
 
       -- Do the inside operations
       let ys , op-f = step₁ (flip ix-to-str workingMem) inp
       op ← op-f
 
-      j ← new-Ix q
-      j′ ← new-Ix (ι s)
-      let copyInOp = loopnest j (assignment (xs β) (workingMem))
-      let copyInComments  = "// CURRENT ISSUE: xs : Ix s → String, meaning we can't pull the name of xs, meaning we are unable to cast with it"
-                     ++ printf "// Copy from %s into %s performing %s as we go\n" workingMem  (xs β) (showResh r₃)
-                     ++ printf "// Shape of %s \"is\" %s\n" (workingMem) (ShapeCast q)
-                     ++ printf "// Shape of %s should be cast to %s\n" (xs β) (ShapeCast s)
-                     ++ printf "// Loop with %s which becomes %s\n" (showIx j) (showIx (resh-ix (up r₃) j))
-                     ++ "// OR \n"
-                     ++ printf "// Loop with %s which becomes %s\n" (showIx (resh-ix (down (rev r₃)) j′)) (showIx j′)
-     -- let test = loopnest i ("// The opeation here needs to perform " ++ showResh r₁ ++ "\n")
+      j ← new-Ix s
+      let copyInOp = "//" <+> (showResh r₃) ++ "\n"
+                  ++ loopnest j (assignment (xs (ι j)) (ix-to-str (resh-ix (rev r₃) j) workingMem))
 
-      let ops = assign ++ copyOutComments ++ copyOutOp ++ op ++ copyInComments ++ copyInOp ++ free
+      let ops = assign ++ copyOutOp ++ op ++ copyInOp ++ free
       return $ commentBlock "copyOut" $ ops
-      -}
+
       {-
       -- Create the working memory we copy in to and out of 
       workingMem , assign , free ← calloc complex-type p
@@ -558,11 +547,25 @@ module _ where
       test₃′ s = copyOut` eq eq transpᵣ id`
   -}
 
+  -- Working
+  test₃ : String
+  test₃ = inp→f (test₃′ (ι (ι (ν 1)) ⊗ ι (ι (ν 2)))) "CMtTest3" 
+    where
+      test₃′ : ∀ (s : S (ss (ss zz))) → Inp translate-Ty (ι s) 
+      test₃′ s = copyOut` (rev CMᵗ) CMᵗ id`
+
+  -- Working
   test₄ : String
   test₄ = inp→f (test₄′ (ι (ι (ν 1)) ⊗ ι (ι (ν 2)))) "CMtTest4" 
     where
       test₄′ : ∀ (s : S (ss (ss zz))) → Inp translate-Ty (ι s) 
-      test₄′ s = copyOut` (rev transpᵣ) transpᵣ id`
+      test₄′ s = copyOut` (rev transpᵣ) CMᵗ id`
+
+  test₅ : String
+  test₅ = inp→f (test₅′ (ι ((ι (ν 1)) ⊗ (ι (ν 2))))) "CMtTest5" 
+    where
+      test₅′ : ∀ (s : S (ss (ss zz))) → Inp translate-Ty (ι s) 
+      test₅′ s = copyOut` (rev transpᵣ) CMᵗ id`
 
   fftn-test-sig′ : S (ss (ss zz)) → String
   fftn-test-sig′ s = inp-signature (fftn` s) "fftn"

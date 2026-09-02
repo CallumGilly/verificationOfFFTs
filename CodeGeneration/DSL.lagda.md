@@ -150,6 +150,7 @@ data Inp (ctxt : Ty → Set) : {l : L} (s : S l) → Set₁ where
           → Inp ctxt s₁
   --view` : ∀ {s s′ : S l} → (r : Reshape s s′) → Inp ctxt s s eq → Inp ctxt s s′ r
   copyOut` : {s : S (ss l)} 
+           → {p : S (ss l)}
            → (r₁ : Reshape s p) 
            → (r₃ : Reshape p s) 
            → Inp ctxt p 
