@@ -375,22 +375,22 @@ module _ where
 Finally we can move to our C translation
 
 ```agda
-step₁ : .( r : Reshape s s′ ) → (Ix s → String) → Inp translate-Ty s s′ r → (Ix s′ → String) × (State ℕ String)
-step₁ _ ar (imap` arit) = ar , ops
+step₁ : (Ix s → String) → Inp translate-Ty s → (Ix s → String) × (State ℕ String)
+step₁ ar (imap` arit) = ar , ops
   where
     ops = do
       i ← new-Ix _
       arit-string ← translate-Arit C (app (app arit (var i)) (var (ar i)))
       return $ commentBlock "imap" $ loopnest i (assignment (ar i) arit-string)
-step₁ _ xs (compose r₁ inp₁ r₂ inp₂) = op₂ .proj₁ , ops
+step₁ xs (compose inp₁ inp₂) = op₂ .proj₁ , ops
   where
-    op₁ = step₁ r₁ xs inp₁
-    op₂ = step₁ r₂ (op₁ .proj₁) inp₂
+    op₁ = step₁ xs inp₁
+    op₂ = step₁ (op₁ .proj₁) inp₂
     ops = do
       ins₁ ← op₁ .proj₂
       ins₂ ← op₂ .proj₂
       return $ commentBlock "compose" $ ins₁ ++ "//Middle: compose\n" ++ ins₂
-step₁ _ xs (mapSum` {u} arit) = xs , ops
+step₁ xs (mapSum` {u} arit) = xs , ops
   where
     ops = do
       memName , assign , free ← calloc complex-type (ι (ν u))
@@ -405,10 +405,10 @@ step₁ _ xs (mapSum` {u} arit) = xs , ops
       let copyBack = loopnest k $ assignment (xs k) (ix-to-str k memName)
       
       return $ commentBlock "mapSum" $ assign ++ body ++ copyBack ++ free
-step₁ _ xs (copyOut` {_} {s} {s′} {p} {q} r₁ r₂ r₃ inp) = zs , ops
+step₁ xs (copyOut` {_} {s} {p} {q} r₁ r₃ inp) = zs , ops
   where
-    zs = xs ∘ resh-ix (up (down (rev (r₃ ∙ r₂ ∙ r₁))))
-    ops = do
+    zs = ? xs ∘ resh-ix (up (down (rev (r₃ ∙ r₁))))
+    ops = ? {- do
       -- Create the working memory
       workingMem , assign , free ← calloc complex-type p
 
@@ -421,16 +421,16 @@ step₁ _ xs (copyOut` {_} {s} {s′} {p} {q} r₁ r₂ r₃ inp) = zs , ops
                      ++ printf "// Loop with %s which becomes %s\n" (showIx i) (showIx (resh-ix (down r₁) i))
 
       -- Do the inside operations
-      let ys , op-f = step₁ r₂ (flip ix-to-str workingMem) inp
+      let ys , op-f = step₁ (flip ix-to-str workingMem) inp
       op ← op-f
 
       j ← new-Ix q
-      j′ ← new-Ix (ι s′)
+      j′ ← new-Ix (ι s)
       let copyInOp = loopnest j (assignment (xs β) (workingMem))
       let copyInComments  = "// CURRENT ISSUE: xs : Ix s → String, meaning we can't pull the name of xs, meaning we are unable to cast with it"
                      ++ printf "// Copy from %s into %s performing %s as we go\n" workingMem  (xs β) (showResh r₃)
                      ++ printf "// Shape of %s \"is\" %s\n" (workingMem) (ShapeCast q)
-                     ++ printf "// Shape of %s should be cast to %s\n" (xs β) (ShapeCast s′)
+                     ++ printf "// Shape of %s should be cast to %s\n" (xs β) (ShapeCast s)
                      ++ printf "// Loop with %s which becomes %s\n" (showIx j) (showIx (resh-ix (up r₃) j))
                      ++ "// OR \n"
                      ++ printf "// Loop with %s which becomes %s\n" (showIx (resh-ix (down (rev r₃)) j′)) (showIx j′)
@@ -438,6 +438,7 @@ step₁ _ xs (copyOut` {_} {s} {s′} {p} {q} r₁ r₂ r₃ inp) = zs , ops
 
       let ops = assign ++ copyOutComments ++ copyOutOp ++ op ++ copyInComments ++ copyInOp ++ free
       return $ commentBlock "copyOut" $ ops
+      -}
       {-
       -- Create the working memory we copy in to and out of 
       workingMem , assign , free ← calloc complex-type p
@@ -469,29 +470,29 @@ step₁ _ xs (copyOut` {_} {s} {s′} {p} {q} r₁ r₂ r₃ inp) = zs , ops
 
       return $ commentBlock "copyOut" $ assign ++ out ++ op ++ re-cast ++ inn ++ free
       -}
-step₁ _ xs (part` {_} {s} {p} s⊂p inp) = xs , ops
+step₁ xs (part` {_} {s} {p} s⊂p inp) = xs , ops
   where
     ops = do
       i ← new-Ix s
       let ys = λ j → xs (resh-ix (rev (to-resh s⊂p)) (i ⊗ j))
 
-      let _ , op-f = step₁ eq ys inp
+      let _ , op-f = step₁ ys inp
       op ← op-f
 
       return $ commentBlock "part" $ loopnest i op
 
-inp→f : Inp translate-Ty s s′ r → String → String
-inp→f {_} {s} {_} {r} inp function-name = runState inp→f′ 0 .proj₂
+inp→f : Inp translate-Ty s → String → String
+inp→f {_} {s} inp function-name = runState inp→f′ 0 .proj₂
   where
     inp→f′ : State ℕ String
     inp→f′ = do
       var-name ← fresh-var
-      let _ , f = step₁ r (flip ix-to-str var-name) inp
+      let _ , f = step₁ (flip ix-to-str var-name) inp
       body ← f
       return $ printf "void %s(%s) {\n%s}\n" function-name (ArCast (just var-name) s) body 
 
-inp-signature : Inp translate-Ty s s′ r → String → String
-inp-signature {_} {s} {_} {r} inp function-name = printf "void %s%s;\n" function-name (ArCast nothing s)
+inp-signature : Inp translate-Ty s → String → String
+inp-signature {_} {s} inp function-name = printf "void %s%s;\n" function-name (ArCast nothing s)
 
 sizeDef : S ℓ → String → String
 sizeDef s name =     (printf "#ifndef %s_SIZE\n" name)
@@ -509,30 +510,36 @@ module _ where
   funk r = up (down r)
 
   -- Takes an array, doubles every value and transposes the result
-  mini₁ : ∀ {s : S (ss ℓ)} → Inp translate-Ty (ι s) (ι (transp s)) (funk (rev transpᵣ))
-  mini₁ {_} {s} = copyOut` {_} {_} {s} {transp s} {s} {s} eq eq (rev transpᵣ) (imap` (`λ i ⇒ `λ x ⇒ var x *C var "2"))
+  -- Illegal
+  --mini₁ : ∀ {s : S (ss ℓ)} → Inp translate-Ty (ι s) (ι (transp s)) (funk (rev transpᵣ))
+  --mini₁ {_} {s} = copyOut` {_} {_} {s} {transp s} {s} {s} eq eq (rev transpᵣ) (imap` (`λ i ⇒ `λ x ⇒ var x *C var "2"))
 
-  mini₂ : ∀ {s : S (ss ℓ)} → Inp translate-Ty (ι s) (ι (transp s)) (funk (rev transpᵣ))
-  mini₂ {_} {s} = compose (funk (rev transpᵣ)) mini₁ eq (imap` (`λ i ⇒ `λ x ⇒ var x))
+  -- Illegal
+  -- mini₂ : ∀ {s : S (ss ℓ)} → Inp translate-Ty (ι s) (ι (transp s)) (funk (rev transpᵣ))
+  -- mini₂ {_} {s} = compose (funk (rev transpᵣ)) mini₁ eq (imap` (`λ i ⇒ `λ x ⇒ var x))
 
-  mini₃ : ∀ {s : S zz} → Inp translate-Ty (ι s) (ι s) eq
+  mini₃ : ∀ {s : S zz} → Inp translate-Ty (ι s) 
   mini₃ {ν u} = mapSum` (`λ x ⇒ `λ i ⇒ var x)
 
-  mini₄ : Inp translate-Ty (ι (ν 3) ⊗ ι (ν 5)) _ eq
+  mini₄ : Inp translate-Ty (ι (ν 3) ⊗ ι (ν 5)) 
   mini₄ = part` (ri _⊆_.id) (imap` (`λ i ⇒ `λ x ⇒ var x *C (ω` (sizeN (var i)) (posiN (var i) eq))))
 
   open import Matrix.Leveled.NatMon-Change-Major
   open Change-Major ℕ-CM
 
-  id` : Inp translate-Ty s s eq
+  id` : Inp translate-Ty s 
   id` = imap` (`λ i ⇒ `λ x ⇒ var x)
   
+  -- Illegal
+  {-
   test₁ : String
   test₁ = inp→f {_} {_} {_} {eq} (test₁′ (ι (ι (ν 1)) ⊗ ι (ι (ν 1)))) "CMtTest" 
     where
       test₁′ : ∀ (s : S (ss (ss zz))) → Inp translate-Ty (ι (transp s)) (ι s) (funk CMᵗ)
       test₁′ s = copyOut` eq eq CMᵗ id`
+  -}
 
+  {- Illegal
   test₂ : String
   test₂ = inp→f {_} {_} {_} {up (down transpᵣ)} (test₂′ (ι (ι (ν 1)) ⊗ ι (ι (ν 2)))) "CMtTest2" 
     where
@@ -541,27 +548,30 @@ module _ where
                  copyOut` transpᵣ eq eq id`
                  --copyOut` eq eq transpᵣ id`
                --copyOut` eq eq CMᵗ id`
+  -}
 
+  {- Illegal
   test₃ : String
   test₃ = inp→f {_} {_} {_} {up (down CMᵗ)} (test₃′ (ι (ι (ν 1)) ⊗ ι (ι (ν 2)))) "tTest3" 
     where
       test₃′ : ∀ (s : S (ss (ss zz))) → Inp translate-Ty (ι (transp s)) (ι s) (funk CMᵗ)
       test₃′ s = copyOut` eq eq transpᵣ id`
+  -}
 
   test₄ : String
-  test₄ = inp→f {_} {_} {_} {eq} (test₄′ (ι (ι (ν 1)) ⊗ ι (ι (ν 2)))) "CMtTest4" 
+  test₄ = inp→f (test₄′ (ι (ι (ν 1)) ⊗ ι (ι (ν 2)))) "CMtTest4" 
     where
-      test₄′ : ∀ (s : S (ss (ss zz))) → Inp translate-Ty (ι s) (ι s) eq
-      test₄′ s = copyOut` (rev transpᵣ) eq (transpᵣ) id`
+      test₄′ : ∀ (s : S (ss (ss zz))) → Inp translate-Ty (ι s) 
+      test₄′ s = copyOut` (rev transpᵣ) transpᵣ id`
 
   fftn-test-sig′ : S (ss (ss zz)) → String
-  fftn-test-sig′ s = inp-signature {_} {_} {_} {eq} (fftn` s) "fftn"
+  fftn-test-sig′ s = inp-signature (fftn` s) "fftn"
 
   fftn-test′ : S (ss (ss zz)) → String
   fftn-test′ s =
     --let shp = 
     let fun = fftn` s in
-    inp→f {_} {_} {_} {eq} fun "fftn"
+    inp→f fun "fftn"
 
 entry : String
 --entry = proj₁ $ translateInp₂ (num (arr C)) (arr {_} {_} {ι (ν 3)} "mem_loc" idh) dft` "fun_name"

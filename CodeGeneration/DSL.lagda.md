@@ -143,38 +143,35 @@ We restrict these to currently operate over one shape level `l`
 infixl 2 _>>>_
 open import Data.Default
 
-data Inp (ctxt : Ty → Set) : {l : L} (s : S l) → (s′ : S l) → .(Reshape s s′) → Set₁ where
-  compose : ∀ {s₁ s₂ s₃ : S l} 
-          → (r₁ : Reshape s₁ s₂) 
-          → Inp ctxt s₁ s₂ r₁ 
-          → (r₂ : Reshape s₂ s₃) 
-          → Inp ctxt s₂ s₃ r₂ 
-          → Inp ctxt s₁ s₃ (r₂ ∙ r₁)
+data Inp (ctxt : Ty → Set) : {l : L} (s : S l) → Set₁ where
+  compose : ∀ {s₁ : S l} 
+          → Inp ctxt s₁
+          → Inp ctxt s₁
+          → Inp ctxt s₁
   --view` : ∀ {s s′ : S l} → (r : Reshape s s′) → Inp ctxt s s eq → Inp ctxt s s′ r
-  copyOut` : {s s′ p q : S (ss l)} 
+  copyOut` : {s : S (ss l)} 
            → (r₁ : Reshape s p) 
-           → (r₂ : Reshape p q) 
-           → (r₃ : Reshape q s) 
-           → Inp ctxt p q r₂ 
-           → Inp ctxt (ι s) (ι s) ((up (down (r₃ ∙ r₂ ∙ r₁))))
+           → (r₃ : Reshape p s) 
+           → Inp ctxt p 
+           → Inp ctxt (ι s) 
   part`    : ∀ {s p : S (ss l)} 
            → (s⊂p : s ⊂ p) 
-           → Inp ctxt (inv-⊂ s⊂p) (inv-⊂ s⊂p) eq 
-           → Inp ctxt p p eq
-  imap`    : Arit ctxt (ix s ⇒ C ⇒ C) → Inp ctxt s s eq
-  mapSum`  : ∀ {u : ℕ} → Arit ctxt ((ar (ι (ν u)) C) ⇒ ix (ι (ν u)) ⇒ ix (ι (ν u)) ⇒ C) → Inp ctxt (ι (ν u)) (ι (ν u)) eq
+           → Inp ctxt (inv-⊂ s⊂p) 
+           → Inp ctxt p 
+  imap`    : Arit ctxt (ix s ⇒ C ⇒ C) → Inp ctxt s
+  mapSum`  : ∀ {u : ℕ} → Arit ctxt ((ar (ι (ν u)) C) ⇒ ix (ι (ν u)) ⇒ ix (ι (ν u)) ⇒ C) → Inp ctxt (ι (ν u)) 
   
 _>>>_ : ∀ {ctxt : Ty → Set} 
       → ∀ {l : L}
       → ∀ {s : S l}
-      → Inp ctxt s s eq → Inp ctxt s s eq → Inp ctxt s s eq
-_>>>_ {ctxt} {_} {s} e₁ e₂ = compose eq e₁ eq e₂
+      → Inp ctxt s → Inp ctxt s → Inp ctxt s 
+_>>>_ {ctxt} {_} {s} e₁ e₂ = compose e₁ e₂
 ```
 
 Within these in place operations, we can then represent twiddles...
 
 ```agda
-twid` : {s s′ p p′ : S (ss l)} {ctxt : Ty → Set} → (r₁ : Reshape s′ s) → (r₂ : Reshape p′ p) → Inp ctxt (s ⊗ p) (s ⊗ p) eq
+twid` : {s s′ p p′ : S (ss l)} {ctxt : Ty → Set} → (r₁ : Reshape s′ s) → (r₂ : Reshape p′ p) → Inp ctxt (s ⊗ p) 
 twid` {l} {s} {s′} {p} {p′} r₁ r₂ = 
       imap` 
         (`λ x ⇒ `λ y ⇒ 
@@ -187,7 +184,7 @@ twid` {l} {s} {s′} {p} {p′} r₁ r₂ =
 
 ```agda
 --ndft` : ∀ {n : ℕ} → Inp (ar (ι (ν n)) C) (ar (ι (ν n)) C)
-dft` : ∀ {s : S zz} {ctxt : Ty → Set} → Inp ctxt (ι s) (ι s) eq
+dft` : ∀ {s : S zz} {ctxt : Ty → Set} → Inp ctxt (ι s)
 dft` {ν u} = mapSum` {u = u} $ `λ xs ⇒ `λ j ⇒ `λ k ⇒ (app (var xs) (var k)) *C (ω` (sizeN (var j)) ((posiN (var k) eq) *N (posiN (var j) eq)))
 ```
 
@@ -201,8 +198,8 @@ I call it `pre-ufft`, if the output needs to be transposed, I call it `post-ufft
 Both are defined here
 
 ```agda
-pre-ufft`  : ∀ {ctxt : Ty → Set} → ∀ (lower-ft : ∀ {p : S l} → Inp ctxt (ι p) (ι p) eq)
-          → ∀ {s : S (ss l)} → Inp ctxt s s eq
+pre-ufft`  : ∀ {ctxt : Ty → Set} → ∀ (lower-ft : ∀ {p : S l} → Inp ctxt (ι p))
+          → ∀ {s : S (ss l)} → Inp ctxt s
 pre-ufft` lower-ft {ι s} = lower-ft
 pre-ufft` {_} {ctxt} lower-ft {s ⊗ p} = part` (le sid) (pre-ufft` lower-ft {p})       -- Left ufft
                              >>> twid` {_} {s} {transp s} {p} {p} transpᵣ eq  -- Twiddles 
@@ -212,8 +209,8 @@ pre-ufft` {_} {ctxt} lower-ft {s ⊗ p} = part` (le sid) (pre-ufft` lower-ft {p}
 The output of the following `post-ufft` would need to be transposed then 
 change majored to be correct.
 ```agda
-post-ufft` : ∀ {ctxt : Ty → Set} → ∀ (lower-ft : ∀ {p : S l} → Inp ctxt (ι p) (ι p) eq)
-          → ∀ {s : S (ss l)} → Inp ctxt s s eq
+post-ufft` : ∀ {ctxt : Ty → Set} → ∀ (lower-ft : ∀ {p : S l} → Inp ctxt (ι p))
+          → ∀ {s : S (ss l)} → Inp ctxt s
 post-ufft` lower-ft {ι s} = lower-ft 
 post-ufft` lower-ft {s ⊗ p} = part` (ri sid) (post-ufft` lower-ft {s})     -- Right ufft
                               >>> twid` {_} {s} {s} {p} {transp p} eq transpᵣ -- Twiddles 
@@ -224,8 +221,8 @@ post-ufft` lower-ft {s ⊗ p} = part` (ri sid) (post-ufft` lower-ft {s})     -- 
 We can then define `fftn` in our DSL.
 
 ```agda
-fftn` : ∀ {ctxt : Ty → Set} → (s : S (ss (ss zz))) → Inp ctxt (ι s) (ι s) eq
-fftn` s = copyOut` eq eq (CMᵗ ∙ rev transpᵣ) (post-ufft` (copyOut` (rev transpᵣ) eq CMᵗ (pre-ufft` dft`))) 
+fftn` : ∀ {ctxt : Ty → Set} → (s : S (ss (ss zz))) → Inp ctxt (ι s)
+fftn` s = copyOut` eq (CMᵗ ∙ rev transpᵣ) (post-ufft` (copyOut` (rev transpᵣ) CMᵗ (pre-ufft` dft`))) 
       -- view` (CMᵗ ∙ rev transpᵣ) (post-ufft` (copyOut` (rev transpᵣ) CMᵗ (pre-ufft` dft`)))
 ```
 
