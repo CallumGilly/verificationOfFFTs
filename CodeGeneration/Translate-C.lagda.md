@@ -498,15 +498,6 @@ module _ where
   funk : ∀ {s p : S ℓ} → Reshape s p → Reshape (ι s) (ι p)
   funk r = up (down r)
 
-  -- Takes an array, doubles every value and transposes the result
-  -- Illegal
-  --mini₁ : ∀ {s : S (ss ℓ)} → Inp translate-Ty (ι s) (ι (transp s)) (funk (rev transpᵣ))
-  --mini₁ {_} {s} = copyOut` {_} {_} {s} {transp s} {s} {s} eq eq (rev transpᵣ) (imap` (`λ i ⇒ `λ x ⇒ var x *C var "2"))
-
-  -- Illegal
-  -- mini₂ : ∀ {s : S (ss ℓ)} → Inp translate-Ty (ι s) (ι (transp s)) (funk (rev transpᵣ))
-  -- mini₂ {_} {s} = compose (funk (rev transpᵣ)) mini₁ eq (imap` (`λ i ⇒ `λ x ⇒ var x))
-
   mini₃ : ∀ {s : S zz} → Inp translate-Ty (ι s) 
   mini₃ {ν u} = mapSum` (`λ x ⇒ `λ i ⇒ var x)
 
@@ -518,34 +509,6 @@ module _ where
 
   id` : Inp translate-Ty s 
   id` = imap` (`λ i ⇒ `λ x ⇒ var x)
-  
-  -- Illegal
-  {-
-  test₁ : String
-  test₁ = inp→f {_} {_} {_} {eq} (test₁′ (ι (ι (ν 1)) ⊗ ι (ι (ν 1)))) "CMtTest" 
-    where
-      test₁′ : ∀ (s : S (ss (ss zz))) → Inp translate-Ty (ι (transp s)) (ι s) (funk CMᵗ)
-      test₁′ s = copyOut` eq eq CMᵗ id`
-  -}
-
-  {- Illegal
-  test₂ : String
-  test₂ = inp→f {_} {_} {_} {up (down transpᵣ)} (test₂′ (ι (ι (ν 1)) ⊗ ι (ι (ν 2)))) "CMtTest2" 
-    where
-      test₂′ : ∀ (s : S (ss (ss zz))) → Inp translate-Ty (ι (transp s)) (ι s) (funk transpᵣ)
-      test₂′ s =
-                 copyOut` transpᵣ eq eq id`
-                 --copyOut` eq eq transpᵣ id`
-               --copyOut` eq eq CMᵗ id`
-  -}
-
-  {- Illegal
-  test₃ : String
-  test₃ = inp→f {_} {_} {_} {up (down CMᵗ)} (test₃′ (ι (ι (ν 1)) ⊗ ι (ι (ν 2)))) "tTest3" 
-    where
-      test₃′ : ∀ (s : S (ss (ss zz))) → Inp translate-Ty (ι (transp s)) (ι s) (funk CMᵗ)
-      test₃′ s = copyOut` eq eq transpᵣ id`
-  -}
 
   -- Working
   test₃ : String
@@ -565,7 +528,7 @@ module _ where
   test₅ = inp→f (test₅′ (ι ((ι (ν 1)) ⊗ (ι (ν 2))))) "CMtTest5" 
     where
       test₅′ : ∀ (s : S (ss (ss zz))) → Inp translate-Ty (ι s) 
-      test₅′ s = copyOut` (rev transpᵣ) CMᵗ id`
+      test₅′ s = copyOut` eq eq id`
 
   fftn-test-sig′ : S (ss (ss zz)) → String
   fftn-test-sig′ s = inp-signature (fftn` s) "fftn"

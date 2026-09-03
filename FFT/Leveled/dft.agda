@@ -74,12 +74,15 @@ module ℕ-dft′ where
                             → ∀ (j : P (flatten-z p))
                             → twiddles {_} {s} {p} (i ⟨ flatten-zᵣ ⟩) (j ⟨ flatten-zᵣ ⟩)
                             ≡ twiddles i j
+  twiddles-flatten-zᵣ-lemma = ?
 
   twiddles-rev-flatten-zᵣ-lemma : {s p
                                  : S (ss (ss ℓ))}
                                 (i : P s) (j : P p) →
                                 twiddles (i ⟨ rev flatten-zᵣ ⟩) (j ⟨ rev flatten-zᵣ ⟩) ≡
                                 twiddles i j
+  twiddles-rev-flatten-zᵣ-lemma = ?
+
   twiddles-transₗ-lemma : {s p : S (ss ℓ)}
                         (i : P s) (j : P p) →
                         twiddles (i ⟨ transpᵣ ∙ transpᵣ ⟩) j ≡
@@ -92,6 +95,7 @@ module ℕ-dft′ where
           (xs : Ar s ℂ) (i : P s) →
           dft (reshape flatten-zᵣ xs) (i ⟨ rev flatten-zᵣ ⟩) ≡
           reshape CMᵗ (fft dft twiddles xs) i
+  dft≡fft = ?
 
 
 ℕ-dft : FFT-Specification

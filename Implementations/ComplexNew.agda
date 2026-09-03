@@ -8,7 +8,7 @@ open Eq.≡-Reasoning
 
 open import Algebra.Structures using (IsCommutativeRing)
 open import Function using (_∘_)
-open import Data.Nat using (ℕ; NonZero) renaming (_*_ to _*ₙ_; _+_ to _+ₙ_)
+open import Data.Nat using (ℕ; NonZero) renaming (_*_ to _*ₙ_; _+_ to _+ₙ_; suc to sucₙ)
 open import Data.Nat.Properties using (m*n≢0)
 
 open import Agda.Builtin.String
@@ -18,7 +18,7 @@ module Implementations.ComplexNew where
   open Real.Real realImplementation using (ℝ; _ᵣ; cos; sin; π; 0/N≡0; cos0; sin0; cos-2πn; sin-2πn; 0ℝ; 1ℝ; ᵣ-distrib-*; -distrib-*; Nm/N≡m) renaming (-_ to -ᵣ_; _+_ to _+ᵣ_; _-_ to _-ᵣ_; _*_ to _*ᵣ_; _/_ to _/ᵣ_; +-*-isCommutativeRing to +ᵣ-*ᵣ-isCommutativeRing)
   open IsCommutativeRing +ᵣ-*ᵣ-isCommutativeRing using (zeroʳ; *-assoc; *-comm)
 
-  module _ where
+  module Base where
     record ℂ₁ : Set where
       constructor _+_i
       field
@@ -52,40 +52,23 @@ module Implementations.ComplexNew where
 
     e^i_ : ℝ → ℂ₁
     e^i_ x = (cos x) + (sin x) i
-    
-    -ω : (N : ℕ) → .⦃ nonZero-n : NonZero N ⦄ → (k : ℕ) → ℂ₁
-    -ω N k = e^i (((-ᵣ (2 ᵣ)) *ᵣ π *ᵣ (k ᵣ)) /ᵣ (N ᵣ))
 
-    ω-N-0 : ∀ {N : ℕ} → ⦃ nonZero-n : NonZero N ⦄ → -ω N 0 ≡ 1ℂ
-    ω-N-0 {N} ⦃ nonZero-n ⦄ rewrite 
-        zeroʳ (-ᵣ 2 ᵣ *ᵣ π) 
-      | 0/N≡0 (N ᵣ)
-      | cos0
-      | sin0
-      = refl
+    -ω : (N : ℕ) → (k : ℕ) → ℂ₁
+    -ω N k = e^i (((-ᵣ (2 ᵣ)) *ᵣ π *ᵣ (k ᵣ)) /ᵣ ((sucₙ N) ᵣ))
     
-    
-    ω-N-mN : ∀ {N m : ℕ} → ⦃ nonZero-n : NonZero N ⦄ → -ω N (N *ₙ m) ≡ 1ℂ
-    ω-N-mN {N} {m} rewrite 
-        ᵣ-distrib-* N m 
-      | *-comm (-ᵣ 2 ᵣ *ᵣ π) (N ᵣ *ᵣ m ᵣ)
-      | *-assoc (N ᵣ) (m ᵣ) (-ᵣ 2 ᵣ *ᵣ π)
-      | Nm/N≡m (N ᵣ) (m ᵣ *ᵣ (-ᵣ 2 ᵣ *ᵣ π))
-      | *-comm (m ᵣ) (-ᵣ 2 ᵣ *ᵣ π)
-      | -distrib-* (2 ᵣ) π
-      | cos-2πn (m)
-      | sin-2πn (m)
-      = refl
-
 
     postulate
       isCommutativeRing : IsCommutativeRing {A = ℂ₁} _≡_ _+_ _*_ -_ 0ℂ 1ℂ
+
+      ω-N-0 : ∀ {N : ℕ} → -ω N 0 ≡ 1ℂ
+
+      ω-N-mN : ∀ {N m : ℕ} → -ω N ((1 +ₙ N) *ₙ m) ≡ 1ℂ
+
       ω-r₁x-r₁y : 
         ∀ (r₁ x y : ℕ) 
-        → ⦃ nonZero-r₁ : NonZero r₁ ⦄
-        → ⦃ nonZero-x : NonZero x ⦄ 
-        → -ω (r₁ *ₙ x) ⦃ m*n≢0 r₁ x ⦄ (r₁ *ₙ y) ≡ -ω x y
-      ω-N-k₀+k₁ : ∀ {N k₀ k₁ : ℕ} → ⦃ nonZero-n : NonZero N ⦄ → -ω N (k₀ +ₙ k₁) ≡ (-ω N k₀) * (-ω N k₁)
+        → -ω (r₁ +ₙ x +ₙ (r₁ *ₙ x)) ((1 +ₙ r₁) *ₙ y) ≡ -ω x y 
+
+      ω-N-k₀+k₁ : ∀ {N k₀ k₁} → -ω N (k₀ +ₙ k₁) ≡ -ω N k₀ * -ω N k₁
 
     complexImplementation : Cplx
     complexImplementation = record {
@@ -100,9 +83,9 @@ module Implementations.ComplexNew where
 
         ; +-*-isCommutativeRing = isCommutativeRing
         ; ω-N-0                 = ω-N-0 
-        ; ω-N-mN                = ω-N-mN 
+        ; ω-N-mN                = λ {N} {m} → ω-N-mN {N} {m}
         ; ω-r₁x-r₁y             = ω-r₁x-r₁y 
-        ; ω-N-k₀+k₁             = ω-N-k₀+k₁
+        ; ω-N-k₀+k₁             = λ {r₁} {x} {y} → ω-N-k₀+k₁ {r₁} {x} {y}
       }
   open Base public
   open Cplx complexImplementation
