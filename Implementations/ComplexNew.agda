@@ -13,9 +13,8 @@ open import Data.Nat.Properties using (m*n≢0)
 
 open import Agda.Builtin.String
 
-module Implementations.ComplexNew where
-  open import Implementations.Real
-  open Real.Real realImplementation using (ℝ; _ᵣ; cos; sin; π; 0/N≡0; cos0; sin0; cos-2πn; sin-2πn; 0ℝ; 1ℝ; ᵣ-distrib-*; -distrib-*; Nm/N≡m) renaming (-_ to -ᵣ_; _+_ to _+ᵣ_; _-_ to _-ᵣ_; _*_ to _*ᵣ_; _/_ to _/ᵣ_; +-*-isCommutativeRing to +ᵣ-*ᵣ-isCommutativeRing)
+module Implementations.ComplexNew (real : Real) where
+  open Real.Real real using (ℝ; _ᵣ; cos; sin; π; 0/N≡0; cos0; sin0; cos-2πn; sin-2πn; 0ℝ; 1ℝ; ᵣ-distrib-*; -distrib-*; Nm/N≡m) renaming (-_ to -ᵣ_; _+_ to _+ᵣ_; _-_ to _-ᵣ_; _*_ to _*ᵣ_; _/_ to _/ᵣ_; +-*-isCommutativeRing to +ᵣ-*ᵣ-isCommutativeRing)
   open IsCommutativeRing +ᵣ-*ᵣ-isCommutativeRing using (zeroʳ; *-assoc; *-comm)
 
   module Base where

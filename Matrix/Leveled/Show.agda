@@ -32,3 +32,7 @@ fold {X} {Y} {suc u} f acc xs = f (head₁ xs) (fold f acc (tail₁ xs))
 showAr : Ar (ν (suc u)) C → String
 showAr xs = fold (λ x acc → acc ++ "," <+> ShowC x) (ShowC (head₁ xs)) (tail₁ xs)
 
+open import Data.List
+
+
+--showArVet : List (Ar (ν (suc u))) C → String

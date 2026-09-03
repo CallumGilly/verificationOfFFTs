@@ -4,6 +4,9 @@ CompileGenerator: $(shell find . -name '*.agda')
 
 CompileGHC: $(shell find . -name '*.agda')
 	agda --compile Implementations/FFT.agda --compile-dir=bin
+	
+CompileAgdaTranslate: $(shell find . -name '*.agda')
+	agda --compile CodeGeneration/RunTranslate.agda --compile-dir=bin
 
 GenerateCCode: CompileGenerator
 	./Main && clang-format -i generated/* && clang-format -i tests/*

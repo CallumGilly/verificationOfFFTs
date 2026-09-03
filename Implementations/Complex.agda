@@ -102,7 +102,7 @@ module Implementations.Complex (real : Real) where
         ; ω-r₁x-r₁y             = ω-r₁x-r₁y 
         ; ω-N-k₀+k₁             = ω-N-k₀+k₁
       }
-  open Base public
-  open Cplx complexImplementation
+  open Base
+  open Cplx complexImplementation public
 
 
