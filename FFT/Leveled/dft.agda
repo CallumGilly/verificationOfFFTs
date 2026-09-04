@@ -31,6 +31,9 @@ private
     n : U
     X : Set
 
+  infixl 4 _⊡_
+  _⊡_ = trans
+
 -- Be careful here, given i : Fin ∘ suc
 --iota : ∀ {n : U} → Ar (ι (ν n)) ℕ
 --iota (ι (ν x)) = toℕ x
@@ -66,7 +69,14 @@ module ℕ-dft′ where
                       → ∀ (j : P p) 
                       → twiddles i (j ⟨ CMᵗ ⟩) ≡ twiddles i j
   twiddles-CMᵗᵣ-lemma {ℓ} {s} {.(S.ι _)} i (ι j) = refl
-  twiddles-CMᵗᵣ-lemma {ℓ} {s} {(p₁ ⊗ p₂)} i (j₁ ⊗ j₂) = cong₂ -ω (cong ((length s) *ₙ_) (resh-length {_} {_} {(transp (p₁ ⊗ p₂))} transpᵣ)) ?
+  twiddles-CMᵗᵣ-lemma {ℓ} {s} {(p₁ ⊗ p₂)} i (j₁ ⊗ j₂) = 
+      cong₂ -ω 
+        (cong ((length s) *ₙ_) (resh-length {_} {_} {(transp (p₁ ⊗ p₂))} transpᵣ))
+        (cong₂ _*ₙ_ {_} {_} {iota (ι (((((j₁ ⟨ CMᵗ ⟩) ⊗ (j₂ ⟨ CMᵗ ⟩)) ⟨ CM ⟩) ⟨ rev u-flattenᵣ ⊕ rev u-flattenᵣ ⟩) ⟨ unflat ⟩))} {iota (ι (((j₁ ⟨ rev u-flattenᵣ ⟩) ⊗ (j₂ ⟨ rev u-flattenᵣ ⟩)) ⟨ unflat ⟩))} refl 
+        ?
+            --(((((j₁ ⟨ CMᵗ ⟩) ⊗ (j₂ ⟨ CMᵗ ⟩)) ⟨ CM ⟩) ⟨ rev u-flattenᵣ ⊕ rev u-flattenᵣ ⟩) ⟨ unflat ⟩)
+---(((j₁ ⟨ rev u-flattenᵣ ⟩) ⊗ (j₂ ⟨ rev u-flattenᵣ ⟩)) ⟨ unflat ⟩)
+        )
   --rewrite length-transp p₁ | length-transp p₂ = cong₂ -ω ? ?
 
   twiddles-flatten-zᵣ-lemma : ∀ {s p : S (ss (ss ℓ))}

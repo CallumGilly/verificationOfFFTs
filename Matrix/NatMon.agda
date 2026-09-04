@@ -47,11 +47,9 @@ pair-from {a} {b} (fst , snd) =
         (combine fst snd)
     
 -- Taken from the master branch of std library - not in my version
-{-
 cast-involutive : ∀ {m n} → .(eq₁ : m ≡ n) .(eq₂ : n ≡ m) →
                   ∀ k → cast eq₁ (cast eq₂ k) ≡ k
 cast-involutive eq₁ eq₂ k = trans (cast-trans eq₂ eq₁ k) (cast-is-id refl k)
--}
 
 from-to : ∀ {a b : ℕ} {x : Fin (suc (a * b + a + b))} → pair-from {a} {b} (pair-to x) ≡ x
 from-to {a} {b} {x} = 

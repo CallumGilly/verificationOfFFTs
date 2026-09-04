@@ -113,29 +113,6 @@ We can also then create a function to get this position after a reshape has been
 ```
 
 ```agda
-  data InplaceReshape : {s : S ℓ} {s′ : S ℓ′} → Reshape s s′ → Set where
-    eq     : ∀ {s  : S ℓ } → InplaceReshape {_} {_} {s} {s} eq
-    _∙_    : ∀ {s₁ : S ℓ₁} {s₂ : S ℓ₂} {s₃ : S ℓ₃}     {r₁ : Reshape s₁ s₂} {r₂ : Reshape s₂ s₃} → InplaceReshape r₁ → InplaceReshape r₂ → InplaceReshape (r₂ ∙ r₁)
-    _⊕_    : ∀ {s₁ s₂ : S (ss ℓ₁)} {s₃ s₄ : S (ss ℓ₂)} {r₁ : Reshape s₁ s₃} {r₂ : Reshape s₂ s₄} → InplaceReshape r₁ → InplaceReshape r₂ → InplaceReshape (r₁ ⊕ r₂)
-    up     : ∀ {r : Reshape s s′} → InplaceReshape r → InplaceReshape (up r)
-    down   : ∀ {r : Reshape s s′} → InplaceReshape r → InplaceReshape (down r)
-    assoₗ  : ∀ {s₁ s₂ s₃ : S (ss ℓ)} → InplaceReshape (assoₗ {ℓ} {s₁} {s₂} {s₃})
-    assoᵣ  : ∀ {s₁ s₂ s₃ : S (ss ℓ)} → InplaceReshape (assoᵣ {ℓ} {s₁} {s₂} {s₃})
-    flat   : ∀ {n m : ℕ} → InplaceReshape (flat {n} {m})
-    unflat : ∀ {n m : ℕ} → InplaceReshape (unflat {n} {m})
-
-  isInplace : ∀ {s : S ℓ} {s′ : S ℓ′} → (r : Reshape s s′) → Maybe (InplaceReshape r)
-  isInplace eq        = just eq
-  isInplace (r₁ ∙ r₂) = zipM (isInplace r₂) (isInplace r₁) ⟫= uncurry (just ∘₂′ _∙_) 
-  isInplace (r₁ ⊕ r₂) = zipM (isInplace r₁) (isInplace r₂) ⟫= uncurry (just ∘₂′ _⊕_)
-  isInplace (up   r)  = isInplace r ⟫= just ∘ up
-  isInplace (down r)  = isInplace r ⟫= just ∘ down
-  isInplace flat      = just flat
-  isInplace unflat    = just unflat
-  isInplace swap      = nothing
-  isInplace assoₗ     = just assoₗ
-  isInplace assoᵣ     = just assoᵣ
-  
   NormResh : Reshape s s′ → Reshape s s′
   NormResh eq = eq
   NormResh (r₁ ∙ r₂) with NormResh r₁ 
@@ -524,11 +501,12 @@ module _ where
       test₄′ : ∀ (s : S (ss (ss zz))) → Inp translate-Ty (ι s) 
       test₄′ s = copyOut` (rev transpᵣ) CMᵗ id`
 
+  -- let s =  ((ι (ι (ν 1) ⊗ ι (ν 1))) ⊗  (ι (ι (ν 1))))
   test₅ : String
-  test₅ = inp→f (test₅′ (ι ((ι (ν 1)) ⊗ (ι (ν 2))))) "CMtTest5" 
+  test₅ = inp→f (test₅′ (ι (((ι (ν 1)) ⊗ (ι (ν 2))) ⊗ (ι (ν 3))))) "CMtTest5" 
     where
       test₅′ : ∀ (s : S (ss (ss zz))) → Inp translate-Ty (ι s) 
-      test₅′ s = copyOut` eq eq id`
+      test₅′ s = copyOut` (rev transpᵣ) transpᵣ id`
 
   fftn-test-sig′ : S (ss (ss zz)) → String
   fftn-test-sig′ s = inp-signature (fftn` s) "fftn"

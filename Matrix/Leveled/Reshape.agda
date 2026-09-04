@@ -19,7 +19,8 @@ module Matrix.Leveled.Reshape (M : Mon) where
     _⊡_ = trans
 
     variable
-      l r w : L
+      ℓ ℓ′ ℓ₁ ℓ₂ ℓ₃ l r w : L
+      s s′ : S ℓ
       u : U
       X : Set
 
@@ -300,11 +301,6 @@ module Matrix.Leveled.Reshape (M : Mon) where
                → Reshape s₂ s 
                → length s₁ ≡ length s₂
   resh₂-length {l} {l₁} {l₂} {l₃} {s} {s₁} {s₂} r₁ r₂ rewrite resh-length (rev r₁) | resh-length (rev r₂) =  refl
-
-
-
-
-
 
 
 

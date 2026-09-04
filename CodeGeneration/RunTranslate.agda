@@ -9,12 +9,6 @@ open import Implementations.ComplexNew --using (complexImplementation) --(comple
 
 open Real.Real realImplementation using (ℝ; _ᵣ) renaming (-_ to -ᵣ_)
 
---open import Effect.Monad.Random
-open import System.Random hiding ()
-open InBounds
-open Float using () renaming (randomIO to randFloat; randomRIO to randRFloat)
-open Vec using () renaming (randomIO to randVec)
-
 open Cplx (complexImplementation realImplementation)
 
 --open Cplx ?
@@ -44,8 +38,7 @@ showℂ (real-component + imaginary-component i) = showℝ real-component ++ ", 
 
 open import Matrix.Leveled.Show ℂ showℂ
 
-randℂ : IO ℂ
-randℂ = (λ re im → (re .value) + (im .value) i) <$> (randRFloat (-ᵣ (400 ᵣ)) (400 ᵣ) _) <*> (randRFloat (-ᵣ (400 ᵣ)) (400 ᵣ) _)
+
 
 
 open import Data.Vec.Functional hiding (length; _++_; _>>=_)
@@ -74,10 +67,6 @@ module _ where
 
   ArToVector : Ar s X → Vector X (suc $ length s)
   ArToVector = ArToVector′ ∘ reshape length-flattenᵣ
-
-  randAr : ∀ {ℓ : L} → (s : S ℓ) → IO (Ar s ℂ)
-  randAr s = ArFromVector ∘ fromVec <$> randVec randℂ (suc $ length s)
-
   showVectorLine : (X → String) → Vector X (suc n) → String
   showVectorLine show xs = foldl (λ existing new → existing ++ ", " ++ show new) (show $ head xs) (tail xs)
 
@@ -86,13 +75,33 @@ module _ where
   showVectorGrid show header xs = (foldl (λ existing new → (suc (existing .proj₁)) , ((existing .proj₂) ++ "\n" ++ showℕ (existing .proj₁) ++ ", " ++ showVectorLine show new)) (0 , header) (transpose xs)) .proj₂
 
 
-index : ∀ (n : ℕ) → Ar (ν n) ℕ
-index _ (ν j) = toℕ j
+module _ where
+  {-
+  open import System.Random hiding ()
+  open InBounds
+  open Float using () renaming (randomIO to randFloat; randomRIO to randRFloat)
+  open Vec using () renaming (randomIO to randVec)
+
+  randℂ : IO ℂ
+  randℂ = (λ re im → (re .value) + (im .value) i) <$> (randRFloat (-ᵣ (400 ᵣ)) (400 ᵣ) _) <*> (randRFloat (-ᵣ (400 ᵣ)) (400 ᵣ) _)
+
+  randAr : ∀ {ℓ : L} → (s : S ℓ) → IO (Ar s ℂ)
+  randAr s = ArFromVector ∘ fromVec <$> randVec randℂ (suc $ length s)
+  -}
+
+  -- Not Random, but not ordered enough to let the dft get away with being silly
+  index : ∀ (n : ℕ) → Ar (ν n) ℂ
+  index _ (ν j) = ((toℕ j % (suc (toℕ j / 5))) ᵣ) + ((toℕ j % 3) ᵣ) i --toℕ j
+
+  randAr : ∀ {ℓ : L} → (s : S ℓ) → IO (Ar s ℂ)
+  randAr s = pure (reshape (rev length-flattenᵣ) (index _))
+
 
 level : L
 level = ss (ss zz)
 
 shape : S level
+--shape = ι (ι (ν 3) ⊗ ι (ν 3))
 shape = ι (ι (ν 3) ⊗ ι (ν 4)) ⊗ ι (ι (ν 3) ⊗ ι (ν (2)))
 
 header : String
@@ -102,9 +111,12 @@ zeroAr : Ar s ℂ
 zeroAr x = (0 ᵣ) + (0 ᵣ) i
 
 open import CodeGeneration.Translate-Agda (complexImplementation realImplementation)
+open import Matrix.Leveled.Change-Major ℕ-Mon
 open import Matrix.Leveled.NatMon-Change-Major
+open Change-Major ℕ-CM
 open import FFT.Leveled.Specification
 open import FFT.Leveled.dft (complexImplementation realImplementation)
+open import FFT.Leveled.FFT (complexImplementation realImplementation) ℕ-Mon
 open import FFT.Leveled.Properties (complexImplementation realImplementation) ℕ-Mon ℕ-CM ℕ-dft
 open FFT-Specification ℕ-dft
 
@@ -117,9 +129,10 @@ main = run do
   input ← randAr shape
   let inputAsVec = ArToVector input
 
-  --let dftAsVec = ArToVector $ dft (reshape length-flattenᵣ input) 
-  let dftAsVec = ArToVector $ fftn input 
-  --let dftAsVec = ArToVector $ reshape (down eq) (fft-from-DSL (reshape (up eq) input))
+  let dftAsVec = ArToVector $ dft (reshape length-flattenᵣ input) 
+  -- The followng two lines DO NOT WORK, this is a problem coming (I think) from FFT.Leveled.dft having the spec defined incorrectly...
+  --let dftAsVec = ArToVector $ reshape length-flattenᵣ $ reshape CMᵗ (fft dft twiddles (reshape flattenᵣ input))
+  --let dftAsVec = ArToVector $ fftn input 
   let fftAsVec = ArToVector $ reshape (down eq) (fft-from-DSL (reshape (up eq) input))
   let diffAsVec = ArToVector $ zeroAr {_} {shape}
 
