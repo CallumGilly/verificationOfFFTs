@@ -53,6 +53,9 @@ module Matrix.Leveled.Reshape (M : Mon) where
   reshape : {s : S l}{p : S r} → Reshape s p → Ar s X → Ar p X
   reshape r a i = a (i ⟨ r ⟩)
 
+  iota : ∀ {n : U} → Ar (ι (ν n)) U
+  iota = reshape (up eq) iota′
+
   rev : ∀ {s : S l} {p : S r} → Reshape s p → Reshape p s
   rev eq = eq
   rev (r₁ ∙ r₂) = rev r₂ ∙ rev r₁
@@ -126,39 +129,41 @@ module Matrix.Leveled.Reshape (M : Mon) where
   transpᵣ {_} {ι s} = eq
   transpᵣ {_} {s₁ ⊗ s₂} = (transpᵣ ⊕ transpᵣ) ∙ swap
 
-  flatten : S (ss (ss l)) → S (ss l)
-  flatten (ι s) = s
-  flatten (s ⊗ p) = flatten s ⊗ flatten p
-  
-  flattenᵣ : ∀ {s : S (ss (ss l))} → Reshape s (flatten s)
-  flattenᵣ {l} {ι s} = down eq
-  flattenᵣ {l} {s ⊗ s₁} = flattenᵣ ⊕ flattenᵣ
-
   u-flatten : S l → U
   u-flatten (ν x) = x
   u-flatten (ι s) = u-flatten s
   u-flatten (s ⊗ p) = u-flatten s ● u-flatten p
   
-  u-flattenᵣ : ∀ {s : S (ss l)} → Reshape s (ι (ν (u-flatten s)))
-  u-flattenᵣ {_} {s ⊗ s₁} = up flat ∙ (u-flattenᵣ ⊕ u-flattenᵣ)
-  u-flattenᵣ {zz} {ι (ν x)} = eq
-  u-flattenᵣ {ss l} {ι s} = down u-flattenᵣ
+  --u-flatten-z : S zz → U
+  --u-flatten-z (ν x) = u-flatten (ν x)
+
+  flatten-z : S (ss l) → S l
+  flatten-z {l} (ι x) = x
+  flatten-z {zz} (x ⊗ y) = ν (u-flatten (flatten-z x) ● u-flatten (flatten-z y))
+  flatten-z {ss l} (x ⊗ y) = (flatten-z x) ⊗ (flatten-z y)
+
+  --flatten : S (ss (ss l)) → S (ss l)
+  --flatten (ι s) = s
+  --flatten (s ⊗ p) = flatten s ⊗ flatten p
+  
+  --flattenᵣ : ∀ {s : S (ss (ss l))} → Reshape s (flatten s)
+  --flattenᵣ {l} {ι s} = down eq
+  --flattenᵣ {l} {s ⊗ s₁} = flattenᵣ ⊕ flattenᵣ
 
   ν-flattenᵣ : ∀ {s : S l} → Reshape s (ν (u-flatten s))
   ν-flattenᵣ {.(ss _)} {s ⊗ s₁} = flat ∙ (up ν-flattenᵣ ⊕ up ν-flattenᵣ)
   ν-flattenᵣ {.zz} {ν x} = eq
   ν-flattenᵣ {.(ss _)} {ι s} = down ν-flattenᵣ
 
-  u-flatten-z : S zz → U
-  u-flatten-z (ν x) = u-flatten (ν x)
+  --u-flattenᵣ : ∀ {s : S (ss l)} → Reshape s (ι (ν (u-flatten s)))
+  --u-flattenᵣ = up ν-flattenᵣ
 
-  u-flatten-z-id : ∀ {s : S zz} → Reshape s (ν (u-flatten-z s))
+  --u-flattenᵣ {_} {s ⊗ s₁} = up flat ∙ (u-flattenᵣ ⊕ u-flattenᵣ)
+  --u-flattenᵣ {zz} {ι (ν x)} = eq
+  --u-flattenᵣ {ss l} {ι s} = down u-flattenᵣ
+
+  u-flatten-z-id : ∀ {s : S zz} → Reshape s (ν (u-flatten s))
   u-flatten-z-id {ν x} = eq
-
-  flatten-z : S (ss l) → S l
-  flatten-z {l} (ι x) = x
-  flatten-z {zz} (x ⊗ y) = ν (u-flatten-z (flatten-z x) ● u-flatten-z (flatten-z y))
-  flatten-z {ss l} (x ⊗ y) = (flatten-z x) ⊗ (flatten-z y)
 
   flatten-zᵣ : ∀ {s : S (ss l)} → Reshape s (flatten-z s)
   flatten-zᵣ {l} {ι s} = down eq

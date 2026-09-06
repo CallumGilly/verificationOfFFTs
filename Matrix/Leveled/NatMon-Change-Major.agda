@@ -11,7 +11,7 @@ open import Relation.Binary.PropositionalEquality
 Change-Major.BaseCM ℕ-CM {s} {p} = subst 
                                       (λ x → Reshape 
                                               (ν x) 
-                                              (ν ((u-flatten-z (flatten-z p)) * (u-flatten-z (flatten-z s)) + (u-flatten-z (flatten-z p)) + (u-flatten-z (flatten-z s))))
+                                              (ν ((u-flatten (flatten-z p)) * (u-flatten (flatten-z s)) + (u-flatten (flatten-z p)) + (u-flatten (flatten-z s))))
                                       )
-                                      (∘-suc-lemma₂ (u-flatten-z (flatten-z s)) (u-flatten-z (flatten-z p))) 
+                                      (∘-suc-lemma₂ (u-flatten (flatten-z s)) (u-flatten (flatten-z p))) 
                                       eq 

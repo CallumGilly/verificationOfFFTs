@@ -21,7 +21,7 @@ private
   
 record Change-Major : Set₁ where
   field
-    BaseCM : ∀ {s p : S (ss zz)} → Reshape (ν (u-flatten-z (flatten-z s) ● u-flatten-z (flatten-z p))) (ν (u-flatten-z (flatten-z p) ● u-flatten-z (flatten-z s)))
+    BaseCM : ∀ {s p : S (ss zz)} → Reshape (ν (u-flatten (flatten-z s) ● u-flatten (flatten-z p))) (ν (u-flatten (flatten-z p) ● u-flatten (flatten-z s)))
     
   CM : ∀ {s p : S (ss l)} → Reshape (s ⊗ p) (p ⊗ s)
   CM {zz  } {s} {p} = (rev flatten-zᵣ) 
@@ -141,7 +141,7 @@ record Change-Major : Set₁ where
     semi-flattenᵣ {l} {s} = up flatten-zᵣ
 
     CMᵗ-reindex : ∀ {s : S (ss l)} → Reshape (transp s) s
-    CMᵗ-reindex {l} {s} = rev (u-flattenᵣ) ∙ (reindex (♭s-sᵗ s)) ∙ (u-flattenᵣ)
+    CMᵗ-reindex {l} {s} = rev (up ν-flattenᵣ) ∙ (reindex (♭s-sᵗ s)) ∙ (up ν-flattenᵣ)
 
 
     lemma : ∀ {n m k : U} 

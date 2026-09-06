@@ -27,7 +27,7 @@ open import Data.Nat.Properties
 
 private
   variable
-    ℓ : L
+    ℓ ℓ′ : L
     n : U
     X : Set
 
@@ -59,7 +59,7 @@ module ℕ-dft′ where
                                     {(λ k → ys k * -ω n (iota (P.ι k) *ₙ toℕ j))} 
                                     λ{ (ν i) → 
                                       cong₂ _*_ (prf (ν i)) refl
-                                    } 
+                                    }
 
   twiddles : ∀ {s p : S (ss ℓ)} → P s → P p → ℂ
   twiddles {_} {s} {p} i j = ℕ-twiddles (length s *ₙ length p) i j
@@ -79,13 +79,24 @@ module ℕ-dft′ where
         )
   --rewrite length-transp p₁ | length-transp p₂ = cong₂ -ω ? ?
 
+  open import Matrix.Leveled.IotaHelper ℕ-Mon
+
+  open import Data.Unit 
+
   twiddles-flatten-zᵣ-lemma : ∀ {s p : S (ss (ss ℓ))}
                             → ∀ (i : P (flatten-z s))
                             → ∀ (j : P (flatten-z p))
                             → twiddles {_} {s} {p} (i ⟨ flatten-zᵣ ⟩) (j ⟨ flatten-zᵣ ⟩)
                             ≡ twiddles i j
-  twiddles-flatten-zᵣ-lemma = ?
-
+  twiddles-flatten-zᵣ-lemma {ℓ} {s} {p} i j = cong₂ -ω 
+        (cong₂ _*ₙ_ (resh-length {_} {_} {s} flatten-zᵣ) (resh-length {_} {_} {p} flatten-zᵣ))
+        (cong₂ _*ₙ_ 
+          (thm₁ {_} {_} {_} {s} flatten-zᵣ (flatten-z-isInplace) i)
+          (thm₁ {_} {_} {_} {p} flatten-zᵣ (flatten-z-isInplace) j)
+        )
+-- iota ((i ⟨ flatten-zᵣ ⟩) ⟨ rev u-flattenᵣ ⟩) *ₙ
+-- iota ((j ⟨ flatten-zᵣ ⟩) ⟨ rev u-flattenᵣ ⟩)
+-- ≡ iota (i ⟨ rev u-flattenᵣ ⟩) *ₙ iota (j ⟨ rev u-flattenᵣ ⟩)
   twiddles-rev-flatten-zᵣ-lemma : {s p
                                  : S (ss (ss ℓ))}
                                 (i : P s) (j : P p) →
