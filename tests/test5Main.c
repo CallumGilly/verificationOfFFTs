@@ -17,7 +17,7 @@ void PrinterA(size_t n, size_t m, complex real xs[][m]) {
 int main() {
   complex real memor[2][3][4] = calloc(24, sizeof(complex real));
   for (size_t n = 0; n < 24; n++) {
-    memor[n / 2][(n % 2) ]
+    memor[n / 2][(n % 2)]
   }
 
   PrinterA(2, 3, memor);

@@ -359,7 +359,7 @@ step₁ ar (imap` arit) = ar , ops
       i ← new-Ix _
       arit-string ← translate-Arit C (app (app arit (var i)) (var (ar i)))
       return $ commentBlock "imap" $ loopnest i (assignment (ar i) arit-string)
-step₁ xs (compose inp₁ inp₂) = op₂ .proj₁ , ops
+step₁ xs (compose inp₁ inp₂) = xs , ops
   where
     op₁ = step₁ xs inp₁
     op₂ = step₁ (op₁ .proj₁) inp₂
@@ -384,7 +384,7 @@ step₁ xs (mapSum` {u} arit) = xs , ops
       return $ commentBlock "mapSum" $ assign ++ body ++ copyBack ++ free
 step₁ xs (copyOut` {_} {s} {p} r₁ r₃ inp) = zs , ops
   where
-    zs = xs ∘ resh-ix (up (down (rev (r₃ ∙ r₁))))
+    zs = xs --∘ resh-ix (up (down (rev (r₃ ∙ r₁))))
     ops = do 
       -- Create the working memory
       workingMem , assign , free ← calloc complex-type p
