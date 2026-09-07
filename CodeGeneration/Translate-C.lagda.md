@@ -99,6 +99,9 @@ is a new variable (for use when generating loop nests).
 We also need a way to reshape IX then get the flat position.
 We can also then create a function to get this position after a reshape has been applied
 ```agda
+  ix-flat-index′ : ∀ {n : ℕ} → Ix (ν n) → String
+  ix-flat-index′ (ν i) = i
+
   ix-flat-index : Ix s → String
   ix-flat-index (ν i) = i
   ix-flat-index (ι i) = ix-flat-index i
@@ -219,7 +222,9 @@ module _ where
     return $ printf "%u" $ clen s
   arit-eval (posiN i r) = do
     i′ ← arit-eval i
-    return $ ix-flat-index (resh-ix (rev r) i′)
+    --return $ ix-flat-index (i′)
+    --return $ ix-flat-index (resh-ix (rev r) i′)
+    return $ ix-flat-index′ (resh-ix (ν-flattenᵣ ∙ rev r) i′)
   arit-eval (spliₗ x) = do
     (i ⊗ _) ← arit-eval x
     return i

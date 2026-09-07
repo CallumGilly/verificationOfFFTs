@@ -46,21 +46,19 @@ pair-from {a} {b} (fst , snd) =
         cast (sym (∘-suc-lemma₁ {a} {b}))
         (combine fst snd)
     
-{-
 -- Taken from the master branch of std library - not in my version
-cast-involutive : ∀ {m n} → .(eq₁ : m ≡ n) .(eq₂ : n ≡ m) →
+cast-involutive′ : ∀ {m n} → .(eq₁ : m ≡ n) .(eq₂ : n ≡ m) →
                   ∀ k → cast eq₁ (cast eq₂ k) ≡ k
-cast-involutive eq₁ eq₂ k = trans (cast-trans eq₂ eq₁ k) (cast-is-id refl k)
--}
+cast-involutive′ eq₁ eq₂ k = trans (cast-trans eq₂ eq₁ k) (cast-is-id refl k)
 
 from-to : ∀ {a b : ℕ} {x : Fin (suc (a * b + a + b))} → pair-from {a} {b} (pair-to x) ≡ x
 from-to {a} {b} {x} = 
     cong (cast (sym (∘-suc-lemma₁ {a} {b}))) (combine-remQuot (suc b) (cast (∘-suc-lemma₁ {a} {b}) x))
-  ⊡ cast-involutive (sym (∘-suc-lemma₁ {a} {b})) (∘-suc-lemma₁ {a} {b}) x
+  ⊡ cast-involutive′ (sym (∘-suc-lemma₁ {a} {b})) (∘-suc-lemma₁ {a} {b}) x
 
 to-from : ∀ {a b : ℕ} {x : Fin (suc a) × Fin (suc b)} → pair-to {a} {b} (pair-from x) ≡ x
 to-from {a} {b} {x₁ , x₂} rewrite 
-    cast-involutive (∘-suc-lemma₁ {a} {b}) (sym (∘-suc-lemma₁ {a} {b})) (combine x₁ x₂) 
+    cast-involutive′ (∘-suc-lemma₁ {a} {b}) (sym (∘-suc-lemma₁ {a} {b})) (combine x₁ x₂) 
   = remQuot-combine x₁ x₂
 
 ℕ-Mon : Mon

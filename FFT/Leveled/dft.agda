@@ -39,7 +39,7 @@ private
 --iota (ι (ν x)) = toℕ x
 
 ℕ-twiddles : ∀ {s p : S (ss ℓ)} → ℕ → P s → P p → ℂ
-ℕ-twiddles {l} {s} {p} n i j = -ω n ((iota (i ⟨ rev u-flattenᵣ ⟩)) *ₙ (iota (j ⟨ rev u-flattenᵣ ⟩)))
+ℕ-twiddles {l} {s} {p} n i j = -ω n ((iota (i ⟨ rev (up ν-flattenᵣ) ⟩)) *ₙ (iota (j ⟨ rev (up ν-flattenᵣ) ⟩)))
 
 
 length-transp : ∀ (s : S ℓ) → length s ≡ length (transp s)
@@ -72,7 +72,7 @@ module ℕ-dft′ where
   twiddles-CMᵗᵣ-lemma {ℓ} {s} {(p₁ ⊗ p₂)} i (j₁ ⊗ j₂) = 
       cong₂ -ω 
         (cong ((length s) *ₙ_) (resh-length {_} {_} {(transp (p₁ ⊗ p₂))} transpᵣ))
-        (cong₂ _*ₙ_ {_} {_} {iota (ι (((((j₁ ⟨ CMᵗ ⟩) ⊗ (j₂ ⟨ CMᵗ ⟩)) ⟨ CM ⟩) ⟨ rev u-flattenᵣ ⊕ rev u-flattenᵣ ⟩) ⟨ unflat ⟩))} {iota (ι (((j₁ ⟨ rev u-flattenᵣ ⟩) ⊗ (j₂ ⟨ rev u-flattenᵣ ⟩)) ⟨ unflat ⟩))} refl 
+        (cong₂ _*ₙ_ {_} {_} {iota (ι (((((j₁ ⟨ CMᵗ ⟩) ⊗ (j₂ ⟨ CMᵗ ⟩)) ⟨ CM ⟩) ⟨ rev (up ν-flattenᵣ) ⊕ rev (up ν-flattenᵣ) ⟩) ⟨ unflat ⟩))} {iota (ι (((j₁ ⟨ rev (up ν-flattenᵣ) ⟩) ⊗ (j₂ ⟨ rev (up ν-flattenᵣ) ⟩)) ⟨ unflat ⟩))} refl 
         ?
             --(((((j₁ ⟨ CMᵗ ⟩) ⊗ (j₂ ⟨ CMᵗ ⟩)) ⟨ CM ⟩) ⟨ rev u-flattenᵣ ⊕ rev u-flattenᵣ ⟩) ⟨ unflat ⟩)
 ---(((j₁ ⟨ rev u-flattenᵣ ⟩) ⊗ (j₂ ⟨ rev u-flattenᵣ ⟩)) ⟨ unflat ⟩)

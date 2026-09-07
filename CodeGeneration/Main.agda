@@ -48,9 +48,9 @@ main = run do
   --let s =  (ι ((ι (ν 1))) ⊗  ((ι (ν 1)) ⊗ (ι (ν 1))))
   --let s =  ((ι (ι (ν 1) ⊗ ι (ν 1))) ⊗  (ι (ι (ν 1))))
   --let s = (ι ((ι (ν 1)) ⊗ ((ι (ν 1)) ⊗ (ι (ν 1)))))
-  let s = (ι ((ι (ν 1)) ⊗ ((ι (ν 2)) ⊗ (ι (ν 3)))))
+  --let s = (ι ((ι (ν 1)) ⊗ ((ι (ν 2)) ⊗ (ι (ν 3)))))
   --let s = ((ι (ι (ν 1) ⊗ (ι (ν 1)))) ⊗ (ι (ι (ν 1))))
-  --let s = ((ι (ι (ν 2) ⊗ (ι (ν 3)))) ⊗ (ι (ι (ν 4))))
+  let s = ((ι (ι (ν 2) ⊗ (ι (ν 3)))) ⊗ (ι (ι (ν 4))))
   let DEF = sizeDef s "fftn"
   writeFile "./generated/FFT.c" $ header ++ DEF ++ (fftn-test′     s)
   writeFile "./generated/FFT.h" $ header ++ DEF ++ (fftn-test-sig′ s)
