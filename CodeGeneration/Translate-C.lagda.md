@@ -99,20 +99,8 @@ is a new variable (for use when generating loop nests).
 We also need a way to reshape IX then get the flat position.
 We can also then create a function to get this position after a reshape has been applied
 ```agda
-  ix-flat-index′ : ∀ {n : ℕ} → Ix (ν n) → String
-  ix-flat-index′ (ν i) = i
-
-  ix-flat-index : Ix s → String
+  ix-flat-index : ∀ {n : ℕ} → Ix (ν n) → String
   ix-flat-index (ν i) = i
-  ix-flat-index (ι i) = ix-flat-index i
-  ix-flat-index (_⊗_ {s = s} {p} i j) = parensIfSpace 
-                                        $   (ix-flat-index i) 
-                                        <+> "+" 
-                                        <+> parensIfSpace 
-                                            ( (showℕ $ clen s) 
-                                            <+> "*" 
-                                            <+> ix-flat-index j
-                                            )
 ```
 
 ```agda
@@ -141,11 +129,6 @@ We can also then create a function to get this position after a reshape has been
   NormResh swap = swap
   NormResh assoₗ = assoₗ
   NormResh assoᵣ = assoᵣ
-
-  {-
-  a : ∀ {s : S ℓ} (i : P (ι s)) → i ⟨ up eq ∙ down eq ⟩ ≡ i
-  a (ι i) = refl
-  -}
 
   -- Helper for debugging what RESH should be doing
   showResh′ : Reshape s s′ → String
@@ -222,9 +205,7 @@ module _ where
     return $ printf "%u" $ clen s
   arit-eval (posiN i r) = do
     i′ ← arit-eval i
-    --return $ ix-flat-index (i′)
-    --return $ ix-flat-index (resh-ix (rev r) i′)
-    return $ ix-flat-index′ (resh-ix (ν-flattenᵣ ∙ rev r) i′)
+    return $ ix-flat-index (resh-ix (ν-flattenᵣ ∙ rev r) i′)
   arit-eval (spliₗ x) = do
     (i ⊗ _) ← arit-eval x
     return i
@@ -357,100 +338,55 @@ module _ where
 Finally we can move to our C translation
 
 ```agda
-step₁ : (Ix s → String) → Inp translate-Ty s → (Ix s → String) × (State ℕ String)
-step₁ ar (imap` arit) = ar , ops
-  where
-    ops = do
-      i ← new-Ix _
-      arit-string ← translate-Arit C (app (app arit (var i)) (var (ar i)))
-      return $ commentBlock "imap" $ loopnest i (assignment (ar i) arit-string)
-step₁ xs (compose inp₁ inp₂) = xs , ops
-  where
-    op₁ = step₁ xs inp₁
-    op₂ = step₁ (op₁ .proj₁) inp₂
-    ops = do
-      ins₁ ← op₁ .proj₂
-      ins₂ ← op₂ .proj₂
-      return $ commentBlock "compose" $ ins₁ ++ "//Middle: compose\n" ++ ins₂
-step₁ xs (mapSum` {u} arit) = xs , ops
-  where
-    ops = do
-      memName , assign , free ← calloc complex-type (ι (ν u))
+step₁ : (Ix s → String) → Inp translate-Ty s → (State ℕ String)
+step₁ ar (imap` arit) = do
+  i ← new-Ix _
+  arit-string ← translate-Arit C (app (app arit (var i)) (var (ar i)))
+  return $ commentBlock "imap" $ loopnest i (assignment (ar i) arit-string)
+step₁ xs (compose inp₁ inp₂) = do
+  ins₁ ← step₁ xs inp₁ 
+  ins₂ ← step₁ xs inp₂
+  return $ commentBlock "compose" $ ins₁ ++ "//Middle: compose\n" ++ ins₂
+step₁ xs (mapSum` {u} arit) = do
+  memName , assign , free ← calloc complex-type (ι (ν u))
 
-      i ← new-Ix (ι (ν u))
-      j ← new-Ix (ι (ν u))
-      k ← new-Ix (ι (ν u))
+  i ← new-Ix (ι (ν u))
+  j ← new-Ix (ι (ν u))
+  k ← new-Ix (ι (ν u))
 
-      op ← translate-Arit C $ app (app (app arit (`λ l ⇒ (var (xs l)))) (var i)) (var j)
-      let body = loopnest j $ loopnest i $ +assignment (ix-to-str i memName) op
+  op ← translate-Arit C $ app (app (app arit (`λ l ⇒ (var (xs l)))) (var i)) (var j)
+  let body = loopnest j $ loopnest i $ +assignment (ix-to-str i memName) op
 
-      let copyBack = loopnest k $ assignment (xs k) (ix-to-str k memName)
-      
-      return $ commentBlock "mapSum" $ assign ++ body ++ copyBack ++ free
-step₁ xs (copyOut` {_} {s} {p} r₁ r₃ inp) = zs , ops
-  where
-    zs = xs --∘ resh-ix (up (down (rev (r₃ ∙ r₁))))
-    ops = do 
-      -- Create the working memory
-      workingMem , assign , free ← calloc complex-type p
+  let copyBack = loopnest k $ assignment (xs k) (ix-to-str k memName)
+  
+  return $ commentBlock "mapSum" $ assign ++ body ++ copyBack ++ free
+step₁ xs (copyOut` {_} {s} {p} r₁ r₃ inp) = do 
+  -- Create the working memory
+  workingMem , assign , free ← calloc complex-type p
 
+  -- Copy out
+  i ← new-Ix s
+  let copyOutOp = "//" <+> (showResh r₁) ++ "\n" 
+               ++ loopnest i (assignment (ix-to-str (resh-ix r₁ i) workingMem) (xs (ι i)))
 
-      i ← new-Ix s
-      let copyOutOp = "//" <+> (showResh r₁) ++ "\n" 
-                   ++ loopnest i (assignment (ix-to-str (resh-ix r₁ i) workingMem) (xs (ι i)))
+  -- Do the inside operations
+  let op-f = step₁ (flip ix-to-str workingMem) inp
+  op ← op-f
 
-      -- Do the inside operations
-      let ys , op-f = step₁ (flip ix-to-str workingMem) inp
-      op ← op-f
+  -- Copy back in
+  j ← new-Ix s
+  let copyInOp = "//" <+> (showResh r₃) ++ "\n"
+              ++ loopnest j (assignment (xs (ι j)) (ix-to-str (resh-ix (rev r₃) j) workingMem))
 
-      j ← new-Ix s
-      let copyInOp = "//" <+> (showResh r₃) ++ "\n"
-                  ++ loopnest j (assignment (xs (ι j)) (ix-to-str (resh-ix (rev r₃) j) workingMem))
+  let ops = assign ++ copyOutOp ++ op ++ copyInOp ++ free
+  return $ commentBlock "copyOut" $ ops
+step₁ xs (part` {_} {s} {p} s⊂p inp) = do
+  i ← new-Ix s
+  let ys = λ j → xs (resh-ix (rev (to-resh s⊂p)) (i ⊗ j))
 
-      let ops = assign ++ copyOutOp ++ op ++ copyInOp ++ free
-      return $ commentBlock "copyOut" $ ops
+  op ← step₁ ys inp
 
-      {-
-      -- Create the working memory we copy in to and out of 
-      workingMem , assign , free ← calloc complex-type p
-
-      -- Copy out into the working memory, applying r₁ as we do so
-      i ← new-Ix p
-      let out-op = "//" <+> (showResh r₁) ++ "\n"
-                  ++ assignment (ix-to-str i workingMem) (xs (resh-ix (up (rev r₁)) i))
-      let out = (loopnest i out-op) ++ "\n"
-
-      -- Do the inside operations
-      let ys , op-f = step₁ r₂ (flip ix-to-str workingMem) inp
-      op ← op-f
-      
-      --let maybeIsinplace = isInplace (r₃ ∙ r₂ ∙ r₁) -- this should never be not just, unless the outer most or inner most shape is just ι
-
-      ------------- BELOW THIS LINE IS WHERE WE CURRENTLY GO WRONG ------------
-      ---------------------------- I Think ------------------------------------
-      ------------------- Or in a function called below ofc -------------------
-      -- Re cast --
-      memName₂ ← fresh-var
-      let re-cast = "// SOMETHING GOES WRONG HERE:\n" 
-                    ++ "//" <+> (showResh r₃) ++ "\n"
-                    ++ assignment (ArCast (just memName₂) s′) (ArCast nothing s′ <+> workingMem)
-
-      j ← new-Ix s′
-      let inn-op = assignment (zs (resh-ix (up eq) j)) (ix-to-str j memName₂)
-      let inn = (loopnest j inn-op)
-
-      return $ commentBlock "copyOut" $ assign ++ out ++ op ++ re-cast ++ inn ++ free
-      -}
-step₁ xs (part` {_} {s} {p} s⊂p inp) = xs , ops
-  where
-    ops = do
-      i ← new-Ix s
-      let ys = λ j → xs (resh-ix (rev (to-resh s⊂p)) (i ⊗ j))
-
-      let _ , op-f = step₁ ys inp
-      op ← op-f
-
-      return $ commentBlock "part" $ loopnest i op
+  return $ commentBlock "part" $ loopnest i op
 
 inp→f : Inp translate-Ty s → String → String
 inp→f {_} {s} inp function-name = runState inp→f′ 0 .proj₂
@@ -458,7 +394,7 @@ inp→f {_} {s} inp function-name = runState inp→f′ 0 .proj₂
     inp→f′ : State ℕ String
     inp→f′ = do
       var-name ← fresh-var
-      let _ , f = step₁ (flip ix-to-str var-name) inp
+      let f = step₁ (flip ix-to-str var-name) inp
       body ← f
       return $ printf "void %s(%s) {\n%s}\n" function-name (ArCast (just var-name) s) body 
 
@@ -521,11 +457,4 @@ module _ where
     --let shp = 
     let fun = fftn` s in
     inp→f fun "fftn"
-
-entry : String
---entry = proj₁ $ translateInp₂ (num (arr C)) (arr {_} {_} {ι (ν 3)} "mem_loc" idh) dft` "fun_name"
---entry = show-inp {_} {ι (ι (ν 2) ⊗ ι (ν 3))} {_} {up (down transpᵣ)} mini₂ --fftn-test′
---entry = show-inp {_} {ι (ν 2)} {_} {eq} mini₃ 
---entry = show-inp {_} {_} {_} {eq} mini₄
-entry = fftn-test′ ((ι (ι (ν 2) ⊗ (ι (ν 3)))) ⊗ (ι (ι (ν 4) ⊗ ι (ν 5))))
 ```

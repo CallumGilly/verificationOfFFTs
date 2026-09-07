@@ -124,14 +124,6 @@ K` = lam λ x → lam λ y → var x
 -- 
 S` : Arit ctxt ((σ ⇒ δ ⇒ τ) ⇒ (σ ⇒ δ) ⇒ σ ⇒ τ)
 S` = `λ x ⇒ `λ y ⇒ `λ z ⇒ app (app (var x) (var z)) (app (var y) (var z))
-
-{-
-_ : ∀ {τ δ σ : Ty} → app {ctxt} (app (app S` K`) (S` {ctxt} {τ} {δ})) K` ≡ app (app K` K`) (app (S` {ctxt} {τ} {δ}) K`)
-_ = ?
-
-_ : ∀ {x y} → app {ctxt} {τ} (app (app (S` {_} {_} {σ}) K`) (var x)) (var y) ≡ (var y)
-_ = ? 
--}
 ```
 
 # The set of in place operations
@@ -148,7 +140,6 @@ data Inp (ctxt : Ty → Set) : {l : L} (s : S l) → Set₁ where
           → Inp ctxt s₁
           → Inp ctxt s₁
           → Inp ctxt s₁
-  --view` : ∀ {s s′ : S l} → (r : Reshape s s′) → Inp ctxt s s eq → Inp ctxt s s′ r
   copyOut` : {s : S (ss l)} 
            → {p : S (ss l)}
            → (r₁ : Reshape s p) 
@@ -224,16 +215,8 @@ We can then define `fftn` in our DSL.
 ```agda
 fftn` : ∀ {ctxt : Ty → Set} → (s : S (ss (ss zz))) → Inp ctxt (ι s)
 fftn` s = copyOut` eq (CMᵗ ∙ rev transpᵣ) (post-ufft` (copyOut` (rev transpᵣ) CMᵗ (pre-ufft` dft`))) 
-      -- view` (CMᵗ ∙ rev transpᵣ) (post-ufft` (copyOut` (rev transpᵣ) CMᵗ (pre-ufft` dft`)))
 ```
 
-And then see how that looks for some shapes (Contains holes so commented)
-```agda
-{-
-_ : fftn` (ι ? ⊗ ι ?) ≡ ?
-_ = ?
--}
-```
 One observation here is that we end up with `? >>> copy r₁ >>> copy r₂ >>> ?`
 so I will need to make a small optimiser function which composes copy's (for 
 when we want to use dropping a level to signify that we want to copy....... wait
@@ -255,3 +238,8 @@ with `∀ {s s′ : S l} → Reshape s s′` as this could include `up eq ∙ do
 
 For ℝ × ℝ ≡ ℂ, I need to think of a nice way to relate the dsl with the split 
 to the Agda without.
+
+And then see how that looks for some shapes (Contains holes so commented)
+```agda
+
+```
