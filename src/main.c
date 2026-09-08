@@ -13,7 +13,7 @@
 #include <time.h>
 
 //void testTranspose();
-void testDFTFFT();
+void testDFTFFT(void);
 //void testDFTFFTCUBE();
 void printer(size_t n, complex real input[], complex real dftOutput[], complex real fftOutput[]);
 
@@ -53,7 +53,7 @@ void testTranspose() {
 }
 */
 
-void testDFTFFT() {
+void testDFTFFT(void) {
   complex real(*input)[fftn_SIZE] = malloc(sizeof(*input));
   memset(input, 0, sizeof(*input));
 

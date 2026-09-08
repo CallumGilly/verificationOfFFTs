@@ -24,6 +24,7 @@ header = "#include <complex.h>\n"
 
 main : Main
 main = run do
+  {-
   ----- Test Cases -----
   --let test₁-body = test₁
   --writeFile "./tests/test1.c" $ header ++ test₁-body
@@ -39,6 +40,7 @@ main = run do
   
   let test₅-body = test₅
   writeFile "./tests/test5.c" $ header ++ test₅-body
+  -}
   
   
   ----- FFTN -----

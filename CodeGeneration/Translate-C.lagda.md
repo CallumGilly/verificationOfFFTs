@@ -1,5 +1,6 @@
 Here I define the translation from the DSL into C...
 ```agda
+--{-# OPTIONS --termination-depth 40 #-}
 
 module CodeGeneration.Translate-C where
 open import Function 
@@ -30,6 +31,7 @@ private variable
   ℓ ℓ′ ℓ₁ ℓ₂ ℓ₃ ℓ₄ : L
   s s′ k : S ℓ
   r : Reshape s s′
+  n : ℕ
 ```
 
 We can now start looking at generating some C code.
@@ -177,35 +179,62 @@ We then create a converter from ix to subscripts to allow us to stringify them.
 
 ```
 
-# Translate Ty
-We can then start giving Ty it's semantics within C
-```
-translate-Ty : Ty → Set
-translate-Ty C = String
-translate-Ty N = String
-translate-Ty (ix s) = Ix s
-translate-Ty (τ ⇒ σ) = translate-Ty τ → State ℕ (translate-Ty σ)
-```
-
 # Arithmetic Evaluator
 We can then create an evaluator and translator for our Airthmetic operations.
 Our evaluator is going to evaluate all lambda calculus, while the translator 
 will stringify this into something which can be used in C. 
 
 ```agda
+open import Data.List as List renaming (_++_ to _++ₗ_; [_] to [_]ₗ)
 module _ where
+
+  data NOp : Set where
+    Nconst : ℕ → NOp
+    Niota : Ix (ν n) → NOp
+    Nmult : NOp → NOp → NOp
+    
+  data COp : Set where
+    var : String → COp
+    Cmult : COp → COp → COp
+    ω : NOp → NOp → COp
+
+  data AssignmentOperation : Set where
+    ≔ : AssignmentOperation
+    += : AssignmentOperation
+
+  mutual
+    data Instruction : Set where
+      comment′ : String → Instruction
+      assign′ : String → AssignmentOperation → COp → Instruction
+      declare′ : String → S ℓ → Instruction
+      loop′ : Ix s → Program → Instruction
+      free′ : String → Instruction
+
+    Program : Set
+    Program = List Instruction
+
+
+  data Val : Ty → Set where
+    C : Val C
+    N : Val N
+
+  translate-Ty : (τ : Ty) → Set
+  translate-Ty C = COp
+  translate-Ty N = NOp
+  translate-Ty (ix s) = Ix s
+  translate-Ty (τ ⇒ τ₁) = translate-Ty τ → State ℕ (translate-Ty τ₁)
+
   arit-eval : ∀ {τ : Ty} → Arit translate-Ty τ → State ℕ (translate-Ty τ)
   arit-eval (var x) = return x
-  arit-eval (lam x) = return (arit-eval ∘ x)
+  arit-eval (lam x) = return (arit-eval ∘ x) 
   arit-eval (app f x) = do
     f′ ← arit-eval f
     x′ ← arit-eval x
     f′ x′
-  arit-eval (sizeN {s = s} x) =
-    return $ printf "%u" $ clen s
+  arit-eval (sizeN {s = s} _) = return $ Nconst (clen s)
   arit-eval (posiN i r) = do
     i′ ← arit-eval i
-    return $ ix-flat-index (resh-ix (ν-flattenᵣ ∙ rev r) i′)
+    return $ Niota $ resh-ix (ν-flattenᵣ ∙ rev r) i′
   arit-eval (spliₗ x) = do
     (i ⊗ _) ← arit-eval x
     return i
@@ -215,55 +244,26 @@ module _ where
   arit-eval (x *N y) = do
     x′ ← arit-eval x
     y′ ← arit-eval y
-    return $ parens $ x′ <+> "*" <+> y′
+    return $ Nmult x′ y′
   arit-eval (x *C y) = do
     x′ ← arit-eval x
     y′ ← arit-eval y
-    return $ parens $ x′ <+> "*" <+> y′
+    return $ Cmult x′ y′
   arit-eval (ω` x y) = do
     x′ ← arit-eval x
     y′ ← arit-eval y
-    return $ parens $ "minus_omega(" ++ x′ ++ "," <+> y′ ++ ")"
+    return $ ω x′ y′
 ```
 
 We can then create a function which takes this evaluated form into string form.
-This feels wrong however, as the array case is blatantly useless.......
 ```agda
-  evaled-to-str : Num τ → translate-Ty τ → State ℕ String
-  evaled-to-str (C) x = return x
-  evaled-to-str (N) x = return x
-  evaled-to-str ((arr {s = s} num-τ)) xs = do
-    i ← new-Ix s
-    x ← xs i
-    evaled-to-str (num-τ) x
-
-  translate-Arit : Num τ → Arit translate-Ty τ → State ℕ String
-  translate-Arit a b = evaled-to-str a =<< arit-eval b
-```
-
-One curiosity here is that the sizeN case needs the successor of length, this 
-is suspicious to me and hints that there MAY be an issue with my implementation 
-of `natMon` (where `U = Fin ∘ suc`)
-```agda
-  module Arit-Test where
-    Test-complexMult : Arit translate-Ty C 
-    Test-complexMult = ((var "VarA") *C (var "VarB"))
-    
-    Test-size₁ : Arit translate-Ty N
-    Test-size₁ = sizeN (var (ι (ν {2} "VarA")))
-
-    Test-size₂ : Arit translate-Ty N
-    Test-size₂ = sizeN (var (ι (ν {4} "VarA") ⊗ ι (ν {3} "VarB")))
-
-    Test-lambda : Arit translate-Ty N
-    Test-lambda = app ( `λ x ⇒ (var x) *N (var "VarA") ) (var {translate-Ty} {N} "VarB")
-
-{-
-open Arit-Test
-entry : String
-entry = (runState (translate-Arit (num N) Test-size₂) 0) .proj₂
--}
-
+  evaled-to-str : Val τ → translate-Ty τ → String
+  evaled-to-str C (var x) = x
+  evaled-to-str C (Cmult op₁ op₂) = printf "(%s * %s)" (evaled-to-str C op₁) (evaled-to-str C op₂)
+  evaled-to-str C (ω op₁ op₂) = printf "minus_omega(%s, %s)" (evaled-to-str N op₁) (evaled-to-str N op₂)
+  evaled-to-str N (Nconst x) = showℕ x
+  evaled-to-str N (Niota i) = ix-flat-index i
+  evaled-to-str N (Nmult op₁ op₂) = printf "(%s * %s)" (evaled-to-str N op₁) (evaled-to-str N op₂)
 ```
 
 # C Helpers
@@ -313,13 +313,6 @@ module _ where
   commentBlock : String → String → String
   commentBlock comment body = printf "//Start: %s\n%s//End: %s\n" comment body comment
 
-  calloc : String → S ℓ → State ℕ (String × String × String)
-  calloc type s = do  
-    memName ← fresh-var
-    let ops = assignment (ArCast (just memName) s) $ (ArCast nothing s) ++ (calloc-op type (clen s))
-    let free = printf "free(%s);\n" memName
-    return $ memName , ops , free
-
   -- Placeholder ix
   β : Ix s 
   β {.zz} {ν x} = ν "β"
@@ -331,22 +324,78 @@ module _ where
   showIx {.zz} {ν n} (ν i) = printf "%s < %u, " i (suc n)
   showIx {.(ss _)} {ι s} (ι i) = showIx i
   showIx {.(ss _)} {s ⊗ s₁} (i₁ ⊗ i₂) = showIx i₁ ++ showIx i₂
+
+  calloc : String → S ℓ → State ℕ (String × Instruction × Instruction)
+  calloc type s = do  
+    memName ← fresh-var
+    let ops = declare′ memName s
+    let free = free′ memName
+    return $ memName , ops , free
 ```
+
+# C AST
+
+If I create a small AST representing C, then migrating from ℂ to ℝ × ℝ should 
+become trivial as we can make the change in the next translation step
+
+```agda
+
+--lines : String → List String
+
+showAssignmentOperation : AssignmentOperation → String
+showAssignmentOperation ≔ = "="
+showAssignmentOperation += = "+="
+
+showValue : COp → String
+showValue = evaled-to-str C
+
+--- THIS IS VERY CHEATY
+--{-# TERMINATING #-}
+--- This is less cheaty but not great either
+{-# NON_TERMINATING #-}
+mutual
+  showInstruction : Instruction → String
+  showInstruction (comment′ x) = unlines $ List.map ("//" <+>_) $ lines x
+  showInstruction (assign′ var′ op′ val′) = var′ <+> (showAssignmentOperation op′) <+> showValue val′
+  showInstruction (loop′ i ins) = loopnest i (showProgram ins)
+  showInstruction (free′ x) = printf "free(%s)" x
+  showInstruction (declare′ memName s) = printf "%s = %s" (ArCast (just memName) s) (calloc-op "complex real" (clen s))
+
+  showProgram  : Program → String
+  showProgram = unlines ∘ List.map (_++ ";") ∘ List.map showInstruction 
+
+
+  {-
+  --Some playing with the Writer monad, this could have been nice if I could get it to play with State ℕ 
+  open import Effect.Monad.Writer 
+  open import Effect.Monad.Writer.Transformer
+  open import Algebra using (RawMonoid)
+    
+  ProgramMonad : RawMonoid _ _
+  ProgramMonad = record { Carrier = Program ; _≈_ = _≡_ ; _∙_ = _++ₗ_ ; ε = [] }
+
+  open import Data.Unit
+  step′ : (Ix s → String) → Inp translate-Ty s → WriterT ProgramMonad (State ℕ) ⊤
+  step′ xs inp = do
+    mkWriterT λ { x → ? }
+    -}
+```
+
 
 # C Translation
 
 Finally we can move to our C translation
 
 ```agda
-step₁ : (Ix s → String) → Inp translate-Ty s → (State ℕ String)
+step₁ : (Ix s → String) → Inp translate-Ty s → (State ℕ Program)
 step₁ ar (imap` arit) = do
   i ← new-Ix _
-  arit-string ← translate-Arit C (app (app arit (var i)) (var (ar i)))
-  return $ commentBlock "imap" $ loopnest i (assignment (ar i) arit-string)
+  arit′ ← arit-eval (app (app arit (var i)) (var (var (ar i))))
+  return $ [ loop′ i [ assign′ (ar i) ≔ arit′ ]ₗ ]ₗ
 step₁ xs (compose inp₁ inp₂) = do
   ins₁ ← step₁ xs inp₁ 
   ins₂ ← step₁ xs inp₂
-  return $ commentBlock "compose" $ ins₁ ++ "//Middle: compose\n" ++ ins₂
+  return $ ins₁ ++ₗ ins₂
 step₁ xs (mapSum` {u} arit) = do
   memName , assign , free ← calloc complex-type (ι (ν u))
 
@@ -354,39 +403,33 @@ step₁ xs (mapSum` {u} arit) = do
   j ← new-Ix (ι (ν u))
   k ← new-Ix (ι (ν u))
 
-  op ← translate-Arit C $ app (app (app arit (`λ l ⇒ (var (xs l)))) (var i)) (var j)
-  let body = loopnest j $ loopnest i $ +assignment (ix-to-str i memName) op
+  op ← arit-eval $ app (app (app arit (`λ l ⇒ (var (var (xs l))))) (var i)) (var j)
 
-  let copyBack = loopnest k $ assignment (xs k) (ix-to-str k memName)
-  
-  return $ commentBlock "mapSum" $ assign ++ body ++ copyBack ++ free
+  let body = loop′ j [ loop′ i [ assign′ (ix-to-str i memName) += op ]ₗ ]ₗ
+
+  let copyBack = loop′ k [ assign′ (xs k) ≔ (var (ix-to-str k memName)) ]ₗ
+  return $ assign ∷ body ∷ copyBack ∷ [ free ]ₗ
 step₁ xs (copyOut` {_} {s} {p} r₁ r₃ inp) = do 
-  -- Create the working memory
   workingMem , assign , free ← calloc complex-type p
 
-  -- Copy out
   i ← new-Ix s
-  let copyOutOp = "//" <+> (showResh r₁) ++ "\n" 
-               ++ loopnest i (assignment (ix-to-str (resh-ix r₁ i) workingMem) (xs (ι i)))
+  let copyOutOp = comment′ (showResh r₁)
+                ∷ [ loop′ i [ assign′ (ix-to-str (resh-ix r₁ i) workingMem) ≔ (var (xs (ι i))) ]ₗ ]ₗ
 
-  -- Do the inside operations
-  let op-f = step₁ (flip ix-to-str workingMem) inp
-  op ← op-f
+  op ← step₁ (flip ix-to-str workingMem) inp
 
-  -- Copy back in
   j ← new-Ix s
-  let copyInOp = "//" <+> (showResh r₃) ++ "\n"
-              ++ loopnest j (assignment (xs (ι j)) (ix-to-str (resh-ix (rev r₃) j) workingMem))
+  let copyInOp = comment′ (showResh r₃)
+              ∷ [ loop′ j [ assign′ (xs (ι j)) ≔ (var (ix-to-str (resh-ix (rev r₃) j) workingMem)) ]ₗ ]ₗ
 
-  let ops = assign ++ copyOutOp ++ op ++ copyInOp ++ free
-  return $ commentBlock "copyOut" $ ops
+  return $ [ assign ]ₗ ++ₗ copyOutOp ++ₗ op ++ₗ copyInOp ++ₗ [ free ]ₗ
 step₁ xs (part` {_} {s} {p} s⊂p inp) = do
   i ← new-Ix s
   let ys = λ j → xs (resh-ix (rev (to-resh s⊂p)) (i ⊗ j))
 
   op ← step₁ ys inp
 
-  return $ commentBlock "part" $ loopnest i op
+  return $ [ loop′ i op ]ₗ
 
 inp→f : Inp translate-Ty s → String → String
 inp→f {_} {s} inp function-name = runState inp→f′ 0 .proj₂
@@ -394,8 +437,8 @@ inp→f {_} {s} inp function-name = runState inp→f′ 0 .proj₂
     inp→f′ : State ℕ String
     inp→f′ = do
       var-name ← fresh-var
-      let f = step₁ (flip ix-to-str var-name) inp
-      body ← f
+      f ← step₁ (flip ix-to-str var-name) inp
+      let body = showProgram f
       return $ printf "void %s(%s) {\n%s}\n" function-name (ArCast (just var-name) s) body 
 
 inp-signature : Inp translate-Ty s → String → String
@@ -412,42 +455,6 @@ sizeDef s name =     (printf "#ifndef %s_SIZE\n" name)
 
 ```agda
 module _ where
-  -- Name inspired by hit song uptown funk, which sounds similar to up-down-funk
-  funk : ∀ {s p : S ℓ} → Reshape s p → Reshape (ι s) (ι p)
-  funk r = up (down r)
-
-  mini₃ : ∀ {s : S zz} → Inp translate-Ty (ι s) 
-  mini₃ {ν u} = mapSum` (`λ x ⇒ `λ i ⇒ var x)
-
-  mini₄ : Inp translate-Ty (ι (ν 3) ⊗ ι (ν 5)) 
-  mini₄ = part` (ri _⊆_.id) (imap` (`λ i ⇒ `λ x ⇒ var x *C (ω` (sizeN (var i)) (posiN (var i) eq))))
-
-  open import Matrix.Leveled.NatMon-Change-Major
-  open Change-Major ℕ-CM
-
-  id` : Inp translate-Ty s 
-  id` = imap` (`λ i ⇒ `λ x ⇒ var x)
-
-  -- Working
-  test₃ : String
-  test₃ = inp→f (test₃′ (ι (ι (ν 1)) ⊗ ι (ι (ν 2)))) "CMtTest3" 
-    where
-      test₃′ : ∀ (s : S (ss (ss zz))) → Inp translate-Ty (ι s) 
-      test₃′ s = copyOut` (rev CMᵗ) CMᵗ id`
-
-  -- Working
-  test₄ : String
-  test₄ = inp→f (test₄′ (ι (ι (ν 1)) ⊗ ι (ι (ν 2)))) "CMtTest4" 
-    where
-      test₄′ : ∀ (s : S (ss (ss zz))) → Inp translate-Ty (ι s) 
-      test₄′ s = copyOut` (rev transpᵣ) CMᵗ id`
-
-  -- let s =  ((ι (ι (ν 1) ⊗ ι (ν 1))) ⊗  (ι (ι (ν 1))))
-  test₅ : String
-  test₅ = inp→f (test₅′ (ι (((ι (ν 1)) ⊗ (ι (ν 2))) ⊗ (ι (ν 3))))) "CMtTest5" 
-    where
-      test₅′ : ∀ (s : S (ss (ss zz))) → Inp translate-Ty (ι s) 
-      test₅′ s = copyOut` (rev transpᵣ) transpᵣ id`
 
   fftn-test-sig′ : S (ss (ss zz)) → String
   fftn-test-sig′ s = inp-signature (fftn` s) "fftn"

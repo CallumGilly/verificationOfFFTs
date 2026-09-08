@@ -26,4 +26,3 @@ clean:
 	rm -f generated/*
 	rm -f CGenerator
 	rm -f program
-	rm -f FFT
