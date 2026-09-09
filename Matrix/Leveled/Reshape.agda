@@ -300,6 +300,17 @@ module Matrix.Leveled.Reshape (M : Mon) where
   resh-length assoₗ = sym asso
   resh-length assoᵣ = asso
 
+  resh-u-flatten : ∀ {l l′ : L} {s : S l} {s′ : S l′} → Reshape s s′ → u-flatten s ≡ u-flatten s′
+  resh-u-flatten eq = refl
+  resh-u-flatten (r₁ ∙ r₂) = resh-u-flatten r₂ ⊡ resh-u-flatten r₁
+  resh-u-flatten (r₁ ⊕ r₂) = cong₂ _●_ (resh-u-flatten r₁) (resh-u-flatten r₂)
+  resh-u-flatten (up r) rewrite resh-u-flatten r = refl
+  resh-u-flatten (down r) rewrite resh-u-flatten r = refl
+  resh-u-flatten flat = refl
+  resh-u-flatten unflat = refl
+  resh-u-flatten swap = comm
+  resh-u-flatten assoₗ = sym asso
+  resh-u-flatten assoᵣ = asso
 
   resh₂-length : ∀ {l₁ l₂ l₃ : L} {s : S l} {s₁ : S l₁} {s₂ : S l₂} 
                → Reshape s s₁

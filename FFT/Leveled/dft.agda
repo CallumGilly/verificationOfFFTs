@@ -64,6 +64,27 @@ module ℕ-dft′ where
   twiddles : ∀ {s p : S (ss ℓ)} → P s → P p → ℂ
   twiddles {_} {s} {p} i j = ℕ-twiddles (length s *ₙ length p) i j
 
+  open import Matrix.Leveled.IotaHelper ℕ-Mon
+
+{-
+Change-Major.BaseCM ℕ-CM {s} {p} = subst 
+                                      (λ x → Reshape 
+                                              (ν x) 
+                                              (ν ((u-flatten (flatten-z p)) * (u-flatten (flatten-z s)) + (u-flatten (flatten-z p)) + (u-flatten (flatten-z s))))
+                                      )
+                                      (∘-suc-lemma₂ (u-flatten (flatten-z s)) (u-flatten (flatten-z p))) 
+                                      eq 
+                                      -}
+
+  CM-isInplace : ∀ {s p : S (ss ℓ)} → InplaceReshape (CM {_} {s} {p})
+  CM-isInplace {zz} {s} {p} = (Inplace-rev _ flatten-z-isInplace) ∙ ({-subst InplaceReshape ? -} ?) ∙ flatten-z-isInplace
+  CM-isInplace {ss ℓ} {s} {p} = (Inplace-rev _ flatten-z-isInplace) ⊕ (Inplace-rev _ flatten-z-isInplace) ∙ CM-isInplace ∙ flatten-z-isInplace ⊕ flatten-z-isInplace
+
+  CMᵗ-isInplace : ∀ {s : S ℓ} → InplaceReshape (CMᵗ {_} {s})
+  CMᵗ-isInplace {zz} {ν x} = eq
+  CMᵗ-isInplace {ss ℓ} {ι s} = eq
+  CMᵗ-isInplace {ss ℓ} {s₁ ⊗ s₂} = CMᵗ-isInplace ⊕ CMᵗ-isInplace ∙ CM-isInplace
+
   twiddles-CMᵗᵣ-lemma : ∀ {s p : S (ss ℓ)}
                       → ∀ (i : P s) 
                       → ∀ (j : P p) 
@@ -79,9 +100,7 @@ module ℕ-dft′ where
         )
   --rewrite length-transp p₁ | length-transp p₂ = cong₂ -ω ? ?
 
-  open import Matrix.Leveled.IotaHelper ℕ-Mon
 
-  open import Data.Unit 
 
   twiddles-flatten-zᵣ-lemma : ∀ {s p : S (ss (ss ℓ))}
                             → ∀ (i : P (flatten-z s))

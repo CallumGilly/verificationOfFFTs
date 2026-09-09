@@ -40,6 +40,9 @@ module Matrix.Leveled.IotaHelper (M : Mon) where
       flat   : ∀ {n m : U} → InplaceReshape (flat {n} {m})
       unflat : ∀ {n m : U} → InplaceReshape (unflat {n} {m})
 
+    Inplace-rev : ∀ {s : S ℓ} {s′ : S ℓ′} → ∀ (r : Reshape s s′) → InplaceReshape r → InplaceReshape (rev r)
+    Inplace-rev = ?
+
     isInplace : ∀ {s : S ℓ} {s′ : S ℓ′} → (r : Reshape s s′) → Maybe (InplaceReshape r)
     isInplace eq        = just eq
     isInplace (r₁ ∙ r₂) = zipM (isInplace r₁) (isInplace r₂) ⟫= uncurry (just ∘₂′ _∙_) 
@@ -63,11 +66,18 @@ module Matrix.Leveled.IotaHelper (M : Mon) where
     fromJust : ∀ {A} → (x : Maybe A) → isJust x → A
     fromJust (just x) tt = x
 
+
+    u-flat-id-isInplace : ∀ {s₁} → InplaceReshape (u-flatten-z-id {s₁})
+    u-flat-id-isInplace {ν x} = eq
+
     -- It's very annoying that reshapes constructed from splitting on the shape apparently cannot use the fromJust isInplace "Tactic"
-    flatten-z-isInplace : {s : S (ss (ss ℓ))} 
-       → InplaceReshape {_} {_} {s} flatten-zᵣ
-    flatten-z-isInplace {ℓ} {ι s} = down eq
-    flatten-z-isInplace {ℓ} {s ⊗ s₁} = flatten-z-isInplace ⊕ flatten-z-isInplace
+    flatten-z-isInplace : {s : S (ss ℓ)} → InplaceReshape (flatten-zᵣ {_} {s})
+    flatten-z-isInplace {zz} {ι s} = down eq
+    flatten-z-isInplace {zz} {s₁ ⊗ s₂} = flat ∙ ((up u-flat-id-isInplace ∙ flatten-z-isInplace) ⊕ (up u-flat-id-isInplace ∙ flatten-z-isInplace))
+    flatten-z-isInplace {ss ℓ} {ι s} = down eq
+    flatten-z-isInplace {ss ℓ} {s ⊗ s₁} = flatten-z-isInplace ⊕ flatten-z-isInplace
+
+    
   {-
   For the DFT≡FFT proofs, we need to prove equality over iota ALLOT, the 
   theory I had here was as follows:
@@ -80,6 +90,7 @@ module Matrix.Leveled.IotaHelper (M : Mon) where
 
   -}
   
+  {-
   module _ where
     open import Function
     private variable
@@ -147,6 +158,7 @@ module Matrix.Leveled.IotaHelper (M : Mon) where
                    ⊡ helper₁ {_} {_} x i 
                    ⊡ lemma₃ (ι (ν n)) x i
                    ⊡ (sym (iota≡iota-♭ i))
+     -}
 
     {-
     inplaceReshape→iota≡ : ∀ {r₁ : Reshape (ι (ν n)) s} 
@@ -162,19 +174,40 @@ module Matrix.Leveled.IotaHelper (M : Mon) where
     -}
     open Inverse
 
+    lem₁ : ∀ {s q : S ℓ} → length s ≡ length q → u-flatten s ≡ u-flatten q
+    lem₁ {.zz} {ν x₁} {ν x₂} x = x
+    lem₁ {.(ss _)} {ι s} {ι q} x = lem₁ {_} {s} {q} x 
+    lem₁ {.(ss _)} {ι s} {q₁ ⊗ q₂} x = ?
+    lem₁ {.(ss _)} {s ⊗ s₁} {q} x = ?
+
     thm₁ : ∀ {s : S ℓ} {s′ : S ℓ′}
          → ∀ (r : Reshape s′ s)
          → InplaceReshape r
          → (i : P s) → iota′ (i ⟨ r ⟩ ⟨ rev ν-flattenᵣ ⟩) ≡ iota′ (i ⟨ rev ν-flattenᵣ ⟩)
     thm₁ eq eq i = refl
     thm₁ (r₁ ∙ r₂) (x₁ ∙ x₂) i = thm₁ r₂ x₂ (i ⟨ r₁ ⟩) ⊡ thm₁ r₁ x₁ i
-    thm₁ (r₁ ⊕ r₂) (x₁ ⊕ x₂) (i₁ ⊗ i₂) = ?  
+    thm₁ (_⊕_ {s = s} {p} {q} {t} r₁ r₂) (x₁ ⊕ x₂) (i₁ ⊗ i₂) with sym (resh-u-flatten r₁) | sym (resh-u-flatten r₂)
+    thm₁ (_⊕_ {s = s} {p} {q} {t} r₁ r₂) (x₁ ⊕ x₂) (i₁ ⊗ i₂) | a | b = ?
+      
+
+
+      {-
+          cong 
+            --{} 
+            --{} 
+            iota′ 
+            {((ι ((i₁ ⟨ r₁ ⟩) ⟨ rev ν-flattenᵣ ⟩) ⊗ ι ((i₂ ⟨ r₂ ⟩) ⟨ rev ν-flattenᵣ ⟩)) ⟨ unflat ⟩)}
+            {let x = ((ι (i₁ ⟨ rev ν-flattenᵣ ⟩) ⊗ ι (i₂ ⟨ rev ν-flattenᵣ ⟩)) ⟨ unflat ⟩) in 
+             let y = subst P (cong ν (cong₂ _●_ a b)) x in 
+             let z = ((ι (i₁ ⟨ rev ν-flattenᵣ ⟩) ⊗ ι (i₂ ⟨ rev ν-flattenᵣ ⟩)) ⟨ unflat ⟩) in ? }
+            ?
+        -}
     thm₁ (up r) (up x) (ι i) = thm₁ r x i
     thm₁ (down r) (down x) i = thm₁ r x i
     thm₁ (flat {m} {n}) flat (ν x) = cong toU ( inverse (pair-law m n) .proj₂ refl )
     thm₁ unflat unflat (ι i ⊗ ι j) = refl
     thm₁ swap () i
-    thm₁ assoₗ assoₗ (i ⊗ (i₁ ⊗ i₂)) = ?
+    thm₁ {ss ℓ} {ss ℓ′} {s₁ ⊗ (s₂ ⊗ s₃)} {(.s₁ ⊗ .s₂) ⊗ .s₃} assoₗ assoₗ (i₁ ⊗ (i₂ ⊗ i₃)) = ?
     thm₁ assoᵣ assoᵣ i = ?
     --thm₁ eq eq i = refl
     --thm₁ (r ∙ r₁) (x ∙ x₁) i = thm₁ ? ? (i ⟨ r ⟩) ⊡ ?

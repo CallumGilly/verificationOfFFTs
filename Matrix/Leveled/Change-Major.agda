@@ -168,7 +168,7 @@ record Change-Major : Set₁ where
     CMᵗ-lemma : ∀ {s p : S (ss l)} 
               → ∀ (i : P (transp (s ⊗ p)))
               → i ⟨ CM ∙ (CMᵗ ⊕ CMᵗ) ⟩ ≡ i ⟨ (CMᵗ ⊕ CMᵗ) ∙ CM ⟩
-    CMᵗ-lemma {zz} {s} {p} (i ⊗ j) = ?
+    CMᵗ-lemma {zz} {s} {p} (i ⊗ j) = ?   
     CMᵗ-lemma {ss l} {s} {p} (i ⊗ j) = ?
     --CMᵗ-lemma {zz} {s} {p} (i ⊗ j) = ?
     --CMᵗ-lemma {ss l} {s} {p} (i ⊗ j)  = ?

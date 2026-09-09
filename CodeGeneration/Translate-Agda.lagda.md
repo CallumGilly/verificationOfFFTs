@@ -80,7 +80,7 @@ We can then see what our fftn translates into
 
 ```agda
 open import Data.Fin.Base
-open import Data.Nat
+open import Data.Nat.Base
 
 private variable
   ℓ : L
@@ -92,6 +92,11 @@ lemma₁ : ∀ {s : S (ss ℓ)}
        → ∀ (xs : Ar s ℂ)
        → ∀ (i : P s)
        → translate-Inp (pre-ufft` FT-Inp) xs i ≡ pre-ufft FT twiddles xs i
+lemma₁ {ℓ} {ι s} FT-Inp FT prf xs (ι i) = prf xs (ι i)
+-- THIS CONCERNS ME!!
+--- Why (tf) does the twiddle of pre-ufft not get transposed while the twiddle of pre-ufft` does ?!?!
+--- (Correct behavior is that the twiddle does get transposed)
+lemma₁ {ℓ} {s₁ ⊗ s₂} FT-Inp FT prf xs (i₁ ⊗ i₂) = ?
 
 lemma₂ : ∀ {s : S (ss ℓ)} 
        → ∀ (FT-Inp : ∀ {p : S ℓ} → Inp translate-Ty (ι p))
@@ -101,12 +106,26 @@ lemma₂ : ∀ {s : S (ss ℓ)}
        → ∀ (i : P s)
        → translate-Inp (post-ufft` FT-Inp) xs i ≡ post-ufft FT twiddles xs i
 
+lemma₃ : ∀ {s : S (ss (ss zz))}
+       → ∀ (i : P (ι s))
+       → i ⟨ up (CMᵗ ∙ rev transpᵣ )⟩ ≡ i ⟨ up eq ∙ (CMᵗ ∙ rev transpᵣ) ⟩ 
+lemma₃ (ι i) = refl
+
 prf : ∀ {s : S (ss (ss zz))}
     → ∀ (xs : Ar s ℂ)
     → ∀ (i  : P (ι s))
     → translate-Inp (fftn` s) (reshape (up eq) xs) i ≡ fftn xs (i ⟨ up eq ⟩)
+prf xs i rewrite  
+  lemma₃ i = lemma₂ 
+    (copyOut` (rev transpᵣ) CMᵗ (pre-ufft` dft`)) 
+    ? 
+    ? 
+    ? 
+    (i ⟨ up eq ∙ (CMᵗ ∙ rev transpᵣ) ⟩) ⊡ ?
+    {-
 prf {ι (ι (ν _))} _ (ι (ι (ι _))) = refl
 prf {ι (s₁ ⊗ s₂)} xs (ι (ι (i₁ ⊗ i₂))) = ?
 prf {s ⊗ s₁} xs i = ?
+-}
 
 ```

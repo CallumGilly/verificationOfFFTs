@@ -185,7 +185,7 @@ Our evaluator is going to evaluate all lambda calculus, while the translator
 will stringify this into something which can be used in C. 
 
 ```agda
-open import Data.List as List renaming (_++_ to _++ₗ_; [_] to [_]ₗ; map to mapₗ)
+open import Data.List.Base as List renaming (_++_ to _++ₗ_; [_] to [_]ₗ; map to mapₗ)
 module _ where
 
   data NOp : Set where
@@ -280,12 +280,6 @@ module _ where
   loopnest (ι s) = loopnest s
   loopnest (s ⊗ s₁) = loopnest s ∘ loopnest s₁
 
-  assignment : String → String → String
-  assignment = printf "%s = %s;\n"
-
-  +assignment : String → String → String
-  +assignment = printf "%s += %s;\n"
-  
   ShapeCast′ : Bool → S ℓ → String
   ShapeCast′ isLeft (ι s) = ShapeCast′ isLeft s
   ShapeCast′ isLeft (s₁ ⊗ s₂) = ShapeCast′ isLeft s₁ ++ ShapeCast′ false s₂
@@ -301,18 +295,6 @@ module _ where
 
   commentBlock : String → String → String
   commentBlock comment body = printf "//Start: %s\n%s//End: %s\n" comment body comment
-
-  -- Placeholder ix
-  β : Ix s 
-  β {.zz} {ν x} = ν "β"
-  β {.(ss _)} {ι s} = ι β
-  β {.(ss _)} {s₁ ⊗ s₂} = β ⊗ β
-
-
-  showIx : Ix s → String 
-  showIx {.zz} {ν n} (ν i) = printf "%s < %u, " i (suc n)
-  showIx {.(ss _)} {ι s} (ι i) = showIx i
-  showIx {.(ss _)} {s ⊗ s₁} (i₁ ⊗ i₂) = showIx i₁ ++ showIx i₂
 
   calloc : String → S ℓ → State ℕ ((String → String) × Instruction × Instruction)
   calloc type s = do  
@@ -345,10 +327,14 @@ module _ where
   showValue : COp → String
   showValue = evaled-to-str C
 
+  map′ : ∀ {A B : Set} → (A → B) → List A → List B
+  map′ f []       = []
+  map′ f (x ∷ xs) = f x ∷ map′ f xs
+
   --- THIS IS VERY CHEATY
-  --{-# TERMINATING #-}
+  {-# TERMINATING #-}
   --- This is less cheaty but not great either
-  {-# NON_TERMINATING #-}
+  --{-# NON_TERMINATING #-}
   mutual
     showInstruction : Instruction → String
     showInstruction (comment′ x) = unlines $ List.map ("//" <+>_) $ lines x
@@ -358,7 +344,7 @@ module _ where
     showInstruction (declare′ memName s) = printf "%s = %s" (ArCast (just (memName "")) complex-type s) (calloc-op "complex real" (clen s))
 
     showProgram  : Program → String
-    showProgram = unlines ∘ List.map (_++ ";") ∘ List.map showInstruction 
+    showProgram = unlines ∘ map′ (_++ ";") ∘ map′ showInstruction 
 
 module _ where
 
