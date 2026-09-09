@@ -361,6 +361,10 @@ module _ where
     showProgram = unlines ∘ List.map (_++ ";") ∘ List.map showInstruction 
 
 module _ where
+
+  evil : String
+  evil = "knievel"
+
   data Component : Set where
     re : Component
     im : Component
@@ -404,8 +408,12 @@ module _ where
     showInstruction₂ : Instruction → List String
     showInstruction₂ (comment′ x) = [ unlines $ List.map ("//" <+>_) $ lines x ]ₗ
     showInstruction₂ (assign′ var′ op′ val′) = let
-      inst = λ comp → (prefix-var comp var′) <+> (showAssignmentOperation op′) <+> showCOp₂ comp val′
-      in mapₗ inst $ re ∷ [ im ]ₗ
+      inst₁ = evil                 <+> "=" <+> showCOp₂ re val′
+      inst₂ = (prefix-var im var′) <+> (showAssignmentOperation op′) <+> showCOp₂ im val′
+      inst₃ = (prefix-var re var′) <+> (showAssignmentOperation op′) <+> evil
+      in inst₁ ∷ inst₂ ∷ [ inst₃ ]ₗ
+      --inst = λ comp → (prefix-var comp var′) <+> (showAssignmentOperation op′) <+> showCOp₂ comp val′
+      -- in mapₗ inst $ re ∷ [ im ]ₗ
     showInstruction₂ (declare′ var′ s) = let
       inst = λ comp → printf "%s = %s" (ArCast (just (prefix-var comp var′)) real-type s) (calloc-op real-type (clen s))
       in mapₗ inst $ re ∷ [ im ]ₗ
@@ -488,10 +496,12 @@ inp→f-Real {_} {s} inp function-name = runState inp→f′ 0 .proj₂
       let var-name = _++ var-name′
       f ← step₁ (flip ix-to-str var-name) inp
       let body = showProgram₂ f
-      return $ printf "void %s(%s, %s) {\n%s}\n" 
+      let assignEvil = printf "real %s = 0;" evil
+      return $ printf "void %s(%s, %s) {\n%s\n%s}\n" 
           function-name 
-          (ArCast (just (prefix-var re var-name)) complex-type s) 
-          (ArCast (just (prefix-var im var-name)) complex-type s) 
+          (ArCast (just (prefix-var re var-name)) real-type s) 
+          (ArCast (just (prefix-var im var-name)) real-type s) 
+          assignEvil
           body 
 
 inp-signature-Complex : Inp translate-Ty s → String → String
@@ -504,6 +514,7 @@ sizeDef-Complex : S ℓ → String → String
 sizeDef-Complex s name =     (printf "#ifndef %s_SIZE\n" name)
                   ++ (printf "#define %s_SIZE %u\n" name (clen s))
                   ++ (printf "typedef complex real (*%s_TYPE)%s;\n" name (ShapeCast s))
+                  ++ ("#define ARR_OF_COMPLEX\n")
                   ++ "#endif\n"
 
 sizeDef-Real : S ℓ → String → String

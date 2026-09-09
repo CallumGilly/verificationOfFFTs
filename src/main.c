@@ -15,7 +15,7 @@
 //void testTranspose();
 void testDFTFFT(void);
 //void testDFTFFTCUBE();
-void printer(size_t n, complex real input[], complex real dftOutput[], complex real fftOutput[]);
+void printer(size_t n, complex real input[], complex real dftOutput[], real r_fftOutput[], real i_fftOutput[]);
 
 /*****************************************************************************/
 
@@ -60,6 +60,11 @@ void testDFTFFT(void) {
   complex real(*fftnMem)[fftn_SIZE] = malloc(sizeof(*fftnMem));
   memset(fftnMem, 0, sizeof(*fftnMem));
 
+  real(*r_fftnMem)[fftn_SIZE] = malloc(sizeof(*r_fftnMem));
+  real(*i_fftnMem)[fftn_SIZE] = malloc(sizeof(*i_fftnMem));
+  memset(r_fftnMem, 0, sizeof(*r_fftnMem));
+  memset(i_fftnMem, 0, sizeof(*i_fftnMem));
+
   complex real(*dftOutput)[fftn_SIZE] = malloc(sizeof(*dftOutput));
   memset(dftOutput, 0, sizeof(*dftOutput));
 
@@ -70,14 +75,28 @@ void testDFTFFT(void) {
     x_r = (real)rand()/(real)((real)RAND_MAX/(400.0f));
     x_i = (real)rand()/(real)((real)RAND_MAX/(400.0f));
     (*input)[ai] = x_r + (x_i * I);
+
     (*fftnMem)[ai] = x_r + (x_i * I);
+
+    (*r_fftnMem)[ai] = x_r;
+    (*i_fftnMem)[ai] = x_i;
   }
 
   dft(fftn_SIZE, (*input), (*dftOutput));
   // SPLIT_DFT(fftn_SIZE, ((real (*)[fftn_SIZE])splitDftMem), ((real (*)[fftn_SIZE])dftSplitOutput));
-  fftn((fftn_TYPE)fftnMem);
+  #ifndef ARR_OF_COMPLEX
+    fftn((fftn_TYPE)r_fftnMem, (fftn_TYPE)i_fftnMem);
+  #else
+    fftn((fftn_TYPE)fftnMem);
 
-  printer(fftn_SIZE, *input, *dftOutput, *fftnMem);
+    for (size_t ai = 0; ai < fftn_SIZE; ai++) {
+      (*r_fftnMem)[ai] = creal((*fftnMem)[ai]);
+      (*i_fftnMem)[ai] = cimag((*fftnMem)[ai]);
+    }
+  #endif
+
+  //printer(fftn_SIZE, *input, *dftOutput, *fftnMem);
+  printer(fftn_SIZE, *input, *dftOutput, *r_fftnMem, *i_fftnMem);
 }
 
 /*
@@ -114,7 +133,7 @@ void testDFTFFTCUBE() {
 }
 */
 
-void printer(size_t n, complex real input[], complex real dftOutput[], complex real fftOutput[]) {
+void printer(size_t n, complex real input[], complex real dftOutput[], real r_fftOutput[], real i_fftOutput[]) {
 
   printf("Index, Input-Real, Input-Imag, DFT-Real, DFT-Imag, FFT-Real, FFT-Imag, DFT-FFT-Diff-Real, DFT-FFT-Diff-Imag\n");
   for (size_t ai = 0; ai < n; ai++) {
@@ -124,10 +143,12 @@ void printer(size_t n, complex real input[], complex real dftOutput[], complex r
             cimag((input)[ai]),
             creal((dftOutput)[ai    ]),
             cimag((dftOutput)[ai    ]),
-            creal((fftOutput)[ai    ]),
-            cimag((fftOutput)[ai    ]),
-            fabs(creal((fftOutput)[ai]) - creal((dftOutput)[ai])),
-            fabs(cimag((fftOutput)[ai]) - cimag((dftOutput)[ai]))
+            r_fftOutput[ai],
+            i_fftOutput[ai],
+            //creal((fftOutput)[ai    ]),
+            //cimag((fftOutput)[ai    ]),
+            fabs(((r_fftOutput)[ai]) - creal((dftOutput)[ai])),
+            fabs(((i_fftOutput)[ai]) - cimag((dftOutput)[ai]))
            );
   }
 

@@ -24,25 +24,6 @@ header = "#include <complex.h>\n"
 
 main : Main
 main = run do
-  {-
-  ----- Test Cases -----
-  --let test₁-body = test₁
-  --writeFile "./tests/test1.c" $ header ++ test₁-body
-
-  --let test₂-body = test₂
-  --writeFile "./tests/test2.c" $ header ++ test₂-body
-
-  let test₃-body = test₃
-  writeFile "./tests/test3.c" $ header ++ test₃-body
-
-  let test₄-body = test₄
-  writeFile "./tests/test4.c" $ header ++ test₄-body
-  
-  let test₅-body = test₅
-  writeFile "./tests/test5.c" $ header ++ test₅-body
-  -}
-  
-  
   ----- FFTN -----
 
   --let s = ((ι (ι (ν 1))) ⊗ (ι (ι (ν 1))))
@@ -54,10 +35,12 @@ main = run do
   --let s = ((ι (ι (ν 1) ⊗ (ι (ν 1)))) ⊗ (ι (ι (ν 1))))
   let s = ((ι (ι (ν 2) ⊗ (ι (ν 3)))) ⊗ (ι (ι (ν 4))))
 
-  --let DEF = sizeDef-Complex s "fftn"
-  --writeFile "./generated/FFT.c" $ header ++ DEF ++ (fftn-test-Complex′     s)
-  --writeFile "./generated/FFT.h" $ header ++ DEF ++ (fftn-test-sig-Complex′ s)
-  
+  {-
+  let DEF = sizeDef-Complex s "fftn"
+  writeFile "./generated/FFT.c" $ header ++ DEF ++ (fftn-test-Complex′     s)
+  writeFile "./generated/FFT.h" $ header ++ DEF ++ (fftn-test-sig-Complex′ s)
+  -}
+
   let DEF = sizeDef-Real s "fftn"
   writeFile "./generated/FFT.c" $ header ++ DEF ++ (fftn-test-Real′     s)
   writeFile "./generated/FFT.h" $ header ++ DEF ++ (fftn-test-sig-Real′ s)
