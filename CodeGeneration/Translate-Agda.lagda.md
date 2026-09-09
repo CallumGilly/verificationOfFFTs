@@ -5,7 +5,6 @@ equate to my Agda implementation
 
 open import ComplexNew
 open import Matrix.NatMon
-open import FFT.Leveled.Specification
 open import Matrix.Leveled.NatMon-Change-Major 
 --(spec : FFT-Specification cplx ℕ-Mon ℕ-CM)
 module CodeGeneration.Translate-Agda (cplx : Cplx)  where
@@ -16,6 +15,8 @@ open import Data.Nat renaming (_*_ to _*ₙ_)
 open Cplx cplx
 
 open import FFT.Leveled.dft cplx
+open import FFT.Leveled.Specification cplx ℕ-Mon ℕ-CM
+open FFT-Specification ℕ-dft
 open import FFT.Leveled.UFFT cplx ℕ-Mon --ℕ-CM ℕ-dft
 open import FFT.Leveled.Properties cplx ℕ-Mon ℕ-CM ℕ-dft
 
@@ -81,9 +82,25 @@ We can then see what our fftn translates into
 open import Data.Fin.Base
 open import Data.Nat
 
+private variable
+  ℓ : L
 
+lemma₁ : ∀ {s : S (ss ℓ)} 
+       → ∀ (FT-Inp : ∀ {p : S ℓ} → Inp translate-Ty (ι p))
+       → ∀ (FT : ∀ {p : S ℓ} → Ar p ℂ → Ar p ℂ)
+       → (∀ {p : S ℓ} (xs : Ar (ι p) ℂ) → ∀ i → translate-Inp FT-Inp xs i ≡ FT (reshape (down eq) xs) (i ⟨ up eq ⟩))
+       → ∀ (xs : Ar s ℂ)
+       → ∀ (i : P s)
+       → translate-Inp (pre-ufft` FT-Inp) xs i ≡ pre-ufft FT twiddles xs i
 
-{-
+lemma₂ : ∀ {s : S (ss ℓ)} 
+       → ∀ (FT-Inp : ∀ {p : S ℓ} → Inp translate-Ty (ι p))
+       → ∀ (FT : ∀ {p : S ℓ} → Ar p ℂ → Ar p ℂ)
+       → (∀ {p : S ℓ} (xs : Ar (ι p) ℂ) → ∀ i → translate-Inp FT-Inp xs i ≡ FT (reshape (down eq) xs) (i ⟨ up eq ⟩))
+       → ∀ (xs : Ar s ℂ)
+       → ∀ (i : P s)
+       → translate-Inp (post-ufft` FT-Inp) xs i ≡ post-ufft FT twiddles xs i
+
 prf : ∀ {s : S (ss (ss zz))}
     → ∀ (xs : Ar s ℂ)
     → ∀ (i  : P (ι s))
@@ -91,6 +108,5 @@ prf : ∀ {s : S (ss (ss zz))}
 prf {ι (ι (ν _))} _ (ι (ι (ι _))) = refl
 prf {ι (s₁ ⊗ s₂)} xs (ι (ι (i₁ ⊗ i₂))) = ?
 prf {s ⊗ s₁} xs i = ?
--}
 
 ```
