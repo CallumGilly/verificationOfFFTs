@@ -174,8 +174,8 @@ We then create a converter from ix to subscripts to allow us to stringify them.
   ix-to-subscripts (ι i) = ix-to-subscripts i
   ix-to-subscripts (i ⊗ j) = ix-to-subscripts i ++ ix-to-subscripts j
 
-  ix-to-str : Ix s → (String → String) → (String → String)
-  ix-to-str i name pre = "(*" ++ name pre ++ ")" ++ (ix-to-subscripts i)
+  ix-to-str : Ix s → String → String
+  ix-to-str i name = "(*" ++ name ++ ")" ++ (ix-to-subscripts i)
 
 ```
 
@@ -194,7 +194,7 @@ module _ where
     Nmult : NOp → NOp → NOp
     
   data COp : Set where
-    var : (String → String) → COp
+    var : String → COp
     Cmult : COp → COp → COp
     ω : NOp → NOp → COp
 
@@ -205,10 +205,10 @@ module _ where
   mutual
     data Instruction : Set where
       comment′ : String → Instruction
-      assign′ : (String → String) → AssignmentOperation → COp → Instruction
-      declare′ : (String → String) → S ℓ → Instruction
+      assign′ : String → AssignmentOperation → COp → Instruction
+      declare′ : String → S ℓ → Instruction
       loop′ : Ix s → Program → Instruction
-      free′ : (String → String) → Instruction
+      free′ : String → Instruction
 
     Program : Set
     Program = List Instruction
@@ -314,10 +314,9 @@ module _ where
   showIx {.(ss _)} {ι s} (ι i) = showIx i
   showIx {.(ss _)} {s ⊗ s₁} (i₁ ⊗ i₂) = showIx i₁ ++ showIx i₂
 
-  calloc : String → S ℓ → State ℕ ((String → String) × Instruction × Instruction)
+  calloc : String → S ℓ → State ℕ (String × Instruction × Instruction)
   calloc type s = do  
-    memName′ ← fresh-var
-    let memName = _++ memName′
+    memName ← fresh-var
     let ops = declare′ memName s
     let free = free′ memName
     return $ memName , ops , free
@@ -331,7 +330,7 @@ become trivial as we can make the change in the next translation step
 ```agda
 module _ where
   evaled-to-str : Val τ → translate-Ty τ → String
-  evaled-to-str C (var x) = x ""
+  evaled-to-str C (var x) = x
   evaled-to-str C (Cmult op₁ op₂) = printf "(%s * %s)" (evaled-to-str C op₁) (evaled-to-str C op₂)
   evaled-to-str C (ω op₁ op₂) = printf "minus_omega(%s, %s)" (evaled-to-str N op₁) (evaled-to-str N op₂)
   evaled-to-str N (Nconst x) = showℕ x
@@ -352,10 +351,10 @@ module _ where
   mutual
     showInstruction : Instruction → String
     showInstruction (comment′ x) = unlines $ List.map ("//" <+>_) $ lines x
-    showInstruction (assign′ var′ op′ val′) = (var′ "") <+> (showAssignmentOperation op′) <+> showValue val′
+    showInstruction (assign′ var′ op′ val′) = var′ <+> (showAssignmentOperation op′) <+> showValue val′
     showInstruction (loop′ i ins) = loopnest i (showProgram ins)
-    showInstruction (free′ x) = printf "free(%s)" (x "")
-    showInstruction (declare′ memName s) = printf "%s = %s" (ArCast (just (memName "")) complex-type s) (calloc-op "complex real" (clen s))
+    showInstruction (free′ x) = printf "free(%s)" x
+    showInstruction (declare′ memName s) = printf "%s = %s" (ArCast (just memName) complex-type s) (calloc-op "complex real" (clen s))
 
     showProgram  : Program → String
     showProgram = unlines ∘ List.map (_++ ";") ∘ List.map showInstruction 
@@ -373,13 +372,9 @@ module _ where
   showNOp₂ (Niota (ν i)) = i
   showNOp₂ (Nmult op₁ op₂) = printf "(%s * %s)" (showNOp₂ op₁) (showNOp₂ op₂)
 
-  prefix-string : Component → String → String
-  prefix-string re = printf "r_%s"
-  prefix-string im = printf "i_%s"
-
-  prefix-var : Component → (String → String) → String
-  prefix-var re f = f "r_"
-  prefix-var im f = f "i_"
+  prefix-var : Component → String → String
+  prefix-var re = printf "r_%s"
+  prefix-var im = printf "i_%s"
     
   showCOp₂ : Component → COp → String
   showCOp₂ component (var x) = prefix-var component x
@@ -397,7 +392,7 @@ module _ where
       c = showCOp₂ re op₂
       d = showCOp₂ im op₂
       in printf "((%s * %s) + (%s * %s))" a d b c
-  showCOp₂ component (ω op₁ op₂) = prefix-string component (printf "minus_omega(%s, %s)" (evaled-to-str N op₁) (evaled-to-str N op₂))
+  showCOp₂ component (ω op₁ op₂) = prefix-var component (printf "minus_omega(%s, %s)" (evaled-to-str N op₁) (evaled-to-str N op₂))
 
   {-# NON_TERMINATING #-}
   mutual
@@ -424,7 +419,7 @@ module _ where
 Finally we can move to our C translation
 
 ```agda
-step₁ : (Ix s → (String → String)) → Inp translate-Ty s → (State ℕ Program)
+step₁ : (Ix s → String) → Inp translate-Ty s → (State ℕ Program)
 step₁ ar (imap` arit) = do
   i ← new-Ix _
   arit′ ← arit-eval (app (app arit (var i)) (var (var (ar i))))
@@ -473,19 +468,17 @@ inp→f-Complex {_} {s} inp function-name = runState inp→f′ 0 .proj₂
   where
     inp→f′ : State ℕ String
     inp→f′ = do
-      var-name′ ← fresh-var
-      let var-name = _++ var-name′
+      var-name ← fresh-var
       f ← step₁ (flip ix-to-str var-name) inp
       let body = showProgram f
-      return $ printf "void %s(%s) {\n%s}\n" function-name (ArCast (just (var-name "")) complex-type s) body 
+      return $ printf "void %s(%s) {\n%s}\n" function-name (ArCast (just var-name) complex-type s) body 
 
 inp→f-Real : Inp translate-Ty s → String → String
 inp→f-Real {_} {s} inp function-name = runState inp→f′ 0 .proj₂
   where
     inp→f′ : State ℕ String
     inp→f′ = do
-      var-name′ ← fresh-var
-      let var-name = _++ var-name′
+      var-name ← fresh-var
       f ← step₁ (flip ix-to-str var-name) inp
       let body = showProgram₂ f
       return $ printf "void %s(%s, %s) {\n%s}\n" 

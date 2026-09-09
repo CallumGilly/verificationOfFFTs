@@ -18,10 +18,10 @@ void dft(size_t n, complex real x_0[], complex real dft[]);
   { \
     for (size_t i = 0; i < n; i++) { \
       for (size_t j = 0; j < n; j++) { \
-        ys[0][i] += xs[0][j] * minus_omega_r(n, (j * i)); \
-        ys[0][i] -= xs[1][j] * minus_omega_i(n, (j * i)); \
-        ys[1][i] += xs[0][j] * minus_omega_i(n, (j * i)); \
-        ys[1][i] += xs[1][j] * minus_omega_r(n, (j * i)); \
+        ys[0][i] += xs[0][j] * r_minus_omega(n, (j * i)); \
+        ys[0][i] -= xs[1][j] * i_minus_omega(n, (j * i)); \
+        ys[1][i] += xs[0][j] * i_minus_omega(n, (j * i)); \
+        ys[1][i] += xs[1][j] * r_minus_omega(n, (j * i)); \
       } \
     } \
   }
