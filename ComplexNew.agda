@@ -31,7 +31,7 @@ module ComplexNew where
 
     open AlgebraStructures  {A = ℂ} _≡_
     open AlgebraDefinitions {A = ℂ} _≡_
-    
+
     field
 
       +-*-isCommutativeRing : IsCommutativeRing _+_ _*_ -_ 0ℂ 1ℂ

@@ -21,11 +21,15 @@ private
   
 record Change-Major : Set₁ where
   field
-    BaseCM : ∀ {s p : S (ss zz)} → Reshape (ν (u-flatten (flatten-z s) ● u-flatten (flatten-z p))) (ν (u-flatten (flatten-z p) ● u-flatten (flatten-z s)))
+    --BaseCM : ∀ {s p : S (ss zz)} → Reshape (ν (u-flatten (flatten-z s) ● u-flatten (flatten-z p))) (ν (u-flatten (flatten-z p) ● u-flatten (flatten-z s)))
+    BaseCM : ∀ {m n : U} → Reshape (ν (m ● n)) (ν (n ● m))
+    
+    CM-preserves-order : ∀ {m n : U} (i : P (ν (m ● n)))
+                       → iota′ (i ⟨ BaseCM ⟩) ≡ iota′ i
     
   CM : ∀ {s p : S (ss l)} → Reshape (s ⊗ p) (p ⊗ s)
   CM {zz  } {s} {p} = (rev flatten-zᵣ) 
-                    ∙ BaseCM {s} {p}
+                    ∙ BaseCM -- {u-flatten (flatten-z s)} {u-flatten (flatten-z p)}
                     ∙ flatten-zᵣ
   CM {ss l} {s} {p} = (rev flatten-zᵣ) 
                     ∙ CM {l}
@@ -48,7 +52,7 @@ record Change-Major : Set₁ where
     -- CM with u-flatten and prove they are equivalent
     CM′ : ∀ {s p : S (ss l)} → Reshape (s ⊗ p) (p ⊗ s)
     CM′ {l} {s} {p} = (rev ν-flattenᵣ) 
-                    ∙ BaseCM {ι (ν (u-flatten s))} {ι (ν (u-flatten p))}
+                    ∙ BaseCM {u-flatten s} {u-flatten p}
                     ∙ ν-flattenᵣ
 
     {-
@@ -168,15 +172,12 @@ record Change-Major : Set₁ where
     CMᵗ-lemma : ∀ {s p : S (ss l)} 
               → ∀ (i : P (transp (s ⊗ p)))
               → i ⟨ CM ∙ (CMᵗ ⊕ CMᵗ) ⟩ ≡ i ⟨ (CMᵗ ⊕ CMᵗ) ∙ CM ⟩
-    CMᵗ-lemma {zz} {s} {p} (i ⊗ j) = ?   
+    CMᵗ-lemma {zz} {s} {p} (i ⊗ j) = ?
     CMᵗ-lemma {ss l} {s} {p} (i ⊗ j) = ?
     --CMᵗ-lemma {zz} {s} {p} (i ⊗ j) = ?
     --CMᵗ-lemma {ss l} {s} {p} (i ⊗ j)  = ?
     
   open CMᵗ-prfs public
-
-
-
 
 
 

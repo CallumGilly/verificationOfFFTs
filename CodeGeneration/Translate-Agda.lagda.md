@@ -28,6 +28,13 @@ open Change-Major ℕ-CM
 
 open import CodeGeneration.DSL
 open import Relation.Binary.PropositionalEquality
+
+import Algebra.Structures as AlgebraStructures
+import Algebra.Definitions as AlgebraDefinitions
+open AlgebraStructures  {A = ℂ} _≡_
+open AlgebraDefinitions {A = ℂ} _≡_
+
+open IsCommutativeRing +-*-isCommutativeRing hiding (trans; refl; sym)
 ```
 
 We first need a translation between DSL types, and our Agda types.
@@ -79,49 +86,81 @@ translate-Inp (mapSum` x) xs i = sum ((translate-Arit x) xs i ∘ ι)
 We can then see what our fftn translates into
 
 ```agda
-open import Data.Fin.Base
-open import Data.Nat.Base
-
 private variable
   ℓ : L
+  
+lemma₀ : ∀ {s : S zz} (xs : Ar (ι s) ℂ) (i : P (ι s)) →
+         translate-Inp dft` xs i ≡ dft (reshape (down eq) xs) (i ⟨ up eq ⟩)
+lemma₀ {ν x} xs (ι (ν x₁)) = refl
+
 
 lemma₁ : ∀ {s : S (ss ℓ)} 
        → ∀ (FT-Inp : ∀ {p : S ℓ} → Inp translate-Ty (ι p))
        → ∀ (FT : ∀ {p : S ℓ} → Ar p ℂ → Ar p ℂ)
+       → (∀ {s : S ℓ} → (xs ys : Ar s ℂ) → (∀ (i : P s) → xs i ≡ ys i) → (i : P s) → FT xs i ≡ FT ys i)
        → (∀ {p : S ℓ} (xs : Ar (ι p) ℂ) → ∀ i → translate-Inp FT-Inp xs i ≡ FT (reshape (down eq) xs) (i ⟨ up eq ⟩))
        → ∀ (xs : Ar s ℂ)
        → ∀ (i : P s)
-       → translate-Inp (pre-ufft` FT-Inp) xs i ≡ pre-ufft FT twiddles xs i
-lemma₁ {ℓ} {ι s} FT-Inp FT prf xs (ι i) = prf xs (ι i)
--- THIS CONCERNS ME!!
---- Why (tf) does the twiddle of pre-ufft not get transposed while the twiddle of pre-ufft` does ?!?!
---- (Correct behavior is that the twiddle does get transposed)
-lemma₁ {ℓ} {s₁ ⊗ s₂} FT-Inp FT prf xs (i₁ ⊗ i₂) = ?
+       → translate-Inp (pre-ufft` FT-Inp) xs i ≡ pre-ufft FT (λ i j → twiddles (i ⟨ transpᵣ ⟩) j) xs i
+lemma₁ {ℓ} {ι _} FT-Inp FT _ prf xs (ι i) = prf xs (ι i)
+lemma₁ {ℓ} {s₁ ⊗ s₂} FT-Inp FT FT-cong prf xs (i₁ ⊗ i₂) = 
+    lemma₁ FT-Inp FT FT-cong prf _ i₁ 
+  ⊡ pre-ufft-cong FT-cong _ _ (λ j → *-comm _ _ ⊡ cong₂ _*_ (cong₂ -ω ? refl) (lemma₁ FT-Inp FT FT-cong prf _ i₂)) i₁
 
 lemma₂ : ∀ {s : S (ss ℓ)} 
        → ∀ (FT-Inp : ∀ {p : S ℓ} → Inp translate-Ty (ι p))
        → ∀ (FT : ∀ {p : S ℓ} → Ar p ℂ → Ar p ℂ)
+       → (∀ {s : S ℓ} → (xs ys : Ar s ℂ) → (∀ (i : P s) → xs i ≡ ys i) → (i : P s) → FT xs i ≡ FT ys i)
        → (∀ {p : S ℓ} (xs : Ar (ι p) ℂ) → ∀ i → translate-Inp FT-Inp xs i ≡ FT (reshape (down eq) xs) (i ⟨ up eq ⟩))
        → ∀ (xs : Ar s ℂ)
        → ∀ (i : P s)
-       → translate-Inp (post-ufft` FT-Inp) xs i ≡ post-ufft FT twiddles xs i
+       → translate-Inp (post-ufft` FT-Inp) xs i ≡ post-ufft FT (λ i j → twiddles i (j ⟨ transpᵣ ⟩)) xs i
+lemma₂ {ℓ} {ι _} FT-Inp FT FT-cong prf xs (ι i) = prf xs (ι i)
+lemma₂ {ℓ} {s₁ ⊗ s₂} FT-Inp FT FT-cong prf xs (i₁ ⊗ i₂) =
+      lemma₂ FT-Inp FT FT-cong prf _ i₂
+    ⊡ post-ufft-cong FT-cong _ _ (λ j → *-comm _ _ ⊡ cong₂ _*_ (cong₂ -ω ? ?) (lemma₂ FT-Inp FT FT-cong prf _ i₁)) i₂
 
 lemma₃ : ∀ {s : S (ss (ss zz))}
        → ∀ (i : P (ι s))
        → i ⟨ up (CMᵗ ∙ rev transpᵣ )⟩ ≡ i ⟨ up eq ∙ (CMᵗ ∙ rev transpᵣ) ⟩ 
 lemma₃ (ι i) = refl
 
+lemma₄ : ∀ {s : S ℓ}
+       → ∀ (i : P (ι s))
+       → i ⟨ up CMᵗ ⟩ ≡ i ⟨ up eq ⟩ ⟨ CMᵗ ⟩
+lemma₄ (ι i) = refl
+--fftn` s = copyOut` eq (CMᵗ ∙ rev transpᵣ) (post-ufft` (copyOut` (rev transpᵣ) CMᵗ (pre-ufft` dft`))) 
+
 prf : ∀ {s : S (ss (ss zz))}
     → ∀ (xs : Ar s ℂ)
     → ∀ (i  : P (ι s))
     → translate-Inp (fftn` s) (reshape (up eq) xs) i ≡ fftn xs (i ⟨ up eq ⟩)
 prf xs i rewrite  
+    lemma₃ i 
+  | lemma₄ i = 
+    lemma₂ _ _ ?
+      (λ ys j → 
+          cong (translate-Inp (pre-ufft` dft`) (λ i₁ → ys (ι (i₁ ⟨ rev transpᵣ ⟩)))) (lemma₄ j) 
+        ⊡ lemma₁ dft` dft dft-cong lemma₀ (reshape (down (rev transpᵣ)) ys) (j ⟨ up eq ∙ CMᵗ ⟩)
+      )
+      xs 
+      (i ⟨ up eq ∙ (CMᵗ ∙ rev transpᵣ) ⟩)
+
+
+{-
+rewrite  
   lemma₃ i = lemma₂ 
     (copyOut` (rev transpᵣ) CMᵗ (pre-ufft` dft`)) 
-    ? 
-    ? 
-    ? 
+    (pre-ufft dft (λ i j → twiddles (i ⟨ transpᵣ ⟩) j))
+    ((λ{ xs j → ? }))
+    xs
     (i ⟨ up eq ∙ (CMᵗ ∙ rev transpᵣ) ⟩) ⊡ ?
+    -}
+
+
+
+
+
     {-
 prf {ι (ι (ν _))} _ (ι (ι (ι _))) = refl
 prf {ι (s₁ ⊗ s₂)} xs (ι (ι (i₁ ⊗ i₂))) = ?

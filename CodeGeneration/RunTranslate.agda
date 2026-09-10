@@ -76,6 +76,7 @@ module _ where
 
 
 module _ where
+  {-
   open import System.Random hiding ()
   open InBounds
   open Float using () renaming (randomIO to randFloat; randomRIO to randRFloat)
@@ -86,15 +87,14 @@ module _ where
 
   randAr : ∀ {ℓ : L} → (s : S ℓ) → IO (Ar s ℂ)
   randAr s = ArFromVector ∘ fromVec <$> randVec randℂ (suc $ length s)
+  -}
 
-  {-
   -- Not Random, but not ordered enough to let the dft get away with being silly
   index : ∀ (n : ℕ) → Ar (ν n) ℂ
   index _ (ν j) = ((toℕ j % (suc (toℕ j / 5))) ᵣ) + ((toℕ j % 3) ᵣ) i --toℕ j
 
   randAr : ∀ {ℓ : L} → (s : S ℓ) → IO (Ar s ℂ)
   randAr s = pure (reshape (rev length-flattenᵣ) (index _))
-  -}
 
 
 level : L
@@ -131,7 +131,7 @@ main = run do
 
   --let dftAsVec = ArToVector $ dft (reshape length-flattenᵣ input) 
   -- The followng two lines DO NOT WORK, this is a problem coming (I think) from FFT.Leveled.dft having the spec defined incorrectly...
-  let dftAsVec = ArToVector $ reshape length-flattenᵣ $ reshape CMᵗ (fft dft twiddles (reshape flattenᵣ input))
+  let dftAsVec = ArToVector $ reshape CMᵗ (fft dft twiddles (reshape flatten-zᵣ input))
   --let dftAsVec = ArToVector $ fftn input 
   let fftAsVec = ArToVector $ reshape (down eq) (fft-from-DSL (reshape (up eq) input))
   let diffAsVec = ArToVector $ zeroAr {_} {shape}

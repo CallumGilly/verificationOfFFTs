@@ -35,6 +35,7 @@ post-ufft dft twid {s ⊗ p} a =
       (nest (reshape swap a))
     d = map (post-ufft dft twid {p}) (nest (reshape swap c))
   in (unnest d)
+  --unnest ∘ map (post-ufft dft twid {p}) ∘ nest ∘ reshape swap ∘ unnest ∘ imap (λ i → zipWith _*_ (twid {p} {s} i) ∘ post-ufft dft twid {s}) ∘ nest ∘ reshape swap
 
 pre-ufft : (dft : ∀ {s : S l} → Ar s ℂ → Ar s ℂ)
          → (twid : ∀ {s p : S (ss l)} → P s → P p → ℂ)

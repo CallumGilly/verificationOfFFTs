@@ -1,4 +1,3 @@
-
 Here I define the DSL with which I can model the FFT. 
 I should then be able to define a transpiler from an implementation in the DSL,
 to Agda (to give semantics), and to `C` (to generate for performance).
@@ -21,7 +20,6 @@ open import Function.Base
 
 _⊡_ = trans
 ```
-TODO: I need to provide an implementation of CM-base for the naturals.
 ```agda
 open Change-Major ℕ-CM
 ```
@@ -108,22 +106,22 @@ data Arit (ctxt : Ty → Set) : Ty → Set where
 infix 1 lam
 syntax lam (λ x → e) = `λ x ⇒ e
 ```
-This is also nicer as I no longer need the here there notation.
 
 Here I check that I have setup the lambda calculi correctly by ensuring I can 
 represent the SKI operators
 ```agda
-private variable
-  ctxt : Ty → Set
+module _ where
+  private variable
+    ctxt : Ty → Set
 
-I` : Arit ctxt (τ ⇒ τ)
-I` = lam (λ x → var x)
+  I` : Arit ctxt (τ ⇒ τ)
+  I` = lam (λ x → var x)
 
-K` : Arit ctxt (τ ⇒ σ ⇒ τ)
-K` = lam λ x → lam λ y → var x
--- 
-S` : Arit ctxt ((σ ⇒ δ ⇒ τ) ⇒ (σ ⇒ δ) ⇒ σ ⇒ τ)
-S` = `λ x ⇒ `λ y ⇒ `λ z ⇒ app (app (var x) (var z)) (app (var y) (var z))
+  K` : Arit ctxt (τ ⇒ σ ⇒ τ)
+  K` = lam λ x → lam λ y → var x
+  -- 
+  S` : Arit ctxt ((σ ⇒ δ ⇒ τ) ⇒ (σ ⇒ δ) ⇒ σ ⇒ τ)
+  S` = `λ x ⇒ `λ y ⇒ `λ z ⇒ app (app (var x) (var z)) (app (var y) (var z))
 ```
 
 # The set of in place operations
@@ -136,10 +134,10 @@ infixl 2 _>>>_
 open import Data.Default
 
 data Inp (ctxt : Ty → Set) : {l : L} (s : S l) → Set₁ where
-  compose : ∀ {s₁ : S l} 
-          → Inp ctxt s₁
-          → Inp ctxt s₁
-          → Inp ctxt s₁
+  compose  : ∀ {s₁ : S l} 
+           → Inp ctxt s₁
+           → Inp ctxt s₁
+           → Inp ctxt s₁
   copyOut` : {s : S (ss l)} 
            → {p : S (ss l)}
            → (r₁ : Reshape s p) 
@@ -193,7 +191,7 @@ Both are defined here
 pre-ufft`  : ∀ {ctxt : Ty → Set} → ∀ (lower-ft : ∀ {p : S l} → Inp ctxt (ι p))
           → ∀ {s : S (ss l)} → Inp ctxt s
 pre-ufft` lower-ft {ι s} = lower-ft
-pre-ufft` {_} {ctxt} lower-ft {s ⊗ p} = part` (le sid) (pre-ufft` lower-ft {p})       -- Left ufft
+pre-ufft` lower-ft {s ⊗ p} = part` (le sid) (pre-ufft` lower-ft {p})       -- Left ufft
                              >>> twid` {_} {s} {transp s} {p} {p} transpᵣ eq  -- Twiddles 
                              >>> part` (ri sid) (pre-ufft` lower-ft {s})       -- Right ufft
 

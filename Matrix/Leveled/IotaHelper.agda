@@ -72,10 +72,13 @@ module Matrix.Leveled.IotaHelper (M : Mon) where
 
     -- It's very annoying that reshapes constructed from splitting on the shape apparently cannot use the fromJust isInplace "Tactic"
     flatten-z-isInplace : {s : S (ss ℓ)} → InplaceReshape (flatten-zᵣ {_} {s})
+    flatten-z-isInplace {s = s} = ?
+    {-
     flatten-z-isInplace {zz} {ι s} = down eq
     flatten-z-isInplace {zz} {s₁ ⊗ s₂} = flat ∙ ((up u-flat-id-isInplace ∙ flatten-z-isInplace) ⊕ (up u-flat-id-isInplace ∙ flatten-z-isInplace))
     flatten-z-isInplace {ss ℓ} {ι s} = down eq
     flatten-z-isInplace {ss ℓ} {s ⊗ s₁} = flatten-z-isInplace ⊕ flatten-z-isInplace
+    -}
 
     
   {-
@@ -180,6 +183,17 @@ module Matrix.Leveled.IotaHelper (M : Mon) where
     lem₁ {.(ss _)} {ι s} {q₁ ⊗ q₂} x = ?
     lem₁ {.(ss _)} {s ⊗ s₁} {q} x = ?
 
+    mutual
+    lem₂ : ∀ {s₁ p₁ : S ℓ} {s₂ p₂ : S ℓ′} {r₁ : Reshape s₁ s₂} {r₂ : Reshape p₁ p₂}
+        → InplaceReshape r₁
+        → InplaceReshape r₂
+        → ∀ {i₁ : P s₂}
+        → ∀ {i₂ : P p₂}
+        → iota′ ((ι ((i₁ ⟨ r₁ ⟩) ⟨ rev ν-flattenᵣ ⟩) ⊗ ι ((i₂ ⟨ r₂ ⟩) ⟨ rev ν-flattenᵣ ⟩)) ⟨ unflat ⟩)
+        ≡ iota′ ((i₁ ⟨ r₁ ⟩) ⟨ rev ν-flattenᵣ ⟩) ● iota′ ((i₂ ⟨ r₂ ⟩) ⟨ rev ν-flattenᵣ ⟩)
+    lem₂ {ℓ} {ℓ′} {s₁} {p₁} {s₂} {p₂} {r₁} {r₂} inp₁ inp₂ {i₁} {i₂} with (i₁ ⟨ r₁ ⟩) ⟨ rev ν-flattenᵣ ⟩ | (i₂ ⟨ r₂ ⟩) ⟨ rev ν-flattenᵣ ⟩
+    ... | ν x | ν y = ?
+
     thm₁ : ∀ {s : S ℓ} {s′ : S ℓ′}
          → ∀ (r : Reshape s′ s)
          → InplaceReshape r
@@ -188,9 +202,6 @@ module Matrix.Leveled.IotaHelper (M : Mon) where
     thm₁ (r₁ ∙ r₂) (x₁ ∙ x₂) i = thm₁ r₂ x₂ (i ⟨ r₁ ⟩) ⊡ thm₁ r₁ x₁ i
     thm₁ (_⊕_ {s = s} {p} {q} {t} r₁ r₂) (x₁ ⊕ x₂) (i₁ ⊗ i₂) with sym (resh-u-flatten r₁) | sym (resh-u-flatten r₂)
     thm₁ (_⊕_ {s = s} {p} {q} {t} r₁ r₂) (x₁ ⊕ x₂) (i₁ ⊗ i₂) | a | b = ?
-      
-
-
       {-
           cong 
             --{} 

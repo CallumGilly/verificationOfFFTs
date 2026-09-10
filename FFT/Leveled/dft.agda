@@ -129,13 +129,14 @@ Change-Major.BaseCM ℕ-CM {s} {p} = subst
                         twiddles i j
   twiddles-transₗ-lemma {ℓ} {s} {p} i j = cong₂ -ω 
                                             (cong (_*ₙ _) (resh-length {_} {_} {transp (transp s)} (transpᵣ ∙ transpᵣ))) 
-                                            ?
+                                            ?   
 
   dft≡fft : {s : S (ss zz)}
           (xs : Ar s ℂ) (i : P s) →
           dft (reshape flatten-zᵣ xs) (i ⟨ rev flatten-zᵣ ⟩) ≡
           reshape CMᵗ (fft dft twiddles xs) i
-  dft≡fft = ?
+  dft≡fft {ι s} xs (ι i) = refl
+  dft≡fft {s₁ ⊗ s₂} xs (i₁ ⊗ i₂) = ?
 
 
 ℕ-dft : FFT-Specification
