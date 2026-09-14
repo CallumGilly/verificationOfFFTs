@@ -183,7 +183,6 @@ module Matrix.Leveled.IotaHelper (M : Mon) where
     lem₁ {.(ss _)} {ι s} {q₁ ⊗ q₂} x = ?
     lem₁ {.(ss _)} {s ⊗ s₁} {q} x = ?
 
-    mutual
     lem₂ : ∀ {s₁ p₁ : S ℓ} {s₂ p₂ : S ℓ′} {r₁ : Reshape s₁ s₂} {r₂ : Reshape p₁ p₂}
         → InplaceReshape r₁
         → InplaceReshape r₂
@@ -194,6 +193,23 @@ module Matrix.Leveled.IotaHelper (M : Mon) where
     lem₂ {ℓ} {ℓ′} {s₁} {p₁} {s₂} {p₂} {r₁} {r₂} inp₁ inp₂ {i₁} {i₂} with (i₁ ⟨ r₁ ⟩) ⟨ rev ν-flattenᵣ ⟩ | (i₂ ⟨ r₂ ⟩) ⟨ rev ν-flattenᵣ ⟩
     ... | ν x | ν y = ?
 
+  {-
+    lem₂ : ∀ {n m : U} {i₁ : El n} {i₂ : El m} → iota′ ((ι (ν i₁) ⊗ ι (ν i₂)) ⟨ unflat ⟩) ≡ toU (from (pair-law n m) (i₁ , i₂))
+    --(iota′ (i₁)) ● iota′ (i₂)
+    lem₂ {n} {m} {i₁} {i₂} = refl
+
+    thm₁ : ∀ {s : S ℓ} {s′ : S ℓ′}
+         → ∀ (r : Reshape s′ s)
+         → InplaceReshape r
+         → (i : P s) → iota′ (i ⟨ r ⟩ ⟨ rev ν-flattenᵣ ⟩) ≡ iota′ (i ⟨ rev ν-flattenᵣ ⟩)
+    thm₁ eq eq i = refl
+    thm₁ (r₁ ∙ r₂) (x₁ ∙ x₂) i = thm₁ r₂ x₂ (i ⟨ r₁ ⟩) ⊡ thm₁ r₁ x₁ i
+    thm₁ (_⊕_ {s = s} {p} {q} {t} r₁ r₂) (x₁ ⊕ x₂) (i₁ ⊗ i₂) with i₁ ⟨ r₁ ∙ rev ν-flattenᵣ ⟩ | i₂ ⟨ r₂ ∙ rev ν-flattenᵣ ⟩
+    thm₁ (_⊕_ {s = s} {p} {q} {t} r₁ r₂) (x₁ ⊕ x₂) (i₁ ⊗ i₂) | (ν a) | (ν b) =
+          lem₂ {_} {_} {a} {b} 
+        ⊡ cong (toU) (cong (from (pair-law (u-flatten s) (u-flatten p))) (cong₂ _,_ (?) (?)))
+        ⊡ ?
+    -}
     thm₁ : ∀ {s : S ℓ} {s′ : S ℓ′}
          → ∀ (r : Reshape s′ s)
          → InplaceReshape r

@@ -39,7 +39,7 @@ private
 --iota (ι (ν x)) = toℕ x
 
 ℕ-twiddles : ∀ {s p : S (ss ℓ)} → ℕ → P s → P p → ℂ
-ℕ-twiddles {l} {s} {p} n i j = -ω n ((iota (i ⟨ rev (up ν-flattenᵣ) ⟩)) *ₙ (iota (j ⟨ rev (up ν-flattenᵣ) ⟩)))
+ℕ-twiddles {l} {s} {p} n i j = -ω (pred n) ((iota (i ⟨ rev (up ν-flattenᵣ) ⟩)) *ₙ (iota (j ⟨ rev (up ν-flattenᵣ) ⟩)))
 
 
 length-transp : ∀ (s : S ℓ) → length s ≡ length (transp s)
@@ -55,14 +55,14 @@ module ℕ-dft′ where
              ((i : P s) → xs i ≡ ys i) → (i : P s) → dft xs i ≡ dft ys i
   dft-cong {ν n} xs ys prf (ν j) = sum-cong 
                                     {n} 
-                                    {(λ k → xs k * -ω n (iota (P.ι k) *ₙ toℕ j))} 
-                                    {(λ k → ys k * -ω n (iota (P.ι k) *ₙ toℕ j))} 
+                                    {(λ k → xs k * -ω _ (iota (P.ι k) *ₙ toℕ j))} 
+                                    {(λ k → ys k * -ω _ (iota (P.ι k) *ₙ toℕ j))} 
                                     λ{ (ν i) → 
                                       cong₂ _*_ (prf (ν i)) refl
                                     }
 
   twiddles : ∀ {s p : S (ss ℓ)} → P s → P p → ℂ
-  twiddles {_} {s} {p} i j = ℕ-twiddles (length s *ₙ length p) i j
+  twiddles {_} {s} {p} i j = ℕ-twiddles ((length s *ₙ length p)) i j
 
   open import Matrix.Leveled.IotaHelper ℕ-Mon
 
@@ -92,7 +92,7 @@ Change-Major.BaseCM ℕ-CM {s} {p} = subst
   twiddles-CMᵗᵣ-lemma {ℓ} {s} {.(S.ι _)} i (ι j) = refl
   twiddles-CMᵗᵣ-lemma {ℓ} {s} {(p₁ ⊗ p₂)} i (j₁ ⊗ j₂) = 
       cong₂ -ω 
-        (cong ((length s) *ₙ_) (resh-length {_} {_} {(transp (p₁ ⊗ p₂))} transpᵣ))
+        ? --(cong ((length s) *ₙ_) (resh-length {_} {_} {(transp (p₁ ⊗ p₂))} transpᵣ))
         (cong₂ _*ₙ_ {_} {_} {iota (ι (((((j₁ ⟨ CMᵗ ⟩) ⊗ (j₂ ⟨ CMᵗ ⟩)) ⟨ CM ⟩) ⟨ rev (up ν-flattenᵣ) ⊕ rev (up ν-flattenᵣ) ⟩) ⟨ unflat ⟩))} {iota (ι (((j₁ ⟨ rev (up ν-flattenᵣ) ⟩) ⊗ (j₂ ⟨ rev (up ν-flattenᵣ) ⟩)) ⟨ unflat ⟩))} refl 
         ?
             --(((((j₁ ⟨ CMᵗ ⟩) ⊗ (j₂ ⟨ CMᵗ ⟩)) ⟨ CM ⟩) ⟨ rev u-flattenᵣ ⊕ rev u-flattenᵣ ⟩) ⟨ unflat ⟩)
@@ -108,7 +108,7 @@ Change-Major.BaseCM ℕ-CM {s} {p} = subst
                             → twiddles {_} {s} {p} (i ⟨ flatten-zᵣ ⟩) (j ⟨ flatten-zᵣ ⟩)
                             ≡ twiddles i j
   twiddles-flatten-zᵣ-lemma {ℓ} {s} {p} i j = cong₂ -ω 
-        (cong₂ _*ₙ_ (resh-length {_} {_} {s} flatten-zᵣ) (resh-length {_} {_} {p} flatten-zᵣ))
+        ? --(cong₂ _*ₙ_ (resh-length {_} {_} {s} flatten-zᵣ) (resh-length {_} {_} {p} flatten-zᵣ))
         (cong₂ _*ₙ_ 
           (thm₁ {_} {_} {_} {s} flatten-zᵣ (flatten-z-isInplace) i)
           (thm₁ {_} {_} {_} {p} flatten-zᵣ (flatten-z-isInplace) j)
@@ -128,7 +128,7 @@ Change-Major.BaseCM ℕ-CM {s} {p} = subst
                         twiddles (i ⟨ transpᵣ ∙ transpᵣ ⟩) j ≡
                         twiddles i j
   twiddles-transₗ-lemma {ℓ} {s} {p} i j = cong₂ -ω 
-                                            (cong (_*ₙ _) (resh-length {_} {_} {transp (transp s)} (transpᵣ ∙ transpᵣ))) 
+                                            ?  --(cong (_*ₙ _) (resh-length {_} {_} {transp (transp s)} (transpᵣ ∙ transpᵣ))) 
                                             ?   
 
   dft≡fft : {s : S (ss zz)}
@@ -144,6 +144,19 @@ Change-Major.BaseCM ℕ-CM {s} {p} = subst
                ; twiddles-flatten-zᵣ-lemma = λ {l} {s} {p} → ℕ-dft′.twiddles-flatten-zᵣ-lemma {_} {s} {p}
                }
 
+{-
+module _ where
+  open ℕ-dft′
+  open import Matrix.Simple.Base
+  open import FFT.Simple.Base renaming (twiddles to Simp-twiddles; DFT to Simp-DFT)
+  open import Matrix.SimpleLeveledRelation
+  open import Data.Product
+
+  twiddle-relation : ∀ {s₁ s₂ : S (ss zz)} → ∀ (i : P s₁) (j : P s₂) → twiddles ? ? ≡ Simp-twiddles cplx (P-from (i ⊗ j))
+  --twiddles : Ar (s ⊗ p) ℂ
+  --twiddles : ∀ {s p : S (ss ℓ)} → P s → P p → ℂ
+
+-}
 
 
     --record

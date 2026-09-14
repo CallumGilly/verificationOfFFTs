@@ -87,6 +87,5 @@ module Implementations.ComplexNew (real : Real) where
         ; ω-N-k₀+k₁             = λ {r₁} {x} {y} → ω-N-k₀+k₁ {r₁} {x} {y}
       }
   open Base public
-  open Cplx complexImplementation
 
 

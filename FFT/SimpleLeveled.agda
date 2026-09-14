@@ -6,4 +6,4 @@ open import Matrix.Simple.Reshape
 open import Matrix.Leveled.Base
 open import Matrix.Leveled.Reshape
 
-
+S↔Sₗ : ? 

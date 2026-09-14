@@ -1,4 +1,4 @@
-open import Complex using (Cplx)
+open import ComplexNew using (Cplx)
 
 import Algebra.Structures as AlgebraStructures
 
@@ -55,12 +55,14 @@ module FFT.Simple.Base (cplx : Cplx) where
   offset-prod (k ⊗ j) = iota (k ⟨ ♯ ⟩) *ₙ iota (j ⟨ ♯ ⟩)
 
   twiddles′ : ℕ → Position s → Position p → ℂ
-  twiddles′ n i j = -ω (suc n) ⦃ record { nonZero = tt } ⦄ (offset-prod (i ⊗ j))
+  twiddles′ n i j = -ω n (offset-prod (i ⊗ j))
+  --twiddles′ n i j = -ω (suc n) ⦃ record { nonZero = tt } ⦄ (offset-prod (i ⊗ j))
 
   twiddles : Ar (s ⊗ p) ℂ
   twiddles {s} {p} i with nonZeroDec (s ⊗ p)
   ... | no ¬nz = ⊥-elim (¬nz (pos⇒nz i))
-  ... | yes nz = -ω (length (s ⊗ p)) ⦃ nonZeroₛ-s⇒nonZero-s nz ⦄ (offset-prod i)
+  ... | yes nz = -ω (Data.Nat.Base.pred (length (s ⊗ p))) (offset-prod i)
+  --... | yes nz = -ω (length (s ⊗ p)) ⦃ nonZeroₛ-s⇒nonZero-s nz ⦄ (offset-prod i)
 
   -------------------
   --- DFT and FFT ---
@@ -74,7 +76,8 @@ module FFT.Simple.Base (cplx : Cplx) where
   DFT : ∀ {N} → Ar (ι N) ℂ → Ar (ι N) ℂ
   DFT {N} xs with nonZero? N
   ... | no ¬nz = λ { (ι j) → ⊥-elim (¬nz (fin-nz _ j)) }
-  ... | yes nz = λ j → sum (λ k → xs k * -ω N ⦃ nz ⦄ (iota k *ₙ iota j))
+  ... | yes nz = λ j → sum (λ k → xs k * -ω (Data.Nat.Base.pred N) (iota k *ₙ iota j))
+  --... | yes nz = λ j → sum (λ k → xs k * -ω N ⦃ nz ⦄ (iota k *ₙ iota j))
 
   FFT : ∀ {s : Shape} → Ar s ℂ → Ar (recursive-transpose s) ℂ
   FFT {ι N} arr = DFT arr

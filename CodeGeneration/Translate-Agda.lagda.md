@@ -89,11 +89,14 @@ We can then see what our fftn translates into
 private variable
   ℓ : L
   
+  {-
 lemma₀ : ∀ {s : S zz} (xs : Ar (ι s) ℂ) (i : P (ι s)) →
          translate-Inp dft` xs i ≡ dft (reshape (down eq) xs) (i ⟨ up eq ⟩)
 lemma₀ {ν x} xs (ι (ν x₁)) = refl
+-}
 
 
+{-
 lemma₁ : ∀ {s : S (ss ℓ)} 
        → ∀ (FT-Inp : ∀ {p : S ℓ} → Inp translate-Ty (ι p))
        → ∀ (FT : ∀ {p : S ℓ} → Ar p ℂ → Ar p ℂ)
@@ -131,6 +134,8 @@ lemma₄ : ∀ {s : S ℓ}
 lemma₄ (ι i) = refl
 --fftn` s = copyOut` eq (CMᵗ ∙ rev transpᵣ) (post-ufft` (copyOut` (rev transpᵣ) CMᵗ (pre-ufft` dft`))) 
 
+-}
+{-
 prf : ∀ {s : S (ss (ss zz))}
     → ∀ (xs : Ar s ℂ)
     → ∀ (i  : P (ι s))
@@ -145,6 +150,7 @@ prf xs i rewrite
       )
       xs 
       (i ⟨ up eq ∙ (CMᵗ ∙ rev transpᵣ) ⟩)
+      -}
 
 
 {-

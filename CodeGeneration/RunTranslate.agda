@@ -20,7 +20,7 @@ open import Data.Fin using (toℕ)
 open import Data.Nat.Show renaming (show to showℕ)
 
 open import Matrix.NatMon
-open import Matrix.Leveled.Base ℕ-Mon
+open import Matrix.Leveled.Base ℕ-Mon renaming (map to mapₗ)
 open import Matrix.Leveled.Reshape ℕ-Mon
 
 open import CodeGeneration.DSL
@@ -120,6 +120,23 @@ open import FFT.Leveled.FFT (complexImplementation realImplementation) ℕ-Mon
 open import FFT.Leveled.Properties (complexImplementation realImplementation) ℕ-Mon ℕ-CM ℕ-dft
 open FFT-Specification ℕ-dft
 
+module _ where
+  open import Implementations.ComplexTrans
+  open import Implementations.Complex as OldCplx using ()
+  open import FFT.Simple.Base 
+      --(OldCplx.Base.complexImplementation realImplementation)
+      (complexImplementation realImplementation)
+  open import Matrix.SimpleLeveledRelation
+  open import Data.Product
+
+  oldDFT : ∀ {s : S zz} → Ar (ι s) ℂ → Ar (ι s) ℂ
+  oldDFT {ν n} xs (ι (ν j)) = 
+    --let xs′ = Ar-from (mapₗ fromℂ xs) in
+    let xs′ = Ar-from (xs) in
+    --let dftResult = mapₗ toℂ (Ar-to (DFT xs′)) in
+    let dftResult = (Ar-to (DFT xs′)) in
+    dftResult (ι (ν j))
+
 fft-from-DSL : ∀ {s : S (ss (ss zz))} → Ar (ι s) ℂ → Ar (ι s) ℂ
 fft-from-DSL = translate-Inp (fftn` _)
 
@@ -132,6 +149,8 @@ main = run do
   --let dftAsVec = ArToVector $ dft (reshape length-flattenᵣ input) 
   -- The followng two lines DO NOT WORK, this is a problem coming (I think) from FFT.Leveled.dft having the spec defined incorrectly...
   let dftAsVec = ArToVector $ reshape CMᵗ (fft dft twiddles (reshape flatten-zᵣ input))
+  --let dftAsVec = ArToVector $ oldDFT (reshape (up eq ∙ flatten-zᵣ ∙ flatten-zᵣ) input) 
+  --let dftAsVec = ArToVector $ oldDFT (reshape (up eq ∙ length-flattenᵣ) input) 
   --let dftAsVec = ArToVector $ fftn input 
   let fftAsVec = ArToVector $ reshape (down eq) (fft-from-DSL (reshape (up eq) input))
   let diffAsVec = ArToVector $ zeroAr {_} {shape}
