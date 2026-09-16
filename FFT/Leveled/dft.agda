@@ -39,7 +39,7 @@ private
 --iota (ι (ν x)) = toℕ x
 
 ℕ-twiddles : ∀ {s p : S (ss ℓ)} → ℕ → P s → P p → ℂ
-ℕ-twiddles {l} {s} {p} n i j = -ω (pred n) ((iota (i ⟨ rev (up ν-flattenᵣ) ⟩)) *ₙ (iota (j ⟨ rev (up ν-flattenᵣ) ⟩)))
+ℕ-twiddles {l} {s} {p} n i j = -ω (n) ((iota (i ⟨ rev (up ν-flattenᵣ) ⟩)) *ₙ (iota (j ⟨ rev (up ν-flattenᵣ) ⟩)))
 
 
 length-transp : ∀ (s : S ℓ) → length s ≡ length (transp s)
@@ -62,19 +62,9 @@ module ℕ-dft′ where
                                     }
 
   twiddles : ∀ {s p : S (ss ℓ)} → P s → P p → ℂ
-  twiddles {_} {s} {p} i j = ℕ-twiddles ((length s *ₙ length p)) i j
+  twiddles {_} {s} {p} i j = ℕ-twiddles ((length s *ₙ length p +ₙ length s +ₙ length p)) i j
 
   open import Matrix.Leveled.IotaHelper ℕ-Mon
-
-{-
-Change-Major.BaseCM ℕ-CM {s} {p} = subst 
-                                      (λ x → Reshape 
-                                              (ν x) 
-                                              (ν ((u-flatten (flatten-z p)) * (u-flatten (flatten-z s)) + (u-flatten (flatten-z p)) + (u-flatten (flatten-z s))))
-                                      )
-                                      (∘-suc-lemma₂ (u-flatten (flatten-z s)) (u-flatten (flatten-z p))) 
-                                      eq 
-                                      -}
 
   CM-isInplace : ∀ {s p : S (ss ℓ)} → InplaceReshape (CM {_} {s} {p})
   CM-isInplace {zz} {s} {p} = (Inplace-rev _ flatten-z-isInplace) ∙ ({-subst InplaceReshape ? -} ?) ∙ flatten-z-isInplace
@@ -85,19 +75,46 @@ Change-Major.BaseCM ℕ-CM {s} {p} = subst
   CMᵗ-isInplace {ss ℓ} {ι s} = eq
   CMᵗ-isInplace {ss ℓ} {s₁ ⊗ s₂} = CMᵗ-isInplace ⊕ CMᵗ-isInplace ∙ CM-isInplace
 
+  open import Function
+
   twiddles-CMᵗᵣ-lemma : ∀ {s p : S (ss ℓ)}
                       → ∀ (i : P s) 
                       → ∀ (j : P p) 
                       → twiddles i (j ⟨ CMᵗ ⟩) ≡ twiddles i j
   twiddles-CMᵗᵣ-lemma {ℓ} {s} {.(S.ι _)} i (ι j) = refl
-  twiddles-CMᵗᵣ-lemma {ℓ} {s} {(p₁ ⊗ p₂)} i (j₁ ⊗ j₂) = 
+  twiddles-CMᵗᵣ-lemma {ℓ} {s} {(p₁ ⊗ p₂)} i (j₁ ⊗ j₂) rewrite
+      resh-length {s = p₁} (rev transpᵣ)
+    | resh-length {s = p₂} (rev transpᵣ)
+    | ∘-suc-lemma₂ (length (transp p₁)) (length (transp p₂)) =
+      cong₂ -ω 
+        refl
+        (cong₂ 
+          _*ₙ_ 
+          {iota′ (i ⟨ rev ν-flattenᵣ ⟩)} 
+          {_} 
+          {iota′ (((((j₁ ⟨ CMᵗ ⟩) ⊗ (j₂ ⟨ CMᵗ ⟩)) ⟨ CM ⟩) ⟨ down (rev ν-flattenᵣ) ⊕ down (rev ν-flattenᵣ) ⟩) ⟨ unflat ⟩)} 
+          {iota′ ((ι (j₁ ⟨ rev ν-flattenᵣ ⟩) ⊗ ι (j₂ ⟨ rev ν-flattenᵣ ⟩)) ⟨ unflat ⟩)} 
+          refl
+          ?
+        )
+{-
+    iota′ (i ⟨ rev ν-flattenᵣ ⟩) 
+  *ₙ 
+    iota′ (((((j₁ ⟨ CMᵗ ⟩) ⊗ (j₂ ⟨ CMᵗ ⟩)) ⟨ CM ⟩) ⟨ down (rev ν-flattenᵣ) ⊕ down (rev ν-flattenᵣ) ⟩) ⟨ unflat ⟩) 
+≡ 
+    iota′ (i ⟨ rev ν-flattenᵣ ⟩) 
+  *ₙ 
+    iota′ ((ι (j₁ ⟨ rev ν-flattenᵣ ⟩) ⊗ ι (j₂ ⟨ rev ν-flattenᵣ ⟩)) ⟨ unflat ⟩)
+-}
+  {-
       cong₂ -ω 
         ? --(cong ((length s) *ₙ_) (resh-length {_} {_} {(transp (p₁ ⊗ p₂))} transpᵣ))
         (cong₂ _*ₙ_ {_} {_} {iota (ι (((((j₁ ⟨ CMᵗ ⟩) ⊗ (j₂ ⟨ CMᵗ ⟩)) ⟨ CM ⟩) ⟨ rev (up ν-flattenᵣ) ⊕ rev (up ν-flattenᵣ) ⟩) ⟨ unflat ⟩))} {iota (ι (((j₁ ⟨ rev (up ν-flattenᵣ) ⟩) ⊗ (j₂ ⟨ rev (up ν-flattenᵣ) ⟩)) ⟨ unflat ⟩))} refl 
         ?
+        -}
             --(((((j₁ ⟨ CMᵗ ⟩) ⊗ (j₂ ⟨ CMᵗ ⟩)) ⟨ CM ⟩) ⟨ rev u-flattenᵣ ⊕ rev u-flattenᵣ ⟩) ⟨ unflat ⟩)
 ---(((j₁ ⟨ rev u-flattenᵣ ⟩) ⊗ (j₂ ⟨ rev u-flattenᵣ ⟩)) ⟨ unflat ⟩)
-        )
+        --)
   --rewrite length-transp p₁ | length-transp p₂ = cong₂ -ω ? ?
 
 

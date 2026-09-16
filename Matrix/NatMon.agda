@@ -36,10 +36,16 @@ opaque
   ∘-suc-lemma₃ : ∀ (u₁ u₂ u₃ : ℕ) → u₁ * (u₂ * u₃ + u₂ + u₃) + u₁ + (u₂ * u₃ + u₂ + u₃) ≡ (u₁ * u₂ + u₁ + u₂) * u₃ + (u₁ * u₂ + u₁ + u₂) + u₃
   ∘-suc-lemma₃ = solve 3 (λ :u₁ :u₂ :u₃ → :u₁ :* (:u₂ :* :u₃ :+ :u₂ :+ :u₃) :+ :u₁ :+ (:u₂ :* :u₃ :+ :u₂ :+ :u₃) := (:u₁ :* :u₂ :+ :u₁ :+ :u₂) :* :u₃ :+ (:u₁ :* :u₂ :+ :u₁ :+ :u₂) :+ :u₃) refl
 
+  ∘-suc-lemma₄ : ∀ (a b : ℕ) → (suc a) * (suc b) ≡ suc (a * b + a + b)
+  ∘-suc-lemma₄ = solve 2 (λ :a :b → (con 1 :+ :a) :* (con 1 :+ :b) := con 1 :+ (:a :* :b :+ :a :+ :b)) refl
+
 pair-to : ∀ {a : ℕ} {b : ℕ} → Fin (suc (a * b + a + b)) → Fin (suc a) × Fin (suc b) 
 pair-to {a} {b} = 
         remQuot {suc a} (suc b) 
       ∘ cast (∘-suc-lemma₁ {a} {b})
+
+pair-to′ : ∀ {a b : ℕ} → Fin (suc (a * b + a + b)) → (Fin (suc a) × Fin (suc b))
+pair-to′ {a} {b} = remQuot _ ∘ cast (sym (∘-suc-lemma₄ a b)) 
 
 pair-from : ∀ {a : ℕ} {b : ℕ} → Fin (suc a) × Fin (suc b) → Fin (suc (a * b + a + b))
 pair-from {a} {b} (fst , snd) = 
@@ -67,10 +73,10 @@ to-from {a} {b} {x₁ , x₂} rewrite
   ; El   = Fin ∘ suc
   ; toU  = toℕ
   ; ε    = 0
-  ; _●_ = λ a b → (a * b) + a + b
+  ; _●_ = λ a b → ((a * b) + a + b)
   ; unit-law  = 1↔⊤
   ; pair-law  = λ a b → record 
-                { to        = pair-to
+                { to        = pair-to --pair-to
                 ; from      = pair-from
                 ; to-cong   = λ{refl → refl}
                 ; from-cong = λ{refl → refl}

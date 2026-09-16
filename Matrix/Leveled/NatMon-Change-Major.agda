@@ -5,6 +5,7 @@ open import Matrix.Leveled.Base ℕ-Mon
 open import Matrix.Leveled.Reshape ℕ-Mon
 open import Matrix.Leveled.Change-Major ℕ-Mon
 
+open import Data.Fin hiding (_+_)
 open import Data.Nat
 open import Relation.Binary.PropositionalEquality
 open ≡-Reasoning
@@ -16,8 +17,6 @@ Change-Major.CM-preserves-order ℕ-CM {n} {m} (ν x) =
     iota′ (ν x ⟨ subst (λ x₁ → Reshape (ν x₁) (ν (n * m + n + m))) (∘-suc-lemma₂ m n) eq ⟩)
   ≡⟨⟩
     iota′ (_⟨_⟩ (ν x) (subst (λ x₁ → Reshape (ν x₁) (ν (n * m + n + m))) (∘-suc-lemma₂ m n) eq))
-  ≡⟨ subst-application (λ a → ?) ? (∘-suc-lemma₂ m n) ⟩
-    ? --iota′ (_⟨_⟩ (ν x) (subst (λ x₁ → Reshape (ν x₁) (ν (n * m + n + m))) (∘-suc-lemma₂ m n) eq))
   ≡⟨ ? ⟩
     iota′ (ν x)
   ∎
