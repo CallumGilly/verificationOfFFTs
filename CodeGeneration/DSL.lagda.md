@@ -39,9 +39,11 @@ an easy conversion).
 infixr 5 _⇒_
 data Ty : Set where
   C : Ty
+  R : Ty
   N : Ty
   ix : {l : L} → S l → Ty
   _⇒_ : Ty → Ty → Ty
+  _⋆_ : Ty → Ty → Ty
 
 private
   variable
@@ -62,8 +64,12 @@ The set of numeric types (Complex and Arrays)
 ```agda
 data Num : Ty → Set where
   C : Num C
+  R : Num R
   N : Num N
-  arr : ∀ {s : S l} → Num τ → Num (ix s ⇒ τ)
+  C′ : Num (R ⋆ R)
+
+  --_⋆_ : Num τ →  Num σ → Num (τ ⋆ σ)
+  --arr : ∀ {s : S l} → Num τ → Num (ix s ⇒ τ)
 ```
 The set of numeric types and applications which return numeric types
 ```
@@ -91,17 +97,48 @@ data Arit (ctxt : Ty → Set) : Ty → Set where
   lam   : (ctxt τ → Arit ctxt σ) → Arit ctxt (τ ⇒ σ)
   app   : Arit ctxt (τ ⇒ σ) → Arit ctxt τ → Arit ctxt σ
 
-  --NtoC  : Arit ctxt N      → Arit ctxt C
   sizeN : Arit ctxt (ix s) → Arit ctxt N
   posiN : Arit ctxt (ix s) → Reshape p s → Arit ctxt N
   spliₗ : Arit ctxt (ix (s ⊗ p)) → Arit ctxt (ix s)
   spliᵣ : Arit ctxt (ix (s ⊗ p)) → Arit ctxt (ix p)
 
-  --_+N_ : Arit ctxt N → Arit ctxt N → Arit ctxt N 
   _*N_ : Arit ctxt N → Arit ctxt N → Arit ctxt N 
-  --_+C_ : Arit ctxt C → Arit ctxt C → Arit ctxt C 
+
   _*C_ : Arit ctxt C → Arit ctxt C → Arit ctxt C 
   ω`   : Arit ctxt N → Arit ctxt N → Arit ctxt C
+
+  toC  : Arit ctxt R → Arit ctxt R → Arit ctxt C
+  toRᵣ : Arit ctxt C → Arit ctxt R
+  toRᵢ : Arit ctxt C → Arit ctxt R
+
+  to-⋆     : Arit ctxt τ → Arit ctxt σ → Arit ctxt (τ ⋆ σ)
+  ⋆-proj₁ : Arit ctxt (τ ⋆ σ) → Arit ctxt τ
+  ⋆-proj₂ : Arit ctxt (τ ⋆ σ) → Arit ctxt σ
+  
+  _*R_ : Arit ctxt R → Arit ctxt R → Arit ctxt R 
+  _+R_ : Arit ctxt R → Arit ctxt R → Arit ctxt R 
+  _-R_ : Arit ctxt R → Arit ctxt R → Arit ctxt R 
+
+  ωr`  : Arit ctxt N → Arit ctxt N → Arit ctxt R
+  ωi`  : Arit ctxt N → Arit ctxt N → Arit ctxt R
+
+{-
+ω` : ∀ {ctxt : Ty → Set} → Arit ctxt N → Arit ctxt N → Arit ctxt C
+ω` n j = toC (ωr` n j) (ωi` n j)
+-}
+{-
+_*C_ : ∀ {ctxt} → Arit ctxt C → Arit ctxt C → Arit ctxt C 
+x *C′ y =
+  let a = toRᵣ x in
+  let b = toRᵢ x in
+  let c = toRᵣ y in
+  let d = toRᵢ y in
+  toC ((a *R c) -R (b *R d)) ((a *R d) +R (b *R c))
+-}
+
+--let′_=′_in′_ : ∀ {ctxt} → (ctxt τ) → (Arit ctxt τ) → Arit ctxt σ → Arit ctxt σ
+--let′_=′_in′_ nm x y = app ? ?
+
 
 infix 1 lam
 syntax lam (λ x → e) = `λ x ⇒ e
@@ -133,37 +170,44 @@ We restrict these to currently operate over one shape level `l`
 infixl 2 _>>>_
 open import Data.Default
 
-data Inp (ctxt : Ty → Set) : {l : L} (s : S l) → Set₁ where
-  compose  : ∀ {s₁ : S l} 
-           → Inp ctxt s₁
-           → Inp ctxt s₁
-           → Inp ctxt s₁
+data Inp (ctxt : Ty → Set) : {l : L} (s : S l) {τ : Ty} (num : Num τ) → Set₁ where
+  compose  : ∀ {s₁ : S l} {τ : Ty} {num : Num τ}
+           → Inp ctxt s₁ num
+           → Inp ctxt s₁ num
+           → Inp ctxt s₁ num
   copyOut` : {s : S (ss l)} 
            → {p : S (ss l)}
+           → {τ : Ty} {num : Num τ}
            → (r₁ : Reshape s p) 
-           → (r₃ : Reshape p s) 
-           → Inp ctxt p 
-           → Inp ctxt (ι s) 
+           → (r₂ : Reshape p s) 
+           → Inp ctxt p num
+           → Inp ctxt (ι s) num
   part`    : ∀ {s p : S (ss l)} 
+           → {τ : Ty} {num : Num τ}
            → (s⊂p : s ⊂ p) 
-           → Inp ctxt (inv-⊂ s⊂p) 
-           → Inp ctxt p 
-  imap`    : Arit ctxt (ix s ⇒ C ⇒ C) → Inp ctxt s
-  mapSum`  : ∀ {u : ℕ} → Arit ctxt ((ar (ι (ν u)) C) ⇒ ix (ι (ν u)) ⇒ ix (ι (ν u)) ⇒ C) → Inp ctxt (ι (ν u)) 
+           → Inp ctxt (inv-⊂ s⊂p) num
+           → Inp ctxt p num
+  imap`    : ∀ {τ : Ty} {num : Num τ} 
+           → Arit ctxt (ix s ⇒ τ ⇒ τ) → Inp ctxt s num
+  mapSum`  : ∀ {u : ℕ} 
+           → ∀ {τ : Ty} {num : Num τ}
+           → Arit ctxt ((ar (ι (ν u)) τ) ⇒ ix (ι (ν u)) ⇒ ix (ι (ν u)) ⇒ τ) 
+           → Inp ctxt (ι (ν u)) num
   
 _>>>_ : ∀ {ctxt : Ty → Set} 
       → ∀ {l : L}
       → ∀ {s : S l}
-      → Inp ctxt s → Inp ctxt s → Inp ctxt s 
+      → ∀ {τ : Ty} {num : Num τ} 
+      → Inp ctxt s num → Inp ctxt s num → Inp ctxt s num
 _>>>_ {ctxt} {_} {s} e₁ e₂ = compose e₁ e₂
 ```
 
 Within these in place operations, we can then represent twiddles...
 
 ```agda
-twid` : {s s′ p p′ : S (ss l)} {ctxt : Ty → Set} → (r₁ : Reshape s′ s) → (r₂ : Reshape p′ p) → Inp ctxt (s ⊗ p) 
+twid` : {s s′ p p′ : S (ss l)} {ctxt : Ty → Set} → (r₁ : Reshape s′ s) → (r₂ : Reshape p′ p) → Inp ctxt (s ⊗ p) C
 twid` {l} {s} {s′} {p} {p′} r₁ r₂ = 
-      imap` 
+      imap`
         (`λ x ⇒ `λ y ⇒ 
           (var y) *C
           ω` 
@@ -174,7 +218,7 @@ twid` {l} {s} {s′} {p} {p′} r₁ r₂ =
 
 ```agda
 --ndft` : ∀ {n : ℕ} → Inp (ar (ι (ν n)) C) (ar (ι (ν n)) C)
-dft` : ∀ {s : S zz} {ctxt : Ty → Set} → Inp ctxt (ι s)
+dft` : ∀ {s : S zz} {ctxt : Ty → Set} → Inp ctxt (ι s) C
 dft` {ν u} = mapSum` {u = u} $ `λ xs ⇒ `λ j ⇒ `λ k ⇒ (app (var xs) (var k)) *C (ω` (sizeN (var j)) ((posiN (var k) eq) *N (posiN (var j) eq)))
 ```
 
@@ -188,8 +232,8 @@ I call it `pre-ufft`, if the output needs to be transposed, I call it `post-ufft
 Both are defined here
 
 ```agda
-pre-ufft`  : ∀ {ctxt : Ty → Set} → ∀ (lower-ft : ∀ {p : S l} → Inp ctxt (ι p))
-          → ∀ {s : S (ss l)} → Inp ctxt s
+pre-ufft`  : ∀ {ctxt : Ty → Set} → ∀ (lower-ft : ∀ {p : S l} → Inp ctxt (ι p) C)
+          → ∀ {s : S (ss l)} → Inp ctxt s C
 pre-ufft` lower-ft {ι s} = lower-ft
 pre-ufft` lower-ft {s ⊗ p} = part` (le sid) (pre-ufft` lower-ft {p})       -- Left ufft
                              >>> twid` {_} {s} {transp s} {p} {p} transpᵣ eq  -- Twiddles 
@@ -199,8 +243,8 @@ pre-ufft` lower-ft {s ⊗ p} = part` (le sid) (pre-ufft` lower-ft {p})       -- 
 The output of the following `post-ufft` would need to be transposed then 
 change majored to be correct.
 ```agda
-post-ufft` : ∀ {ctxt : Ty → Set} → ∀ (lower-ft : ∀ {p : S l} → Inp ctxt (ι p))
-          → ∀ {s : S (ss l)} → Inp ctxt s
+post-ufft` : ∀ {ctxt : Ty → Set} → ∀ (lower-ft : ∀ {p : S l} → Inp ctxt (ι p) C)
+          → ∀ {s : S (ss l)} → Inp ctxt s C
 post-ufft` lower-ft {ι s} = lower-ft 
 post-ufft` lower-ft {s ⊗ p} = part` (ri sid) (post-ufft` lower-ft {s})     -- Right ufft
                               >>> twid` {_} {s} {s} {p} {transp p} eq transpᵣ -- Twiddles 
@@ -211,7 +255,7 @@ post-ufft` lower-ft {s ⊗ p} = part` (ri sid) (post-ufft` lower-ft {s})     -- 
 We can then define `fftn` in our DSL.
 
 ```agda
-fftn` : ∀ {ctxt : Ty → Set} → (s : S (ss (ss zz))) → Inp ctxt (ι s)
+fftn` : ∀ {ctxt : Ty → Set} → (s : S (ss (ss zz))) → Inp ctxt (ι s) C
 fftn` s = copyOut` eq (CMᵗ ∙ rev transpᵣ) (post-ufft` (copyOut` (rev transpᵣ) CMᵗ (pre-ufft` dft`))) 
 ```
 
@@ -239,5 +283,58 @@ to the Agda without.
 
 And then see how that looks for some shapes (Contains holes so commented)
 ```agda
+module _ where
+  open import Data.Product
+  open import Data.Maybe
+  open import Data.Sum
 
+  private variable
+    ctxt : Ty → Set
+
+  data NoCPred : Ty → Set where
+    N   : NoCPred N
+    R   : NoCPred R
+    ix  : NoCPred (ix s)
+    _⇒_ : NoCPred τ → NoCPred σ → NoCPred (τ ⇒ σ)
+    _⋆_ : NoCPred τ → NoCPred σ → NoCPred (τ ⋆ σ)
+
+  AritC→AritRR : Arit ctxt C → Arit ctxt (R ⋆ R)
+  AritC→AritRR inp@(var _) =
+    to-⋆ (toRᵣ inp) (toRᵢ inp)
+  AritC→AritRR inp@(app _ _) =
+    to-⋆ (toRᵣ inp) (toRᵢ inp)
+  AritC→AritRR (x *C y) = 
+    let x′ = AritC→AritRR x in
+    let y′ = AritC→AritRR y in
+    let a = ⋆-proj₁ x′ in
+    let b = ⋆-proj₂ x′ in
+    let c = ⋆-proj₁ y′ in
+    let d = ⋆-proj₂ y′ in
+    to-⋆ ((a *R c) -R (b *R d)) ((a *R d) +R (b *R c))
+  AritC→AritRR (ω`  n j) = to-⋆ (ωr` n j) (ωi` n j)
+  AritC→AritRR (toC r i) = to-⋆ r i
+
+  C→RR : Num τ → Arit ctxt τ → Σ Ty (λ σ → NoCPred σ × Arit ctxt σ)
+  C→RR {C} _ x = R ⋆ R , R ⋆ R , (AritC→AritRR x)
+  C→RR {R} _ x = R , R , x
+  C→RR {N} _ x = N , N , x
+  C→RR {ix s} _ x = ix s , ix , x
+  C→RR {.R ⋆ .R} C′ x = R ⋆ R , R ⋆ R , x
+  C→RR {_ ⇒ _} () _
+
+  InpC→InpRR : Inp ctxt s C → Inp ctxt s C′
+  InpC→InpRR (compose a b) = 
+    let a′ = InpC→InpRR a in
+    let b′ = InpC→InpRR b in
+    compose a′ b′
+  InpC→InpRR (copyOut` r₁ r₂ a) =
+    let a′ = InpC→InpRR a in
+    copyOut` r₁ r₂ a′
+  InpC→InpRR (part` s⊂p a) =
+    let a′ = InpC→InpRR a in
+    part` s⊂p a′
+  InpC→InpRR (imap` a) = 
+    let a′ = AritC→AritRR ? in 
+    ?
+  InpC→InpRR (mapSum` a) = ?
 ```
