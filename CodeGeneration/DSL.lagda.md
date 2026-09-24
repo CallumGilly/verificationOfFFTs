@@ -14,7 +14,7 @@ open import Matrix.Leveled.SubShape ℕ-Mon renaming (id to sid)
 open import Matrix.Leveled.NatMon-Change-Major
 
 open import Data.Nat
-open import Data.Fin
+open import Data.Fin renaming (zero to fzero; suc to fsuc)
 open import Relation.Binary.PropositionalEquality
 open import Function.Base
 
@@ -43,7 +43,7 @@ data Ty : Set where
   N : Ty
   ix : {l : L} → S l → Ty
   _⇒_ : Ty → Ty → Ty
-  _⋆_ : Ty → Ty → Ty
+  --_⋆_ : Ty → Ty → Ty
 
 private
   variable
@@ -66,7 +66,7 @@ data Num : Ty → Set where
   C : Num C
   R : Num R
   N : Num N
-  C′ : Num (R ⋆ R)
+  --C′ : Num (R ⋆ R)
 
   --_⋆_ : Num τ →  Num σ → Num (τ ⋆ σ)
   --arr : ∀ {s : S l} → Num τ → Num (ix s ⇒ τ)
@@ -111,9 +111,11 @@ data Arit (ctxt : Ty → Set) : Ty → Set where
   toRᵣ : Arit ctxt C → Arit ctxt R
   toRᵢ : Arit ctxt C → Arit ctxt R
 
+  {-
   to-⋆     : Arit ctxt τ → Arit ctxt σ → Arit ctxt (τ ⋆ σ)
   ⋆-proj₁ : Arit ctxt (τ ⋆ σ) → Arit ctxt τ
   ⋆-proj₂ : Arit ctxt (τ ⋆ σ) → Arit ctxt σ
+  -}
   
   _*R_ : Arit ctxt R → Arit ctxt R → Arit ctxt R 
   _+R_ : Arit ctxt R → Arit ctxt R → Arit ctxt R 
@@ -121,6 +123,18 @@ data Arit (ctxt : Ty → Set) : Ty → Set where
 
   ωr`  : Arit ctxt N → Arit ctxt N → Arit ctxt R
   ωi`  : Arit ctxt N → Arit ctxt N → Arit ctxt R
+```
+I initially tried allowing the below constructors in Arit, but this:
+- A) Doesn't make sense in the context of Arit, as the stringification of Arit 
+     should be assignable 
+- B) Its a pain to work with when we want to remove Complex and have to deal with ⇒'s
+  to-⋆     : Arit ctxt τ → Arit ctxt σ → Arit ctxt (τ ⋆ σ)
+  ⋆-proj₁ : Arit ctxt (τ ⋆ σ) → Arit ctxt τ
+
+  ⋆-proj₂ : Arit ctxt (τ ⋆ σ) → Arit ctxt σ
+Instead, I plan to push dealing with Complex or Reals to Inp where it (somewhat)
+makes more sense
+```agda  
 
 {-
 ω` : ∀ {ctxt : Ty → Set} → Arit ctxt N → Arit ctxt N → Arit ctxt C
@@ -193,6 +207,164 @@ data Inp (ctxt : Ty → Set) : {l : L} (s : S l) {τ : Ty} (num : Num τ) → Se
            → ∀ {τ : Ty} {num : Num τ}
            → Arit ctxt ((ar (ι (ν u)) τ) ⇒ ix (ι (ν u)) ⇒ ix (ι (ν u)) ⇒ τ) 
            → Inp ctxt (ι (ν u)) num
+
+open import Data.Vec.Functional renaming (map to mapᵥ; foldr to foldrᵥ)
+open import Data.Vec.Functional.Relation.Unary.All
+open import Data.Product
+
+variable
+  A : Set
+  n : ℕ
+
+  {-
+data InContextOf (ctxt : Ty → Set) (vars : Vector (Σ Ty Num) n) : (Σ Ty Num) → Set where 
+  compose : InContextOf ctxt vars ?
+          → InContextOf ctxt ? ?
+          → InContextOf ctxt ? ?
+  -}
+
+-- whatINeed : {ℓ ℓ′ : Level} {A : Set ℓ} {B : Set ℓ′} {f : A → ?} → Vector A n → Vector (Σ A f) n
+vecAsParams : Vector (Σ Ty Num) n → Ty → Ty
+vecAsParams xs σ = foldrᵥ (λ (τ , _) τs → τ ⇒ τs) σ xs
+
+data InContextOf (ctxt : Ty → Set) : (Vector (Σ Ty Num) n) → Set where 
+  push : ∀ {vars : Vector (Σ Ty Num) n} 
+       → InContextOf ctxt vars
+       → (τ : Σ Ty Num)
+       → Arit ctxt (vecAsParams vars (τ .proj₁))
+       → InContextOf ctxt (τ ∷ vars)
+  pull : ∀ {vars : Vector (Σ Ty Num) n}
+       → ? --Fin n
+       → InContextOf ctxt vars
+
+_ : ∀ {τ} → vecAsParams ((R , R) ∷ (C , C) ∷ []) τ ≡ R ⇒ C ⇒ τ
+_ = refl
+
+_∺_ : A → A → Vector A 2
+x ∺ y = x ∷ y ∷ []
+
+-- Really this is a definition of a context, but we already refer to Ty → Set 
+-- as our context so to reduce confusion, this is called Env
+data Env : Set where
+  ε : Env
+  _◂_ : Ty → Env → Env 
+
+tyFromEnv : Env → Ty
+
+infixr 6 _◂_
+
+lets : (ctxt : Ty → Set) (env : Env) → ((τ , _) : Σ Ty Num) → (Arit ctxt (tyFromEnv env ⇒ τ)) → ? × Env
+
+data Lets (ctxt : Ty → Set) (vars : Vector (Σ Ty Num) n) : Set
+data LetsDeBruijn {ctxt : Ty → Set} {vars : Vector (Σ Ty Num) n} (lets : Lets ctxt vars) : Set
+LetsToTy : {ctxt : Ty → Set} {vars : Vector (Σ Ty Num) n} → Ty → Lets ctxt vars → Ty
+
+-- The idea here was that building lets like this allows us to access the 
+-- previously assigned values in a nice way, and that we could also include a 
+-- method for assigning to the outside memory.
+data Lets {n} ctxt vars where
+  ε : Lets ctxt vars
+  _▹_ : (prev : Lets ctxt vars) → {τ : Ty} → Arit ctxt (vecAsParams vars $ LetsToTy τ prev) → Lets ctxt vars
+  _▸_ : (prev : Lets ctxt vars) → {τ : Ty} → Fin n × LetsDeBruijn prev → Lets ctxt vars
+  --writeOut : (prev : Lets ctxt) → Arit ctxt (LetsToTy τ prev) → 
+
+{-
+-}
+--data Assignments 
+data LetsDeBruijn {ctxt} {vars} lets where
+  here : LetsDeBruijn lets
+  there : ? → ?
+
+LetsToTy τ ε = τ
+LetsToTy τ (_▹_ xs {σ} _) = LetsToTy (σ ⇒ τ) xs
+
+Lets′ : Vector (Σ Ty Num) n → Vector (Arit _ ?) n
+
+--LetsAssignsAll : Lets _ _ → Set
+
+-- I need a way to model the context expanding as we add more lets
+vecExpand : ∀ {X : Set} → Vector X n → Vector ? {- ((λ i → Vector X (toℕ i))) -} n
+
+module _ where
+  open import Relation.Unary
+  open import Level using (Level)
+  private variable
+    a ℓ : Level
+
+  All′ : Pred A ℓ → Vector A n → Set ℓ
+  All′ P xs = ∀ i → P (xs i)
+
+  lowerFin : (i : Fin n) → Fin (suc (toℕ i))
+  lowerFin fzero = fzero
+  lowerFin (fsuc i) = fsuc (lowerFin i)
+
+  --indexedAll : (∀ m → Pred (A × (Fin ?))) ℓ → Vector A n → Set ℓ 
+  --indexedAll {A} {ℓ} {n} P₁ xs = ∀ i → P₁ ? (xs i , ?)
+
+--module _ where
+  {-
+  data Vec′ (A : Set) : ℕ → Set where
+    []′ : Vec′ A 0
+    cons : ∀ (x : Vec′ A n → A) (xs : Vec′ A n) → Vec′ A (suc n)
+  -}
+
+{-
+data AritBuilder : Set where  
+  ε : AritBuilder 
+-}
+
+data N-Inp (ctxt : Ty → Set) : {l : L} (s : S l) (τs : Vector (Σ Ty Num) n) → Set₁ where
+  N-compose  : ∀ {s₁ : S l} {τs : Vector (Σ Ty Num) n}
+    → N-Inp ctxt s₁ τs
+    → N-Inp ctxt s₁ τs
+    → N-Inp ctxt s₁ τs
+  N-copyOut` : {s : S (ss l)} 
+           → {p : S (ss l)}
+           → {τs : Vector (Σ Ty Num) n}
+           → (r₁ : Reshape s p) 
+           → (r₂ : Reshape p s) 
+           → N-Inp ctxt p τs
+           → N-Inp ctxt (ι s) τs
+  N-part`    : ∀ {s p : S (ss l)} 
+           → {τs : Vector (Σ Ty Num) n}
+           → (s⊂p : s ⊂ p) 
+           → N-Inp ctxt (inv-⊂ s⊂p) τs
+           → N-Inp ctxt p τs
+  -- Not too big a fan of either of these
+  -- I need some way of adding lets into imap, this will let me:
+    -- Avoid read after write
+    -- Pre compute the twiddle components
+  N-imap`  : {τs : Vector (Σ Ty Num) n}
+           → {m : ℕ}
+           → (σs : Vector (Σ (Σ Ty Num) (λ (τ , _) → Arit ctxt (ix s ⇒ vecAsParams τs τ))) m)
+           → All (λ (τ , _) → Arit ctxt (ix s ⇒ vecAsParams τs (vecAsParams (mapᵥ proj₁ σs) τ))) τs
+           → N-Inp ctxt s τs
+  {-
+           -- (τs : Vector (Σ (Σ Ty Num) (λ (τ , _) → Arit ctxt (ix s ⇒ τ ⇒ τ))) n)
+           -- → N-Inp ctxt s (mapᵥ proj₁ τs)
+             {τs : Vector (Σ Ty Num) n}
+             -- BUT this actually need to have a way of accessing every other 
+             -- vector's element at a given position...
+           -- → (lets : Vector (Σ Ty λ σ → Arit ctxt (ix s ⇒ vecAsParams (let lastLets = ? in lastLets) σ)) m)
+
+           -- This would allow lets to reference the imap "Parameters", but not 
+           -- the results of other lets
+           → {m : ℕ}
+           → (σs : Vector (Σ (Σ Ty Num) (λ (τ , _) → Arit ctxt (ix s ⇒ vecAsParams τs τ))) m)
+           → All (λ (τ , _) → Arit ctxt (ix s ⇒ vecAsParams τs (vecAsParams (mapᵥ proj₁ σs) τ))) τs
+
+           --→ (σs : Vec′ (?) m)
+
+           --→ (ls : Lets ctxt τs)
+           --→ All (λ (τ , _) → Arit ctxt (ix s ⇒ vecAsParams τs (let someWayOfGettingTheValuesOfTheLets = ? in τ))) τs
+           → N-Inp ctxt s τs
+           --Vector (Σ Ty (λ τ → Arit ctxt (ix s ⇒ τ ⇒ τ) )) n
+           -}
+  N-mapSum`  : ∀ {u : ℕ} 
+           → {τs : Vector (Σ Ty Num) n}
+           → All (λ (τ , _) → Arit ctxt ((ar (ι (ν u)) τ) ⇒ ix (ι (ν u)) ⇒ ix (ι (ν u)) ⇒ τ)) τs
+           → N-Inp ctxt (ι (ν u)) τs
+
   
 _>>>_ : ∀ {ctxt : Ty → Set} 
       → ∀ {l : L}
@@ -208,12 +380,55 @@ Within these in place operations, we can then represent twiddles...
 twid` : {s s′ p p′ : S (ss l)} {ctxt : Ty → Set} → (r₁ : Reshape s′ s) → (r₂ : Reshape p′ p) → Inp ctxt (s ⊗ p) C
 twid` {l} {s} {s′} {p} {p′} r₁ r₂ = 
       imap`
-        (`λ x ⇒ `λ y ⇒ 
-          (var y) *C
+        (`λ i ⇒ `λ x ⇒ 
+          (var x) *C
           ω` 
-            (sizeN $ var x) 
-            ((posiN (spliₗ $ var $ x) r₁) *N (posiN (spliᵣ $ var $ x) r₂))
+            (sizeN $ var i) 
+            ((posiN (spliₗ $ var $ i) r₁) *N (posiN (spliᵣ $ var $ i) r₂))
         )
+
+
+
+--syntax _∺_ x y = x ∷ y ∷ [] 
+
+
+module _ where
+  --open import Data.Fin
+  -- Did not know this was a thing, but I love it.
+  -- https://agda.readthedocs.io/en/latest/language/pattern-synonyms.html
+  pattern real = fzero
+  pattern imag = fsuc fzero
+
+  ℂ₂ : Vector (Σ Ty Num) 2
+  ℂ₂ = (R , R) ∷ (R , R) ∷ []
+
+{-
+a = ω n i
+b = ω n i
+c = a + b ?
+-}
+N-twid` : {s s′ p p′ : S (ss l)} {ctxt : Ty → Set} → (r₁ : Reshape s′ s) → (r₂ : Reshape p′ p) → N-Inp ctxt (s ⊗ p) ((R , R) ∺ (R , R))
+N-twid` {ctxt = ctxt} r₁ r₂ =
+  N-imap` 
+    (((R , R) , (`λ i ⇒ `λ xᵣ ⇒ `λ xᵢ ⇒ 
+         ((var xᵣ) *R (ωr` (sizeN (var i)) ((posiN (spliₗ $ var $ i) r₁) *N (posiN (spliᵣ $ var $ i) r₂)))) 
+      -R ((var xᵢ) *R (ωi` (sizeN (var i)) ((posiN (spliₗ $ var $ i) r₁) *N (posiN (spliᵣ $ var $ i) r₂))))
+    )) ∷ []) 
+    λ { real → `λ _ ⇒ `λ _ ⇒ `λ _ ⇒ `λ letAssignedR ⇒ var letAssignedR
+      ; imag → `λ i ⇒ `λ xᵣ ⇒ `λ xᵢ ⇒ `λ _ ⇒
+           ((var xᵣ) *R (ωi` (sizeN (var i)) ((posiN (spliₗ $ var $ i) r₁) *N (posiN (spliᵣ $ var $ i) r₂))))
+        +R ((var xᵢ) *R (ωr` (sizeN (var i)) ((posiN (spliₗ $ var $ i) r₁) *N (posiN (spliᵣ $ var $ i) r₂))))
+      }
+  --? ?
+  --  (λ { zero → `λ i ⇒ `λ xᵣ ⇒ `λ xᵢ ⇒ ?
+  --    ; imag → ? 
+  --    })
+{-
+  where
+    --arits : All (λ (τ , _) → Arit ctxt (ix _ ⇒ vecAsParams ℂ₂ τ)) ℂ₂
+    --arits real = `λ i ⇒ `λ xᵣ ⇒ `λ xᵢ ⇒ ? -- Here we really want to be using pre computed values of twiddles
+    --arits imag = `λ i ⇒ `λ xᵣ ⇒ `λ xᵢ ⇒ ? -- and here we need a pre saved value of xᵣ
+    -}
 ```
 
 ```agda
@@ -281,8 +496,8 @@ with `∀ {s s′ : S l} → Reshape s s′` as this could include `up eq ∙ do
 For ℝ × ℝ ≡ ℂ, I need to think of a nice way to relate the dsl with the split 
 to the Agda without.
 
-And then see how that looks for some shapes (Contains holes so commented)
 ```agda
+{-
 module _ where
   open import Data.Product
   open import Data.Maybe
@@ -337,4 +552,5 @@ module _ where
     let a′ = AritC→AritRR ? in 
     ?
   InpC→InpRR (mapSum` a) = ?
+  -}
 ```
