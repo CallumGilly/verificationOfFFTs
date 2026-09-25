@@ -5,16 +5,19 @@ equate to my Agda implementation
 
 
 open import ComplexNew
+open import Real
 open import Matrix.NatMon
 open import Matrix.Leveled.NatMon-Change-Major 
 --(spec : FFT-Specification cplx ℕ-Mon ℕ-CM)
-module CodeGeneration.Translate-Agda (cplx : Cplx)  where
+module CodeGeneration.Translate-Agda (real : Real) (cplx : Cplx)  where
 open import Function
 
 open import Data.Nat renaming (_*_ to _*ₙ_; _+_ to _+ₙ_)
 open import Data.Nat.Solver
 open +-*-Solver
+open import Data.Product hiding (map)
 
+open Real.Real real renaming (+-*-isCommutativeRing to ℝ-+-*-isCommutativeRing; _+_ to _+ᵣ_; _*_ to _*ᵣ_; _-_ to _-ᵣ_)
 open Cplx cplx
 
 open import FFT.Leveled.dft cplx
@@ -45,16 +48,18 @@ This actually becomes the "Context" we are working within
 ```agda
 translate-Ty : Ty → Set
 translate-Ty C = ℂ
+translate-Ty R = ℝ
 translate-Ty N = ℕ
 translate-Ty (ix i) = P i
 translate-Ty (x ⇒ y) = (translate-Ty x) → (translate-Ty y)
+translate-Ty (x ⋆ y) = translate-Ty x × translate-Ty y
 ```
 
 Given this we then need to create two translators - that for the set of in place 
 operations and that for the set of arithmetic operations. 
 ```agda
 translate-Arit : {τ : Ty} → Arit translate-Ty τ → translate-Ty τ
-translate-Inp : ∀ {ℓ : L} {s : S ℓ} → Inp translate-Ty s → translate-Ty (ix s ⇒ C) → translate-Ty (ix s ⇒ C)
+translate-Inp : ∀ {ℓ : L} {s : S ℓ} → Inp translate-Ty s (Scl C) → translate-Ty (ix s ⇒ C) → translate-Ty (ix s ⇒ C)
 ```
 
 ```agda
@@ -63,6 +68,11 @@ Pₗ (i ⊗ _) = i
 
 Pᵣ : ∀ {l : L} {s p : S (ss l)} → P (s ⊗ p) → P p
 Pᵣ (_ ⊗ i) = i
+
+toℂ : ℝ × ℝ → ℂ
+toℂ (rl , im) = ?
+fromℂ : ℂ → ℝ × ℝ
+fromℂ x = ?
 
 translate-Arit (var x) = x
 translate-Arit (lam x) = λ y → translate-Arit (x y)
@@ -74,6 +84,21 @@ translate-Arit (spliᵣ arit) = Pᵣ $ translate-Arit arit
 translate-Arit (arit₁ *N arit₂) = translate-Arit arit₁ *ₙ translate-Arit arit₂
 translate-Arit (arit₁ *C arit₂) = translate-Arit arit₁ *  translate-Arit arit₂
 translate-Arit (ω` arit₁ arit₂) = -ω (translate-Arit arit₁) (translate-Arit arit₂)
+
+translate-Arit (toC aritᵣ aritᵢ) = toℂ $ (translate-Arit aritᵣ) , (translate-Arit aritᵢ)
+translate-Arit (toRᵣ arit) = proj₁ $ fromℂ $ translate-Arit arit
+translate-Arit (toRᵢ arit) = proj₂ $ fromℂ $ translate-Arit arit
+
+translate-Arit (to-⋆ aritₗ aritᵣ) = (translate-Arit aritₗ) , (translate-Arit aritᵣ)
+translate-Arit (⋆-proj₁ arit) = proj₁ (translate-Arit arit)
+translate-Arit (⋆-proj₂ arit) = proj₂ (translate-Arit arit)
+
+translate-Arit (arit₁ *R arit₂) = (translate-Arit arit₁) *ᵣ (translate-Arit arit₂)
+translate-Arit (arit₁ +R arit₂) = (translate-Arit arit₁) +ᵣ (translate-Arit arit₂)
+translate-Arit (arit₁ -R arit₂) = (translate-Arit arit₁) -ᵣ (translate-Arit arit₂)
+
+translate-Arit (ωr` aritₙ aritᵢ) = proj₁ $ fromℂ $ -ω (translate-Arit aritₙ) (translate-Arit aritᵢ)
+translate-Arit (ωi` aritₙ aritᵢ) = proj₂ $ fromℂ $ -ω (translate-Arit aritₙ) (translate-Arit aritᵢ)
 ```
 
 
@@ -97,7 +122,7 @@ lemma₀ : ∀ {s : S zz} (xs : Ar (ι s) ℂ) (i : P (ι s)) →
 lemma₀ {ν x} xs (ι (ν x₁)) = refl
 
 lemma₁ : ∀ {s : S (ss ℓ)} 
-       → ∀ (FT-Inp : ∀ {p : S ℓ} → Inp translate-Ty (ι p))
+       → ∀ (FT-Inp : ∀ {p : S ℓ} → Inp translate-Ty (ι p) (Scl C))
        → ∀ (FT : ∀ {p : S ℓ} → Ar p ℂ → Ar p ℂ)
        → (∀ {s : S ℓ} → (xs ys : Ar s ℂ) → (∀ (i : P s) → xs i ≡ ys i) → (i : P s) → FT xs i ≡ FT ys i)
        → (∀ {p : S ℓ} (xs : Ar (ι p) ℂ) → ∀ i → translate-Inp FT-Inp xs i ≡ FT (reshape (down eq) xs) (i ⟨ up eq ⟩))
@@ -113,7 +138,7 @@ lemma₅ : ∀ {a b : ℕ} → a *ₙ b +ₙ a +ₙ b ≡ b *ₙ a +ₙ b +ₙ a
 lemma₅ {a} {b} = solve 2 (λ :a :b → :a :* :b :+ :a :+ :b := :b :* :a :+ :b :+ :a) refl a b 
 
 lemma₂ : ∀ {s : S (ss ℓ)} 
-       → ∀ (FT-Inp : ∀ {p : S ℓ} → Inp translate-Ty (ι p))
+       → ∀ (FT-Inp : ∀ {p : S ℓ} → Inp translate-Ty (ι p) (Scl C))
        → ∀ (FT : ∀ {p : S ℓ} → Ar p ℂ → Ar p ℂ)
        → (∀ {s : S ℓ} → (xs ys : Ar s ℂ) → (∀ (i : P s) → xs i ≡ ys i) → (i : P s) → FT xs i ≡ FT ys i)
        → (∀ {p : S ℓ} (xs : Ar (ι p) ℂ) → ∀ i → translate-Inp FT-Inp xs i ≡ FT (reshape (down eq) xs) (i ⟨ up eq ⟩))

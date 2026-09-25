@@ -43,7 +43,7 @@ data Ty : Set where
   N : Ty
   ix : {l : L} → S l → Ty
   _⇒_ : Ty → Ty → Ty
-  --_⋆_ : Ty → Ty → Ty
+  _⋆_ : Ty → Ty → Ty
 
 private
   variable
@@ -62,13 +62,14 @@ ar s X = ix s ⇒ X
 We can then define two subsets of `Ty`:
 The set of numeric types (Complex and Arrays)
 ```agda
-data Num : Ty → Set where
-  C : Num C
-  R : Num R
-  N : Num N
-  --C′ : Num (R ⋆ R)
+data Scalar : Ty → Set where
+  C : Scalar C
+  R : Scalar R
+  N : Scalar N
 
-  --_⋆_ : Num τ →  Num σ → Num (τ ⋆ σ)
+data Num : Ty → Set where
+  Scl : Scalar τ → Num τ
+  _⋆_ : Num τ →  Num σ → Num (τ ⋆ σ)
   --arr : ∀ {s : S l} → Num τ → Num (ix s ⇒ τ)
 ```
 The set of numeric types and applications which return numeric types
@@ -111,11 +112,9 @@ data Arit (ctxt : Ty → Set) : Ty → Set where
   toRᵣ : Arit ctxt C → Arit ctxt R
   toRᵢ : Arit ctxt C → Arit ctxt R
 
-  {-
   to-⋆     : Arit ctxt τ → Arit ctxt σ → Arit ctxt (τ ⋆ σ)
   ⋆-proj₁ : Arit ctxt (τ ⋆ σ) → Arit ctxt τ
   ⋆-proj₂ : Arit ctxt (τ ⋆ σ) → Arit ctxt σ
-  -}
   
   _*R_ : Arit ctxt R → Arit ctxt R → Arit ctxt R 
   _+R_ : Arit ctxt R → Arit ctxt R → Arit ctxt R 
@@ -135,6 +134,15 @@ I initially tried allowing the below constructors in Arit, but this:
 Instead, I plan to push dealing with Complex or Reals to Inp where it (somewhat)
 makes more sense
 ```agda  
+
+mult : {ctxt : Ty → Set} (a b c d : Arit ctxt R) → Arit ctxt (R ⋆ R)
+mult a b c d = to-⋆ ((a *R c) -R (b *R d)) ((a *R d) +R (b *R c)) 
+
+curry : ∀ {ctxt : Ty → Set} → ∀ { X : Set } → (Arit ctxt (R ⋆ R) → X) → Arit ctxt R → Arit ctxt R → X
+curry f r i = f (to-⋆ r i)
+
+uncurry : ∀ {ctxt : Ty → Set} → ∀ { X : Set } → (Arit ctxt R → Arit ctxt R → X) → (Arit ctxt (R ⋆ R) → X)
+uncurry f x = f (⋆-proj₁ x) (⋆-proj₂ x)
 
 {-
 ω` : ∀ {ctxt : Ty → Set} → Arit ctxt N → Arit ctxt N → Arit ctxt C
@@ -208,6 +216,7 @@ data Inp (ctxt : Ty → Set) : {l : L} (s : S l) {τ : Ty} (num : Num τ) → Se
            → Arit ctxt ((ar (ι (ν u)) τ) ⇒ ix (ι (ν u)) ⇒ ix (ι (ν u)) ⇒ τ) 
            → Inp ctxt (ι (ν u)) num
 
+{-
 open import Data.Vec.Functional renaming (map to mapᵥ; foldr to foldrᵥ)
 open import Data.Vec.Functional.Relation.Unary.All
 open import Data.Product
@@ -364,6 +373,7 @@ data N-Inp (ctxt : Ty → Set) : {l : L} (s : S l) (τs : Vector (Σ Ty Num) n) 
            → {τs : Vector (Σ Ty Num) n}
            → All (λ (τ , _) → Arit ctxt ((ar (ι (ν u)) τ) ⇒ ix (ι (ν u)) ⇒ ix (ι (ν u)) ⇒ τ)) τs
            → N-Inp ctxt (ι (ν u)) τs
+-}
 
   
 _>>>_ : ∀ {ctxt : Ty → Set} 
@@ -377,7 +387,7 @@ _>>>_ {ctxt} {_} {s} e₁ e₂ = compose e₁ e₂
 Within these in place operations, we can then represent twiddles...
 
 ```agda
-twid` : {s s′ p p′ : S (ss l)} {ctxt : Ty → Set} → (r₁ : Reshape s′ s) → (r₂ : Reshape p′ p) → Inp ctxt (s ⊗ p) C
+twid` : {s s′ p p′ : S (ss l)} {ctxt : Ty → Set} → (r₁ : Reshape s′ s) → (r₂ : Reshape p′ p) → Inp ctxt (s ⊗ p) (Scl C)
 twid` {l} {s} {s′} {p} {p′} r₁ r₂ = 
       imap`
         (`λ i ⇒ `λ x ⇒ 
@@ -387,11 +397,19 @@ twid` {l} {s} {s′} {p} {p′} r₁ r₂ =
             ((posiN (spliₗ $ var $ i) r₁) *N (posiN (spliᵣ $ var $ i) r₂))
         )
 
-
+Rtwid` : {s s′ p p′ : S (ss l)} {ctxt : Ty → Set} → (r₁ : Reshape s′ s) → (r₂ : Reshape p′ p) → Inp ctxt (s ⊗ p) ((Scl R) ⋆ (Scl R))
+Rtwid` {l} {s} {s′} {p} {p′} r₁ r₂ = 
+      imap`
+        (`λ i ⇒ `λ x ⇒ 
+            let ωᵣ = ωr` (sizeN $ var i) ((posiN (spliₗ $ var $ i) r₁) *N (posiN (spliᵣ $ var $ i) r₂)) in
+            let ωᵢ = ωi` (sizeN $ var i) ((posiN (spliₗ $ var $ i) r₁) *N (posiN (spliᵣ $ var $ i) r₂)) in
+          (uncurry mult (var x)) ωᵣ ωᵢ
+        )
 
 --syntax _∺_ x y = x ∷ y ∷ [] 
 
 
+{-
 module _ where
   --open import Data.Fin
   -- Did not know this was a thing, but I love it.
@@ -429,12 +447,19 @@ N-twid` {ctxt = ctxt} r₁ r₂ =
     --arits real = `λ i ⇒ `λ xᵣ ⇒ `λ xᵢ ⇒ ? -- Here we really want to be using pre computed values of twiddles
     --arits imag = `λ i ⇒ `λ xᵣ ⇒ `λ xᵢ ⇒ ? -- and here we need a pre saved value of xᵣ
     -}
+    -}
 ```
 
 ```agda
 --ndft` : ∀ {n : ℕ} → Inp (ar (ι (ν n)) C) (ar (ι (ν n)) C)
-dft` : ∀ {s : S zz} {ctxt : Ty → Set} → Inp ctxt (ι s) C
+dft` : ∀ {s : S zz} {ctxt : Ty → Set} → Inp ctxt (ι s) (Scl C)
 dft` {ν u} = mapSum` {u = u} $ `λ xs ⇒ `λ j ⇒ `λ k ⇒ (app (var xs) (var k)) *C (ω` (sizeN (var j)) ((posiN (var k) eq) *N (posiN (var j) eq)))
+
+Rdft` : ∀ {s : S zz} {ctxt : Ty → Set} → Inp ctxt (ι s) ((Scl R) ⋆ (Scl R))
+Rdft` {ν u} = mapSum` {u = u} $ `λ xs ⇒ `λ j ⇒ `λ k ⇒ 
+    let ωᵣ  = ωr` (sizeN (var j)) ((posiN (var k) eq) *N (posiN (var j) eq)) in
+    let ωᵢ  = ωi` (sizeN (var j)) ((posiN (var k) eq) *N (posiN (var j) eq)) in
+    (uncurry mult (app (var xs) (var k))) ωᵣ ωᵢ
 ```
 
 # Defining the FFT
@@ -447,31 +472,47 @@ I call it `pre-ufft`, if the output needs to be transposed, I call it `post-ufft
 Both are defined here
 
 ```agda
-pre-ufft`  : ∀ {ctxt : Ty → Set} → ∀ (lower-ft : ∀ {p : S l} → Inp ctxt (ι p) C)
-          → ∀ {s : S (ss l)} → Inp ctxt s C
+pre-ufft`  : ∀ {ctxt : Ty → Set} → ∀ (lower-ft : ∀ {p : S l} → Inp ctxt (ι p) (Scl C))
+          → ∀ {s : S (ss l)} → Inp ctxt s (Scl C)
 pre-ufft` lower-ft {ι s} = lower-ft
 pre-ufft` lower-ft {s ⊗ p} = part` (le sid) (pre-ufft` lower-ft {p})       -- Left ufft
                              >>> twid` {_} {s} {transp s} {p} {p} transpᵣ eq  -- Twiddles 
                              >>> part` (ri sid) (pre-ufft` lower-ft {s})       -- Right ufft
 
+Rpre-ufft`  : ∀ {ctxt : Ty → Set} → ∀ (lower-ft : ∀ {p : S l} → Inp ctxt (ι p) ((Scl R) ⋆ (Scl R)))
+          → ∀ {s : S (ss l)} → Inp ctxt s ((Scl R) ⋆ (Scl R))
+Rpre-ufft` lower-ft {ι s} = lower-ft
+Rpre-ufft` lower-ft {s ⊗ p} = part` (le sid) (Rpre-ufft` lower-ft {p})       -- Left ufft
+                             >>> Rtwid` {_} {s} {transp s} {p} {p} transpᵣ eq  -- Twiddles 
+                             >>> part` (ri sid) (Rpre-ufft` lower-ft {s})       -- Right ufft
 ```
 The output of the following `post-ufft` would need to be transposed then 
 change majored to be correct.
 ```agda
-post-ufft` : ∀ {ctxt : Ty → Set} → ∀ (lower-ft : ∀ {p : S l} → Inp ctxt (ι p) C)
-          → ∀ {s : S (ss l)} → Inp ctxt s C
+post-ufft` : ∀ {ctxt : Ty → Set} → ∀ (lower-ft : ∀ {p : S l} → Inp ctxt (ι p) (Scl C))
+          → ∀ {s : S (ss l)} → Inp ctxt s (Scl C)
 post-ufft` lower-ft {ι s} = lower-ft 
 post-ufft` lower-ft {s ⊗ p} = part` (ri sid) (post-ufft` lower-ft {s})     -- Right ufft
                               >>> twid` {_} {s} {s} {p} {transp p} eq transpᵣ -- Twiddles 
                               >>> part` (le sid) (post-ufft` lower-ft {p})     -- Left ufft
+
+Rpost-ufft` : ∀ {ctxt : Ty → Set} → ∀ (lower-ft : ∀ {p : S l} → Inp ctxt (ι p) ((Scl R) ⋆ (Scl R)))
+          → ∀ {s : S (ss l)} → Inp ctxt s ((Scl R) ⋆ (Scl R))
+Rpost-ufft` lower-ft {ι s} = lower-ft 
+Rpost-ufft` lower-ft {s ⊗ p} = part` (ri sid) (Rpost-ufft` lower-ft {s})     -- Right ufft
+                              >>> Rtwid` {_} {s} {s} {p} {transp p} eq transpᵣ -- Twiddles 
+                              >>> part` (le sid) (Rpost-ufft` lower-ft {p})     -- Left ufft
 ```
 
 
 We can then define `fftn` in our DSL.
 
 ```agda
-fftn` : ∀ {ctxt : Ty → Set} → (s : S (ss (ss zz))) → Inp ctxt (ι s) C
+fftn` : ∀ {ctxt : Ty → Set} → (s : S (ss (ss zz))) → Inp ctxt (ι s) (Scl C)
 fftn` s = copyOut` eq (CMᵗ ∙ rev transpᵣ) (post-ufft` (copyOut` (rev transpᵣ) CMᵗ (pre-ufft` dft`))) 
+
+Rfftn` : ∀ {ctxt : Ty → Set} → (s : S (ss (ss zz))) → Inp ctxt (ι s) ((Scl R) ⋆ (Scl R))
+Rfftn` s = copyOut` eq (CMᵗ ∙ rev transpᵣ) (Rpost-ufft` (copyOut` (rev transpᵣ) CMᵗ (Rpre-ufft` Rdft`))) 
 ```
 
 One observation here is that we end up with `? >>> copy r₁ >>> copy r₂ >>> ?`

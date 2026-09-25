@@ -13,12 +13,12 @@ open import Matrix.Leveled.Change-Major ℕ-Mon
 open import Matrix.Leveled.SubShape ℕ-Mon
 open import Matrix.Leveled.NatMon-Change-Major
 
-open import Data.Nat
+open import Data.Nat hiding (_≟_)
 open import Data.Nat.Show using () renaming (show to showℕ)
 open import Data.String hiding (length)
 open import Data.Product hiding (swap)
 open import Data.Maybe renaming (_>>=_ to _⟫=_; zip to zipM) 
-open import Data.Bool
+open import Data.Bool hiding (_≟_)
 
 open import Relation.Binary.PropositionalEquality
 
@@ -174,8 +174,8 @@ We then create a converter from ix to subscripts to allow us to stringify them.
   ix-to-subscripts (ι i) = ix-to-subscripts i
   ix-to-subscripts (i ⊗ j) = ix-to-subscripts i ++ ix-to-subscripts j
 
-  ix-to-str : Ix s → (String → String) → (String → String)
-  ix-to-str i name pre = "(*" ++ name pre ++ ")" ++ (ix-to-subscripts i)
+  ix-to-str : Ix s → String → String
+  ix-to-str i name = "(*" ++ name ++ ")" ++ (ix-to-subscripts i)
 
 ```
 
@@ -189,14 +189,43 @@ open import Data.List.Base as List renaming (_++_ to _++ₗ_; [_] to [_]ₗ; map
 module _ where
 
   data NOp : Set where
+    var : String → NOp
     Nconst : ℕ → NOp
     Niota : Ix (ν n) → NOp
     Nmult : NOp → NOp → NOp
-    
-  data COp : Set where
-    var : (String → String) → COp
-    Cmult : COp → COp → COp
-    ω : NOp → NOp → COp
+      
+  mutual
+    data COp : Set where
+      var : String → COp
+      Cmult : COp → COp → COp
+      ω : NOp → NOp → COp
+      fromR : ROp → ROp → COp
+
+    data ROp : Set where
+      var : String → ROp
+      Rmult : ROp → ROp → ROp
+      Rplus : ROp → ROp → ROp
+      Rminu : ROp → ROp → ROp
+      Rωr : NOp → NOp → ROp
+      Rωi : NOp → NOp → ROp
+      fromCr : COp → ROp
+      fromCi : COp → ROp
+
+  translate-Ty : (τ : Ty) → Set
+  translate-Ty C = COp
+  translate-Ty R = ROp
+  translate-Ty N = NOp
+  translate-Ty (ix s) = Ix s
+  translate-Ty (τ ⇒ σ) = translate-Ty τ → State ℕ (translate-Ty σ)
+  translate-Ty (τ ⋆ σ) = translate-Ty τ × translate-Ty σ
+
+  SclOp : ∀ {τ} → Scalar τ → Set
+  SclOp {τ} _ = translate-Ty τ
+
+  SclVar : ∀ {τ} → (scl : Scalar τ) → (String → SclOp scl)
+  SclVar C = var
+  SclVar R = var
+  SclVar N = var
 
   data AssignmentOperation : Set where
     ≔ : AssignmentOperation
@@ -205,24 +234,13 @@ module _ where
   mutual
     data Instruction : Set where
       comment′ : String → Instruction
-      assign′ : (String → String) → AssignmentOperation → COp → Instruction
-      declare′ : (String → String) → S ℓ → Instruction
+      assign′ : String → AssignmentOperation → {scl : Scalar τ} → SclOp scl → Instruction
+      declare′ : String → S ℓ → Scalar τ → Instruction
       loop′ : Ix s → Program → Instruction
-      free′ : (String → String) → Instruction
+      free′ : String → Instruction
 
     Program : Set
     Program = List Instruction
-
-
-  data Val : Ty → Set where
-    C : Val C
-    N : Val N
-
-  translate-Ty : (τ : Ty) → Set
-  translate-Ty C = COp
-  translate-Ty N = NOp
-  translate-Ty (ix s) = Ix s
-  translate-Ty (τ ⇒ τ₁) = translate-Ty τ → State ℕ (translate-Ty τ₁)
 
   arit-eval : ∀ {τ : Ty} → Arit translate-Ty τ → State ℕ (translate-Ty τ)
   arit-eval (var x) = return x
@@ -253,6 +271,46 @@ module _ where
     x′ ← arit-eval x
     y′ ← arit-eval y
     return $ ω x′ y′
+  arit-eval (toC r i) = do
+    r′ ← arit-eval r
+    i′ ← arit-eval i
+    return $ fromR r′ i′
+  arit-eval (toRᵣ x) = do
+    x′ ← arit-eval x
+    return $ fromCr x′
+  arit-eval (toRᵢ x) = do
+    x′ ← arit-eval x
+    return $ fromCi x′
+  arit-eval (to-⋆ x y) = do
+    x′ ← arit-eval x
+    y′ ← arit-eval y
+    return $ x′ , y′
+  arit-eval (⋆-proj₁ x) = do 
+    x₁ , _  ← arit-eval x
+    return x₁
+  arit-eval (⋆-proj₂ x) = do
+    _  , x₂ ← arit-eval x
+    return x₂
+  arit-eval (x *R y) = do
+    x′ ← arit-eval x
+    y′ ← arit-eval y
+    return $ Rmult x′ y′
+  arit-eval (x +R y) = do
+    x′ ← arit-eval x
+    y′ ← arit-eval y
+    return $ Rplus x′ y′
+  arit-eval (x -R y) = do
+    x′ ← arit-eval x
+    y′ ← arit-eval y
+    return $ Rminu x′ y′
+  arit-eval (ωr` n i) = do
+    n′ ← arit-eval n
+    i′ ← arit-eval i
+    return $ Rωr n′ i′
+  arit-eval (ωi` n i) = do
+    n′ ← arit-eval n
+    i′ ← arit-eval i
+    return $ Rωi n′ i′
 ```
 
 # C Helpers
@@ -263,11 +321,19 @@ us. These lay out a structure for the eventual C dsl
 
 ```agda
 module _ where
+  natural-type : String
+  natural-type = "unsigned"
+
   real-type : String
   real-type = "real"
 
   complex-type : String
   complex-type = "complex" <+> real-type
+
+  Scl-type : ∀ {τ : Ty} → Scalar τ → String
+  Scl-type C = complex-type
+  Scl-type R = real-type
+  Scl-type N = natural-type
 
   calloc-op : (type : String) → ℕ → String
   calloc-op ty s = printf "calloc(%u, sizeof(%s))" s ty
@@ -296,13 +362,60 @@ module _ where
   commentBlock : String → String → String
   commentBlock comment body = printf "//Start: %s\n%s//End: %s\n" comment body comment
 
-  calloc : String → S ℓ → State ℕ ((String → String) × Instruction × Instruction)
-  calloc type s = do  
+  calloc : Scalar τ → S ℓ → State ℕ (String × Instruction × Instruction)
+  calloc scl s = do  
     memName′ ← fresh-var
-    let memName = _++ memName′
-    let ops = declare′ memName s
+    let memName = memName′
+    let ops = declare′ memName s scl
     let free = free′ memName
     return $ memName , ops , free
+```
+# ROp Equality
+One thing I will frequently come accross is the case fromCr (fromR x _) which
+we shuld be able to reduce to `x`.
+My original thought here was that the operation:
+  `_≟ᵣ : (a : ROp) → (b : ROp) → Dec (a ≡ b)`
+would allow me to detect these cases, but contructing both proofs of ¬ (a ≡ b),
+and `a ≡ b` (if this was changed to a semidecision) does not appear possible 
+with the current implementation of ROp (which lacks semantics for fromR/ fromCr)
+I may come back to this but am letting it lie for now
+
+```agda
+{-
+module _ where
+  open import Relation.Nullary.Decidable hiding (map′)
+  open import Relation.Nullary.Negation
+  open import Data.Empty
+
+  -- I propose that I cannot use Dec here because I cannot prove the case where
+  -- ¬ x ≡ y → ¬ var x ≡ var y
+  _≟ᵣ_ : (a : ROp) → (b : ROp) → Maybe (a ≡ b)
+  var x ≟ᵣ var y with x ≟ y
+  ... | no ¬a = nothing
+  ... | yes refl = just refl
+  var x ≟ᵣ Rmult b b₁ = ?
+  var x ≟ᵣ Rplus b b₁ = ?
+  var x ≟ᵣ Rminu b b₁ = ?
+  var x ≟ᵣ Rωr x₁ x₂ = ?
+  var x ≟ᵣ Rωi x₁ x₂ = ?
+  var x ≟ᵣ fromCr (fromR y _) with  (var x) ≟ᵣ y 
+  --- This starts getting dangerous, as I can't construct a proof here as we 
+  -- lack semantics for fromR/ fromCr, and so would be resolved to return Bool
+  -- which is sketch
+  ... | just refl = just ?
+  ... | nothing = just ?
+  var x ≟ᵣ fromCr (var x₁) = nothing
+  var x ≟ᵣ fromCr (Cmult x₁ x₂) = nothing
+  var x ≟ᵣ fromCr (ω x₁ x₂) = nothing
+  var x ≟ᵣ fromCi x₁ = ?
+  Rmult a a₁ ≟ᵣ b = ?
+  Rplus a a₁ ≟ᵣ b = ?
+  Rminu a a₁ ≟ᵣ b = ?
+  Rωr x x₁ ≟ᵣ b = ?
+  Rωi x x₁ ≟ᵣ b = ?
+  fromCr x ≟ᵣ b = ?
+  fromCi x ≟ᵣ b = ?
+  -}
 ```
 
 # C AST
@@ -312,20 +425,43 @@ become trivial as we can make the change in the next translation step
 
 ```agda
 module _ where
-  evaled-to-str : Val τ → translate-Ty τ → String
-  evaled-to-str C (var x) = x ""
-  evaled-to-str C (Cmult op₁ op₂) = printf "(%s * %s)" (evaled-to-str C op₁) (evaled-to-str C op₂)
-  evaled-to-str C (ω op₁ op₂) = printf "minus_omega(%s, %s)" (evaled-to-str N op₁) (evaled-to-str N op₂)
-  evaled-to-str N (Nconst x) = showℕ x
-  evaled-to-str N (Niota (ν i)) = i
-  evaled-to-str N (Nmult op₁ op₂) = printf "(%s * %s)" (evaled-to-str N op₁) (evaled-to-str N op₂)
+  num-tuple : Set → Num τ → Set
+  num-tuple X (x ⋆ y) = num-tuple X x × num-tuple X y
+  num-tuple X _ = X
+
+  
+    
+  evaled-to-str : (val : Num τ) → translate-Ty τ → num-tuple String val
+  evaled-to-str (Scl C) (var x) = x
+  evaled-to-str (Scl C) (Cmult op₁ op₂) = printf "(%s * %s)" (evaled-to-str (Scl C) op₁) (evaled-to-str (Scl C) op₂)
+  evaled-to-str (Scl C) (ω op₁ op₂) = printf "minus_omega(%s, %s)" (evaled-to-str (Scl N) op₁) (evaled-to-str (Scl N) op₂)
+  evaled-to-str (Scl N) (Nconst x) = showℕ x
+  evaled-to-str (Scl N) (Niota (ν i)) = i
+  evaled-to-str (Scl N) (Nmult op₁ op₂) = printf "(%s * %s)" (evaled-to-str (Scl N) op₁) (evaled-to-str (Scl N) op₂)
+  evaled-to-str (Scl R) (var x) = x
+  evaled-to-str (Scl R) (Rmult l r) = printf "(%s * %s)" (evaled-to-str (Scl R) l) (evaled-to-str (Scl R) r)
+  evaled-to-str (Scl R) (Rplus l r) = printf "(%s + %s)" (evaled-to-str (Scl R) l) (evaled-to-str (Scl R) r)
+  evaled-to-str (Scl R) (Rminu l r) = printf "(%s - %s)" (evaled-to-str (Scl R) l) (evaled-to-str (Scl R) r)
+  evaled-to-str (Scl R) (Rωr op₁ op₂) = printf "r_minus_omega(%s, %s)" (evaled-to-str (Scl N) op₁) (evaled-to-str (Scl N) op₂)
+  evaled-to-str (Scl R) (Rωi op₁ op₂) = printf "i_minus_omega(%s, %s)" (evaled-to-str (Scl N) op₁) (evaled-to-str (Scl N) op₂)
+  -- Small optimisations to remove unessasary computation
+  evaled-to-str (Scl R) (fromCr (fromR x _)) = (evaled-to-str (Scl R) x)
+  evaled-to-str (Scl R) (fromCr (ω op₁ op₂)) = evaled-to-str (Scl R) (Rωr op₁ op₂)
+  evaled-to-str (Scl R) (fromCr x) = printf "(creal %s)" $ evaled-to-str (Scl C) x
+  evaled-to-str (Scl R) (fromCi (fromR _ x)) = (evaled-to-str (Scl R) x)
+  evaled-to-str (Scl R) (fromCi (ω op₁ op₂)) = evaled-to-str (Scl R) (Rωi op₁ op₂)
+  evaled-to-str (Scl R) (fromCi x) = printf "(cimag %s)" $ evaled-to-str (Scl C) x
+  -- An optimisation could also be added here to remove `fromR (fromCr x) (fromCi y)` when x ≡ y,
+  -- but we would need to check `x ≟ y` 
+  evaled-to-str (Scl C) (fromR r i) = printf "(%s + (%s * I))" (evaled-to-str (Scl R) r) (evaled-to-str (Scl R) i)
+  evaled-to-str (a ⋆ b) (fst , snd) = (evaled-to-str a fst) , (evaled-to-str b snd)
 
   showAssignmentOperation : AssignmentOperation → String
   showAssignmentOperation ≔ = "="
   showAssignmentOperation += = "+="
 
-  showValue : COp → String
-  showValue = evaled-to-str C
+  showNumue : {scl : Scalar τ} → SclOp scl → String
+  showNumue {_} {scl} = evaled-to-str (Scl scl)
 
   map′ : ∀ {A B : Set} → (A → B) → List A → List B
   map′ f []       = []
@@ -338,78 +474,13 @@ module _ where
   mutual
     showInstruction : Instruction → String
     showInstruction (comment′ x) = unlines $ List.map ("//" <+>_) $ lines x
-    showInstruction (assign′ var′ op′ val′) = (var′ "") <+> (showAssignmentOperation op′) <+> showValue val′
+    showInstruction (assign′ var′ op′ val′) = var′ <+> (showAssignmentOperation op′) <+> showNumue val′
     showInstruction (loop′ i ins) = loopnest i (showProgram ins)
-    showInstruction (free′ x) = printf "free(%s)" (x "")
-    showInstruction (declare′ memName s) = printf "%s = %s" (ArCast (just (memName "")) complex-type s) (calloc-op "complex real" (clen s))
+    showInstruction (free′ x) = printf "free(%s)" x
+    showInstruction (declare′ memName s scl) = printf "%s = %s" (ArCast (just memName) (Scl-type scl) s) (calloc-op (Scl-type scl) (clen s))
 
     showProgram  : Program → String
     showProgram = unlines ∘ map′ (_++ ";") ∘ map′ showInstruction 
-
-module _ where
-
-  evil : String
-  evil = "knievel"
-
-  data Component : Set where
-    re : Component
-    im : Component
-
-  --evaled-to-str₂ : Component → Val τ → translate-Ty τ → String
-  --evaled-to-str₂ = ?
-
-  showNOp₂ : NOp → String
-  showNOp₂ (Nconst n) = showℕ n
-  showNOp₂ (Niota (ν i)) = i
-  showNOp₂ (Nmult op₁ op₂) = printf "(%s * %s)" (showNOp₂ op₁) (showNOp₂ op₂)
-
-  prefix-string : Component → String → String
-  prefix-string re = printf "r_%s"
-  prefix-string im = printf "i_%s"
-
-  prefix-var : Component → (String → String) → String
-  prefix-var re f = f "r_"
-  prefix-var im f = f "i_"
-    
-  showCOp₂ : Component → COp → String
-  showCOp₂ component (var x) = prefix-var component x
-  showCOp₂ re (Cmult op₁ op₂) =
-    let
-      a = showCOp₂ re op₁
-      b = showCOp₂ im op₁
-      c = showCOp₂ re op₂
-      d = showCOp₂ im op₂
-      in printf "((%s * %s) - (%s * %s))" a c b d
-  showCOp₂ im (Cmult op₁ op₂) =
-    let
-      a = showCOp₂ re op₁
-      b = showCOp₂ im op₁
-      c = showCOp₂ re op₂
-      d = showCOp₂ im op₂
-      in printf "((%s * %s) + (%s * %s))" a d b c
-  showCOp₂ component (ω op₁ op₂) = prefix-string component (printf "minus_omega(%s, %s)" (evaled-to-str N op₁) (evaled-to-str N op₂))
-
-  {-# NON_TERMINATING #-}
-  mutual
-    showInstruction₂ : Instruction → List String
-    showInstruction₂ (comment′ x) = [ unlines $ List.map ("//" <+>_) $ lines x ]ₗ
-    showInstruction₂ (assign′ var′ op′ val′) = let
-      inst₁ = evil                 <+> "=" <+> showCOp₂ re val′
-      inst₂ = (prefix-var im var′) <+> (showAssignmentOperation op′) <+> showCOp₂ im val′
-      inst₃ = (prefix-var re var′) <+> (showAssignmentOperation op′) <+> evil
-      in inst₁ ∷ inst₂ ∷ [ inst₃ ]ₗ
-      --inst = λ comp → (prefix-var comp var′) <+> (showAssignmentOperation op′) <+> showCOp₂ comp val′
-      -- in mapₗ inst $ re ∷ [ im ]ₗ
-    showInstruction₂ (declare′ var′ s) = let
-      inst = λ comp → printf "%s = %s" (ArCast (just (prefix-var comp var′)) real-type s) (calloc-op real-type (clen s))
-      in mapₗ inst $ re ∷ [ im ]ₗ
-    showInstruction₂ (loop′ i prog) = [ loopnest i (showProgram₂ prog) ]ₗ
-    showInstruction₂ (free′ var′) = let
-      inst = λ comp → printf "free(%s)" $ prefix-var comp var′
-      in mapₗ inst $ re ∷ [ im ]ₗ
-
-    showProgram₂  : Program → String
-    showProgram₂ = unlines ∘ List.map (_++ ";") ∘ List.concatMap showInstruction₂
 ```
 
 
@@ -418,95 +489,72 @@ module _ where
 Finally we can move to our C translation
 
 ```agda
-step₁ : (Ix s → (String → String)) → Inp translate-Ty s → (State ℕ Program)
-step₁ ar (imap` arit) = do
+
+step₂ : (num : Num τ) → (Ix s → String) → Inp translate-Ty s num → (State ℕ Program)
+
+step₁ : (scl : Scalar τ) → (Ix s → String) → Inp translate-Ty s (Scl scl) → (State ℕ Program)
+step₁ scl xs (imap` arit) = do
   i ← new-Ix _
-  arit′ ← arit-eval (app (app arit (var i)) (var (var (ar i))))
-  return $ [ loop′ i [ assign′ (ar i) ≔ arit′ ]ₗ ]ₗ
-step₁ xs (compose inp₁ inp₂) = do
-  ins₁ ← step₁ xs inp₁ 
-  ins₂ ← step₁ xs inp₂
+  arit′ ← arit-eval (app (app arit (var i)) (var (SclVar scl (xs i))))
+  return $ [ loop′ i [ assign′ (xs i) ≔ {scl} arit′ ]ₗ ]ₗ
+step₁ scl xs (compose inp₁ inp₂) = do
+  ins₁ ← step₁ scl xs inp₁ 
+  ins₂ ← step₁ scl xs inp₂
   return $ ins₁ ++ₗ ins₂
-step₁ xs (mapSum` {u} arit) = do
-  memName , assign , free ← calloc complex-type (ι (ν u))
+step₁ scl xs (mapSum` {u} arit) = do
+  memName , assign , free ← calloc scl (ι (ν u))
 
   i ← new-Ix (ι (ν u))
   j ← new-Ix (ι (ν u))
   k ← new-Ix (ι (ν u))
 
-  op ← arit-eval $ app (app (app arit (`λ l ⇒ (var (var (xs l))))) (var i)) (var j)
+  op ← arit-eval $ app (app (app arit (`λ l ⇒ (var (SclVar scl (xs l))))) (var i)) (var j)
 
-  let body = loop′ j [ loop′ i [ assign′ (ix-to-str i memName) += op ]ₗ ]ₗ
+  let body = loop′ j [ loop′ i [ assign′ (ix-to-str i memName) += {scl} op ]ₗ ]ₗ
 
-  let copyBack = loop′ k [ assign′ (xs k) ≔ (var (ix-to-str k memName)) ]ₗ
+  let copyBack = loop′ k [ assign′ (xs k) ≔ {scl} (SclVar scl (ix-to-str k memName)) ]ₗ
   return $ assign ∷ body ∷ copyBack ∷ [ free ]ₗ
-step₁ xs (copyOut` {_} {s} {p} r₁ r₃ inp) = do 
-  workingMem , assign , free ← calloc complex-type p
+step₁ scl xs (copyOut` {_} {s} {p} r₁ r₃ inp) = do 
+  workingMem , assign , free ← calloc scl p
 
   i ← new-Ix s
   let copyOutOp = comment′ (showResh r₁)
-                ∷ [ loop′ i [ assign′ (ix-to-str (resh-ix r₁ i) workingMem) ≔ (var (xs (ι i))) ]ₗ ]ₗ
+                ∷ [ loop′ i [ assign′ (ix-to-str (resh-ix r₁ i) workingMem) ≔ {scl} (SclVar scl (xs (ι i))) ]ₗ ]ₗ
 
-  op ← step₁ (flip ix-to-str workingMem) inp
+  op ← step₁ scl (flip ix-to-str workingMem) inp
 
   j ← new-Ix s
   let copyInOp = comment′ (showResh r₃)
-              ∷ [ loop′ j [ assign′ (xs (ι j)) ≔ (var (ix-to-str (resh-ix (rev r₃) j) workingMem)) ]ₗ ]ₗ
+              ∷ [ loop′ j [ assign′ (xs (ι j)) ≔ {scl} (SclVar scl (ix-to-str (resh-ix (rev r₃) j) workingMem)) ]ₗ ]ₗ
 
   return $ [ assign ]ₗ ++ₗ copyOutOp ++ₗ op ++ₗ copyInOp ++ₗ [ free ]ₗ
-step₁ xs (part` {_} {s} {p} s⊂p inp) = do
+step₁ scl xs (part` {_} {s} {p} s⊂p inp) = do
   i ← new-Ix s
   let ys = λ j → xs (resh-ix (rev (to-resh s⊂p)) (i ⊗ j))
 
-  op ← step₁ ys inp
+  op ← step₁ scl ys inp
 
   return $ [ loop′ i op ]ₗ
 
-inp→f-Complex : Inp translate-Ty s → String → String
-inp→f-Complex {_} {s} inp function-name = runState inp→f′ 0 .proj₂
+inp→f-Scl : (scl : Scalar τ) → Inp translate-Ty s (Scl scl) → String → String
+inp→f-Scl {s = s} scl inp function-name = runState inp→f′ 0 .proj₂
   where
     inp→f′ : State ℕ String
     inp→f′ = do
       var-name′ ← fresh-var
-      let var-name = _++ var-name′
-      f ← step₁ (flip ix-to-str var-name) inp
+      let var-name = var-name′
+      f ← step₁ scl (flip ix-to-str var-name) inp
       let body = showProgram f
-      return $ printf "void %s(%s) {\n%s}\n" function-name (ArCast (just (var-name "")) complex-type s) body 
+      return $ printf "void %s(%s) {\n%s}\n" function-name (ArCast (just var-name) (Scl-type scl) s) body 
 
-inp→f-Real : Inp translate-Ty s → String → String
-inp→f-Real {_} {s} inp function-name = runState inp→f′ 0 .proj₂
-  where
-    inp→f′ : State ℕ String
-    inp→f′ = do
-      var-name′ ← fresh-var
-      let var-name = _++ var-name′
-      f ← step₁ (flip ix-to-str var-name) inp
-      let body = showProgram₂ f
-      let assignEvil = printf "real %s = 0;" evil
-      return $ printf "void %s(%s, %s) {\n%s\n%s}\n" 
-          function-name 
-          (ArCast (just (prefix-var re var-name)) real-type s) 
-          (ArCast (just (prefix-var im var-name)) real-type s) 
-          assignEvil
-          body 
-
-inp-signature-Complex : Inp translate-Ty s → String → String
+inp-signature-Complex : Inp translate-Ty s (Scl C) → String → String
 inp-signature-Complex {_} {s} inp function-name = printf "void %s(%s);\n" function-name (ArCast nothing complex-type s)
-
-inp-signature-Real : Inp translate-Ty s → String → String
-inp-signature-Real {_} {s} inp function-name = printf "void %s(%s, %s);\n" function-name (ArCast nothing real-type s) (ArCast nothing real-type s)
 
 sizeDef-Complex : S ℓ → String → String
 sizeDef-Complex s name =     (printf "#ifndef %s_SIZE\n" name)
                   ++ (printf "#define %s_SIZE %u\n" name (clen s))
                   ++ (printf "typedef complex real (*%s_TYPE)%s;\n" name (ShapeCast s))
                   ++ ("#define ARR_OF_COMPLEX\n")
-                  ++ "#endif\n"
-
-sizeDef-Real : S ℓ → String → String
-sizeDef-Real s name =     (printf "#ifndef %s_SIZE\n" name)
-                  ++ (printf "#define %s_SIZE %u\n" name (clen s))
-                  ++ (printf "typedef real (*%s_TYPE)%s;\n" name (ShapeCast s))
                   ++ "#endif\n"
 ```
 
@@ -518,17 +566,8 @@ module _ where
   fftn-test-sig-Complex′ : S (ss (ss zz)) → String
   fftn-test-sig-Complex′ s = inp-signature-Complex (fftn` s) "fftn"
 
-  fftn-test-sig-Real′ : S (ss (ss zz)) → String
-  fftn-test-sig-Real′ s = inp-signature-Real (fftn` s) "fftn"
-
-
   fftn-test-Complex′ : S (ss (ss zz)) → String
   fftn-test-Complex′ s =
     let fun = fftn` s in
-    inp→f-Complex fun "fftn"
-
-  fftn-test-Real′ : S (ss (ss zz)) → String
-  fftn-test-Real′ s =
-    let fun = fftn` s in
-    inp→f-Real fun "fftn"
+    inp→f-Scl C fun "fftn"
 ```
