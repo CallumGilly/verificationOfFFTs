@@ -185,7 +185,7 @@ Our evaluator is going to evaluate all lambda calculus, while the translator
 will stringify this into something which can be used in C. 
 
 ```agda
-open import Data.List.Base as List renaming (_++_ to _++ₗ_; [_] to [_]ₗ; map to mapₗ)
+open import Data.List.Base as List renaming (_++_ to _++ₗ_; [_] to [_]ₗ; map to mapₗ) hiding (intersperse)
 module _ where
 
   data NOp : Set where
@@ -321,6 +321,47 @@ us. These lay out a structure for the eventual C dsl
 
 ```agda
 module _ where
+  num-tuple : Set → Num τ → Set
+  num-tuple X (x ⋆ y) = num-tuple X x × num-tuple X y
+  num-tuple X _ = X
+
+  fresh-vars : (α : Num τ) → State ℕ (num-tuple String α)
+  fresh-vars (Scl x) = fresh-var
+  fresh-vars (α₁ ⋆ α₂) = do 
+    l ← fresh-vars α₁
+    r ← fresh-vars α₂
+    return $ l , r
+
+  pull-⋆ : {A : Set} (α : Num τ) → num-tuple (A → String) α → A → translate-Ty τ
+  pull-⋆ (Scl α) xs i = SclVar α (xs i)
+  pull-⋆ (α₁ ⋆ α₂) (xs , ys) i = (pull-⋆ α₁ xs i) , (pull-⋆ α₂ ys i)
+
+  create-ass : ∀ {A : Set} (α : Num τ) → AssignmentOperation → num-tuple (A → String) α → translate-Ty τ → A → Program
+  create-ass (Scl α) op xs ys i = [ assign′ (xs i) op {α} ys ]ₗ
+  create-ass (α₁ ⋆ α₂) op (xs₁ , xs₂) (ys₁ , ys₂) i = create-ass α₁ op xs₁ ys₁ i ++ₗ create-ass α₂ op xs₂ ys₂ i
+
+  num-i-to-prog : {α : Num τ} → num-tuple Instruction α → Program
+  num-i-to-prog {α = Scl α} = [_]ₗ
+  num-i-to-prog {α = α₁ ⋆ α₂} (l , r) = num-i-to-prog l ++ₗ num-i-to-prog r
+
+  num-tuple-distrib : ∀ {A B : Set} → (α : Num τ) → num-tuple (A × B) α → num-tuple A α × num-tuple B α
+  num-tuple-distrib (Scl _) x = x
+  num-tuple-distrib (α₁ ⋆ α₂) (x , y) = 
+    let a , b = num-tuple-distrib α₁ x in
+    let c , d = num-tuple-distrib α₂ y in
+    (a , c) , (b , d)
+
+  num-tuple-distrib₃ : ∀ {A B C : Set} → (α : Num τ) → num-tuple (A × B × C) α → num-tuple A α × num-tuple B α × num-tuple C α
+  num-tuple-distrib₃ α xs = 
+    let a , x = num-tuple-distrib α xs in
+    let b , c = num-tuple-distrib α x  in
+    a , b , c 
+
+  num-map : ∀ {A B : Set} (α : Num τ) → (A → B) → num-tuple A α → num-tuple B α
+  num-map (Scl x) f xs = f xs
+  num-map (α₁  ⋆ α₂) f (xs , ys) = num-map α₁ f xs , num-map α₂ f ys
+
+module _ where
   natural-type : String
   natural-type = "unsigned"
 
@@ -369,6 +410,13 @@ module _ where
     let ops = declare′ memName s scl
     let free = free′ memName
     return $ memName , ops , free
+
+  callocs : (α : Num τ) → S ℓ → State ℕ (num-tuple (String × Instruction × Instruction) α)
+  callocs (Scl α) = calloc α
+  callocs (α₁ ⋆ α₂) s = do
+    l ← callocs α₁ s
+    r ← callocs α₂ s
+    return $ l , r
 ```
 # ROp Equality
 One thing I will frequently come accross is the case fromCr (fromR x _) which
@@ -425,10 +473,6 @@ become trivial as we can make the change in the next translation step
 
 ```agda
 module _ where
-  num-tuple : Set → Num τ → Set
-  num-tuple X (x ⋆ y) = num-tuple X x × num-tuple X y
-  num-tuple X _ = X
-
   
     
   evaled-to-str : (val : Num τ) → translate-Ty τ → num-tuple String val
@@ -455,6 +499,7 @@ module _ where
   -- but we would need to check `x ≟ y` 
   evaled-to-str (Scl C) (fromR r i) = printf "(%s + (%s * I))" (evaled-to-str (Scl R) r) (evaled-to-str (Scl R) i)
   evaled-to-str (a ⋆ b) (fst , snd) = (evaled-to-str a fst) , (evaled-to-str b snd)
+  evaled-to-str (Scl N) (var x) = x
 
   showAssignmentOperation : AssignmentOperation → String
   showAssignmentOperation ≔ = "="
@@ -474,7 +519,7 @@ module _ where
   mutual
     showInstruction : Instruction → String
     showInstruction (comment′ x) = unlines $ List.map ("//" <+>_) $ lines x
-    showInstruction (assign′ var′ op′ val′) = var′ <+> (showAssignmentOperation op′) <+> showNumue val′
+    showInstruction (assign′ var′ op′ {scl = scl} val′) = var′ <+> (showAssignmentOperation op′) <+> showNumue {_} {scl} val′
     showInstruction (loop′ i ins) = loopnest i (showProgram ins)
     showInstruction (free′ x) = printf "free(%s)" x
     showInstruction (declare′ memName s scl) = printf "%s = %s" (ArCast (just memName) (Scl-type scl) s) (calloc-op (Scl-type scl) (clen s))
@@ -489,19 +534,16 @@ module _ where
 Finally we can move to our C translation
 
 ```agda
-
-step₂ : (num : Num τ) → (Ix s → String) → Inp translate-Ty s num → (State ℕ Program)
-
-step₁ : (scl : Scalar τ) → (Ix s → String) → Inp translate-Ty s (Scl scl) → (State ℕ Program)
-step₁ scl xs (imap` arit) = do
+scl-step : (scl : Scalar τ) → (Ix s → String) → Inp translate-Ty s (Scl scl) → (State ℕ Program)
+scl-step scl xs (imap` arit) = do
   i ← new-Ix _
   arit′ ← arit-eval (app (app arit (var i)) (var (SclVar scl (xs i))))
   return $ [ loop′ i [ assign′ (xs i) ≔ {scl} arit′ ]ₗ ]ₗ
-step₁ scl xs (compose inp₁ inp₂) = do
-  ins₁ ← step₁ scl xs inp₁ 
-  ins₂ ← step₁ scl xs inp₂
+scl-step scl xs (compose inp₁ inp₂) = do
+  ins₁ ← scl-step scl xs inp₁ 
+  ins₂ ← scl-step scl xs inp₂
   return $ ins₁ ++ₗ ins₂
-step₁ scl xs (mapSum` {u} arit) = do
+scl-step scl xs (mapSum` {u} arit) = do
   memName , assign , free ← calloc scl (ι (ν u))
 
   i ← new-Ix (ι (ν u))
@@ -514,27 +556,109 @@ step₁ scl xs (mapSum` {u} arit) = do
 
   let copyBack = loop′ k [ assign′ (xs k) ≔ {scl} (SclVar scl (ix-to-str k memName)) ]ₗ
   return $ assign ∷ body ∷ copyBack ∷ [ free ]ₗ
-step₁ scl xs (copyOut` {_} {s} {p} r₁ r₃ inp) = do 
+scl-step scl xs (copyOut` {_} {s} {p} r₁ r₃ inp) = do 
   workingMem , assign , free ← calloc scl p
 
   i ← new-Ix s
   let copyOutOp = comment′ (showResh r₁)
                 ∷ [ loop′ i [ assign′ (ix-to-str (resh-ix r₁ i) workingMem) ≔ {scl} (SclVar scl (xs (ι i))) ]ₗ ]ₗ
 
-  op ← step₁ scl (flip ix-to-str workingMem) inp
+  op ← scl-step scl (flip ix-to-str workingMem) inp
 
   j ← new-Ix s
   let copyInOp = comment′ (showResh r₃)
               ∷ [ loop′ j [ assign′ (xs (ι j)) ≔ {scl} (SclVar scl (ix-to-str (resh-ix (rev r₃) j) workingMem)) ]ₗ ]ₗ
 
   return $ [ assign ]ₗ ++ₗ copyOutOp ++ₗ op ++ₗ copyInOp ++ₗ [ free ]ₗ
-step₁ scl xs (part` {_} {s} {p} s⊂p inp) = do
+scl-step scl xs (part` {_} {s} {p} s⊂p inp) = do
   i ← new-Ix s
   let ys = λ j → xs (resh-ix (rev (to-resh s⊂p)) (i ⊗ j))
 
-  op ← step₁ scl ys inp
+  op ← scl-step scl ys inp
 
   return $ [ loop′ i op ]ₗ
+
+num-step : (num : Num τ) → num-tuple (Ix s → String) num → Inp translate-Ty s num → (State ℕ Program)
+num-step α xs (imap` fs) = do
+  i ← new-Ix _
+  arit ← arit-eval (app (app fs (var i)) (var (pull-⋆ α xs i)))
+  return $ [ loop′ i (create-ass α ≔ xs arit i) ]ₗ
+num-step α xs (compose inp₁ inp₂) = do
+  ins₁ ← num-step α xs inp₁ 
+  ins₂ ← num-step α xs inp₂
+  return $ ins₁ ++ₗ ins₂
+num-step α xs (copyOut` {s = s} {p} r₁ r₃ inp) = do
+  mem ← callocs α p
+  let workingMems , assigns , frees = num-tuple-distrib₃ α mem
+
+  let workingMems′ = num-map _ (flip (ix-to-str {s = p})) workingMems
+  let assigns′ = num-i-to-prog assigns
+  let frees′   = num-i-to-prog frees
+
+  i ← new-Ix s
+  let copyOutOps = comment′ (showResh r₁) ∷ [ loop′ i (create-ass α ≔ workingMems′ (pull-⋆ α xs (ι i)) (resh-ix r₁ i)) ]ₗ
+  
+  ops ← num-step α workingMems′ inp
+
+  j ← new-Ix s
+  let copyInOps = comment′ (showResh r₃) ∷ [ loop′ j (create-ass α ≔ xs (pull-⋆ α workingMems′ (resh-ix (rev r₃) j)) (ι j)) ]ₗ
+
+  return $ assigns′ ++ₗ copyOutOps ++ₗ ops ++ₗ copyInOps ++ₗ frees′
+num-step α xs (part` {_} {s} {p} s⊂p inp) = do
+  i ← new-Ix s
+  let ys = num-map α (λ ys j → ys (resh-ix (rev (to-resh s⊂p)) (i ⊗ j))) xs
+  ops ← num-step α ys inp
+  return $ [ loop′ i ops ]ₗ
+num-step α xs (mapSum` {u} arit) = do
+  mem ← callocs α (ι (ν u))
+  let workingMems , assigns , frees = num-tuple-distrib₃ α mem
+
+  let workingMems′ = num-map _ (flip (ix-to-str {s = (ι (ν u))})) workingMems
+  let assigns′ = num-i-to-prog assigns
+  let frees′   = num-i-to-prog frees
+
+  i ← new-Ix (ι (ν u))
+  j ← new-Ix (ι (ν u))
+  k ← new-Ix (ι (ν u))
+  
+  ops ← arit-eval $ app (app (app arit (var (λ δ → return $ pull-⋆ α xs δ))) (var i)) (var j)
+
+  let body = loop′ j [ loop′ i ( create-ass α += workingMems′ ops i ) ]ₗ
+
+  let copyBack = loop′ k $ create-ass α ≔ xs (pull-⋆ α workingMems′ k) k
+
+  return $ assigns′ ++ₗ [ body ]ₗ ++ₗ [ copyBack ]ₗ ++ₗ frees′
+
+-- This would be quite a nice proof, to show that our more complicated step 
+-- implementation is eqivilant to our more simple step implementation for scalars...
+{-
+scl≡num : ∀ (scl : Scalar τ) → (inp : Inp translate-Ty s (Scl scl)) → (xs : Ix s → String) → scl-step scl xs inp ≡ num-step (Scl scl) xs inp
+scl≡num scl (compose inp inp₁) xs rewrite scl≡num scl inp xs | scl≡num scl inp₁ xs = refl
+scl≡num scl (copyOut` r₁ r₂ inp) xs = ?
+scl≡num scl (part` s⊂p inp) xs = ?
+scl≡num scl (imap` x) xs = ?
+scl≡num scl (mapSum` x) xs = ?
+-}
+
+toArgs : {α : Num τ} (s : S ℓ) → num-tuple (Maybe String) α → List String 
+toArgs {α = Scl α} s x = [ ArCast x (Scl-type α) s ]ₗ
+toArgs {α = _ ⋆ _} s (xs , ys) = toArgs s xs ++ₗ toArgs s ys
+
+nothing-num-tuple : {A : Set} (α : Num τ) → num-tuple (Maybe A) α
+nothing-num-tuple (Scl _) = nothing
+nothing-num-tuple (_ ⋆ _) = nothing-num-tuple _ , nothing-num-tuple _
+
+inp→f : (α : Num τ) → Inp translate-Ty s α → String → String
+inp→f {s = s} α inp function-name  = runState inp→f′ 0 .proj₂
+  where
+    inp→f′ : State ℕ String
+    inp→f′ = do
+      var-names ← fresh-vars α
+      let var-names′ = num-map α (flip (ix-to-str {s = s})) var-names
+      f ← num-step α var-names′ inp
+      let body = showProgram f
+      let args = intersperse "," $ toArgs s (num-map α just var-names)
+      return $ printf "void %s(%s) {\n%s}\n" function-name args body
 
 inp→f-Scl : (scl : Scalar τ) → Inp translate-Ty s (Scl scl) → String → String
 inp→f-Scl {s = s} scl inp function-name = runState inp→f′ 0 .proj₂
@@ -543,12 +667,22 @@ inp→f-Scl {s = s} scl inp function-name = runState inp→f′ 0 .proj₂
     inp→f′ = do
       var-name′ ← fresh-var
       let var-name = var-name′
-      f ← step₁ scl (flip ix-to-str var-name) inp
+      f ← scl-step scl (flip ix-to-str var-name) inp
       let body = showProgram f
       return $ printf "void %s(%s) {\n%s}\n" function-name (ArCast (just var-name) (Scl-type scl) s) body 
 
-inp-signature-Complex : Inp translate-Ty s (Scl C) → String → String
-inp-signature-Complex {_} {s} inp function-name = printf "void %s(%s);\n" function-name (ArCast nothing complex-type s)
+inp-signature : (α : Num τ) → Inp translate-Ty s α → String → String
+inp-signature {s = s} α inp function-name = printf "void %s(%s);\n" function-name (intersperse "," $ toArgs s (nothing-num-tuple α))
+
+inp-signature-Scl : (scl : Scalar τ) → Inp translate-Ty s (Scl scl) → String → String
+inp-signature-Scl {s = s} scl inp function-name = printf "void %s(%s);\n" function-name (ArCast nothing (Scl-type scl) s)
+
+sizeDefs : (α : Num τ) → S ℓ → num-tuple String α → String
+sizeDefs (Scl α) s name = (printf "#ifndef %s_SIZE\n" name)
+                       ++ (printf "#define %s_SIZE %u\n" name (clen s))
+                       ++ (printf "typedef %s (*%s_TYPE)%s;\n" (Scl-type α) name (ShapeCast s))
+                       ++ "#endif\n"
+sizeDefs (α₁ ⋆ α₂) s (xs , ys) = sizeDefs α₁ s xs ++ sizeDefs α₂ s ys
 
 sizeDef-Complex : S ℓ → String → String
 sizeDef-Complex s name =     (printf "#ifndef %s_SIZE\n" name)
@@ -564,10 +698,21 @@ sizeDef-Complex s name =     (printf "#ifndef %s_SIZE\n" name)
 module _ where
 
   fftn-test-sig-Complex′ : S (ss (ss zz)) → String
-  fftn-test-sig-Complex′ s = inp-signature-Complex (fftn` s) "fftn"
+  fftn-test-sig-Complex′ s = inp-signature _ (fftn` s) "fftn"
+                             -- inp-signature-Scl C (fftn` s) "fftn"
+
+  fftn-test-sig′ : S (ss (ss zz)) → String
+  fftn-test-sig′ s = inp-signature _ (Rfftn` s) "fftn"
+
 
   fftn-test-Complex′ : S (ss (ss zz)) → String
   fftn-test-Complex′ s =
     let fun = fftn` s in
-    inp→f-Scl C fun "fftn"
+    inp→f _ fun "fftn"
+    --inp→f-Scl C fun "fftn"
+
+  fftn-test′ : S (ss (ss zz)) → String
+  fftn-test′ s =
+    let fun = Rfftn` s in
+    inp→f _ fun "fftn"
 ```
