@@ -364,11 +364,11 @@ module _ where
              → State ℕ (Program × Program)
   create-ass {X = X} α op xs ys i = do
     tmp-vars′ ← fresh-vars α
-    let tmp-vars = num-map α (λ x → λ _ → x) (num-map α (printf "(*%s)[0]") tmp-vars′) 
-    return $ declare-tmp-vars α tmp-vars′ , create-tmp-ass tmp-vars ++ₗ create-ass-from-tmp (num-map α (printf "(*%s)[0]") tmp-vars′)
+    let tmp-vars = num-map α (λ x → λ _ → x) (tmp-vars′) 
+    return $ declare-tmp-vars α tmp-vars′ , create-tmp-ass tmp-vars ++ₗ create-ass-from-tmp (tmp-vars′)
     where
       declare-tmp-vars : (β : Num σ) → (num-tuple String β) → Program
-      declare-tmp-vars (Scl β) zs = [ declare′ zs (ν 0) β ]ₗ
+      declare-tmp-vars (Scl β) zs = [ declareScl′ zs β ]ₗ
       declare-tmp-vars (β₁ ⋆ β₂) (zs₁ , zs₂) = declare-tmp-vars β₁ zs₁ 
                                            ++ₗ declare-tmp-vars β₂ zs₂
 
