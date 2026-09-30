@@ -47,15 +47,15 @@ main = run do
   writeFile "./generated/FFT.h" $ header ++ DEF ++ (fftn-test-sig-Real′ s)
   -}
 
-  {-
   let DEF = sizeDefs (Scl R) s "fftn"
   writeFile "./generated/FFT.c" $ header ++ DEF ++ (fftn-test′     s)
   writeFile "./generated/FFT.h" $ header ++ DEF ++ (fftn-test-sig′ s)
-  -}
 
+  {-
   let DEF = sizeDef-Complex s "fftn"
   writeFile "./generated/FFT.c" $ header ++ DEF ++ (fftn-test-Complex′     s)
   writeFile "./generated/FFT.h" $ header ++ DEF ++ (fftn-test-sig-Complex′ s)
+  -}
 
 
 {-

@@ -236,6 +236,7 @@ module _ where
       comment′ : String → Instruction
       assign′ : String → AssignmentOperation → {scl : Scalar τ} → SclOp scl → Instruction
       declare′ : String → S ℓ → Scalar τ → Instruction
+      declareScl′ : String → Scalar τ → Instruction
       loop′ : Ix s → Program → Instruction
       free′ : String → Instruction
 
@@ -336,9 +337,51 @@ module _ where
   pull-⋆ (Scl α) xs i = SclVar α (xs i)
   pull-⋆ (α₁ ⋆ α₂) (xs , ys) i = (pull-⋆ α₁ xs i) , (pull-⋆ α₂ ys i)
 
+  num-map : ∀ {A B : Set} (α : Num τ) → (A → B) → num-tuple A α → num-tuple B α
+  num-map (Scl x) f xs = f xs
+  num-map (α₁  ⋆ α₂) f (xs , ys) = num-map α₁ f xs , num-map α₂ f ys
+
+  create-ass′ : ∀ {A : Set} (α : Num τ) → AssignmentOperation → num-tuple (A → String) α → translate-Ty τ → A → Program
+  create-ass′ (Scl α) op xs ys i = [ assign′ (xs i) op {α} ys ]ₗ
+  create-ass′ (α₁ ⋆ α₂) op (xs₁ , xs₂) (ys₁ , ys₂) i = 
+            create-ass′ α₁ op xs₁ ys₁ i 
+        ++ₗ create-ass′ α₂ op xs₂ ys₂ i
+
+  num-tuple→translate-Ty : {α : Num τ} → num-tuple String α → translate-Ty τ
+  num-tuple→translate-Ty {_} {Scl α} x = SclVar α x
+  num-tuple→translate-Ty {.(_ ⋆ _)} {α₁ ⋆ α₂} (xs₁ , xs₂) = num-tuple→translate-Ty xs₁ , num-tuple→translate-Ty xs₂
+
+  -- The below is a horible implementation which works, I now need to make this nice :)
+  -- Create arse needs to take up two parts, the arse into temporary variables, 
+  -- and the arse back into the in place memory location
+  -- (But maybe not always)
+  create-ass : ∀ {X : Set}
+             → ∀ (α : Num τ) 
+             → AssignmentOperation 
+             → num-tuple (X → String) α 
+             → translate-Ty τ 
+             → X
+             → State ℕ (Program × Program)
+  create-ass {X = X} α op xs ys i = do
+    tmp-vars′ ← fresh-vars α
+    let tmp-vars = num-map α (λ x → λ _ → x) (num-map α (printf "(*%s)[0]") tmp-vars′) 
+    return $ declare-tmp-vars α tmp-vars′ , create-tmp-ass tmp-vars ++ₗ create-ass-from-tmp (num-map α (printf "(*%s)[0]") tmp-vars′)
+    where
+      declare-tmp-vars : (β : Num σ) → (num-tuple String β) → Program
+      declare-tmp-vars (Scl β) zs = [ declare′ zs (ν 0) β ]ₗ
+      declare-tmp-vars (β₁ ⋆ β₂) (zs₁ , zs₂) = declare-tmp-vars β₁ zs₁ 
+                                           ++ₗ declare-tmp-vars β₂ zs₂
+
+      create-tmp-ass : (num-tuple (_ → String) α) → Program
+      create-tmp-ass zs = create-ass′ α ≔ zs ys i
+
+      create-ass-from-tmp : (num-tuple String α) → Program
+      create-ass-from-tmp zs = create-ass′ α op xs (num-tuple→translate-Ty zs) i
+  {-
   create-ass : ∀ {A : Set} (α : Num τ) → AssignmentOperation → num-tuple (A → String) α → translate-Ty τ → A → Program
   create-ass (Scl α) op xs ys i = [ assign′ (xs i) op {α} ys ]ₗ
   create-ass (α₁ ⋆ α₂) op (xs₁ , xs₂) (ys₁ , ys₂) i = create-ass α₁ op xs₁ ys₁ i ++ₗ create-ass α₂ op xs₂ ys₂ i
+  -}
 
   num-i-to-prog : {α : Num τ} → num-tuple Instruction α → Program
   num-i-to-prog {α = Scl α} = [_]ₗ
@@ -356,10 +399,6 @@ module _ where
     let a , x = num-tuple-distrib α xs in
     let b , c = num-tuple-distrib α x  in
     a , b , c 
-
-  num-map : ∀ {A B : Set} (α : Num τ) → (A → B) → num-tuple A α → num-tuple B α
-  num-map (Scl x) f xs = f xs
-  num-map (α₁  ⋆ α₂) f (xs , ys) = num-map α₁ f xs , num-map α₂ f ys
 
 module _ where
   natural-type : String
@@ -523,6 +562,7 @@ module _ where
     showInstruction (loop′ i ins) = loopnest i (showProgram ins)
     showInstruction (free′ x) = printf "free(%s)" x
     showInstruction (declare′ memName s scl) = printf "%s = %s" (ArCast (just memName) (Scl-type scl) s) (calloc-op (Scl-type scl) (clen s))
+    showInstruction (declareScl′ memName scl) = printf "%s %s" (Scl-type scl) memName
 
     showProgram  : Program → String
     showProgram = unlines ∘ map′ (_++ ";") ∘ map′ showInstruction 
@@ -582,7 +622,8 @@ num-step : (num : Num τ) → num-tuple (Ix s → String) num → Inp translate-
 num-step α xs (imap` fs) = do
   i ← new-Ix _
   arit ← arit-eval (app (app fs (var i)) (var (pull-⋆ α xs i)))
-  return $ [ loop′ i (create-ass α ≔ xs arit i) ]ₗ
+  dec , ass ← create-ass α ≔ xs arit i
+  return $ dec ++ₗ [ loop′ i ass ]ₗ
 num-step α xs (compose inp₁ inp₂) = do
   ins₁ ← num-step α xs inp₁ 
   ins₂ ← num-step α xs inp₂
@@ -596,12 +637,12 @@ num-step α xs (copyOut` {s = s} {p} r₁ r₃ inp) = do
   let frees′   = num-i-to-prog frees
 
   i ← new-Ix s
-  let copyOutOps = comment′ (showResh r₁) ∷ [ loop′ i (create-ass α ≔ workingMems′ (pull-⋆ α xs (ι i)) (resh-ix r₁ i)) ]ₗ
+  let copyOutOps = comment′ (showResh r₁) ∷ [ loop′ i (create-ass′ α ≔ workingMems′ (pull-⋆ α xs (ι i)) (resh-ix r₁ i)) ]ₗ
   
   ops ← num-step α workingMems′ inp
 
   j ← new-Ix s
-  let copyInOps = comment′ (showResh r₃) ∷ [ loop′ j (create-ass α ≔ xs (pull-⋆ α workingMems′ (resh-ix (rev r₃) j)) (ι j)) ]ₗ
+  let copyInOps = comment′ (showResh r₃) ∷ [ loop′ j (create-ass′ α ≔ xs (pull-⋆ α workingMems′ (resh-ix (rev r₃) j)) (ι j)) ]ₗ
 
   return $ assigns′ ++ₗ copyOutOps ++ₗ ops ++ₗ copyInOps ++ₗ frees′
 num-step α xs (part` {_} {s} {p} s⊂p inp) = do
@@ -623,18 +664,19 @@ num-step α xs (mapSum` {u} arit) = do
   
   ops ← arit-eval $ app (app (app arit (var (λ δ → return $ pull-⋆ α xs δ))) (var i)) (var j)
 
-  let body = loop′ j [ loop′ i ( create-ass α += workingMems′ ops i ) ]ₗ
+  dec , ass ← create-ass α += workingMems′ ops i 
+  let body = dec ++ₗ [ loop′ j [ loop′ i ass ]ₗ ]ₗ
 
-  let copyBack = loop′ k $ create-ass α ≔ xs (pull-⋆ α workingMems′ k) k
+  let copyBack = loop′ k $ create-ass′ α ≔ xs (pull-⋆ α workingMems′ k) k
 
-  return $ assigns′ ++ₗ [ body ]ₗ ++ₗ [ copyBack ]ₗ ++ₗ frees′
+  return $ assigns′ ++ₗ body ++ₗ [ copyBack ]ₗ ++ₗ frees′
 
+{-
 -- This would be quite a nice proof, to show that our more complicated step 
 -- implementation is eqivilant to our more simple step implementation for scalars...
-{-
 scl≡num : ∀ (scl : Scalar τ) → (inp : Inp translate-Ty s (Scl scl)) → (xs : Ix s → String) → scl-step scl xs inp ≡ num-step (Scl scl) xs inp
 scl≡num scl (compose inp inp₁) xs rewrite scl≡num scl inp xs | scl≡num scl inp₁ xs = refl
-scl≡num scl (copyOut` r₁ r₂ inp) xs = ?
+scl≡num scl (copyOut` r₁ r₂ inp) xs rewrite scl≡num scl inp _ = ?
 scl≡num scl (part` s⊂p inp) xs = ?
 scl≡num scl (imap` x) xs = ?
 scl≡num scl (mapSum` x) xs = ?
