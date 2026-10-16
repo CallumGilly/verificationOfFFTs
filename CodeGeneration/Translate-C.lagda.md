@@ -16,7 +16,7 @@ open import Matrix.Leveled.NatMon-Change-Major
 open import Data.Nat hiding (_≟_)
 open import Data.Nat.Show using () renaming (show to showℕ)
 open import Data.String hiding (length)
-open import Data.Product hiding (swap)
+open import Data.Product hiding (swap; curry; uncurry)
 open import Data.Maybe renaming (_>>=_ to _⟫=_; zip to zipM) 
 open import Data.Bool hiding (_≟_)
 
@@ -98,7 +98,7 @@ is a new variable (for use when generating loop nests).
       return (ix-s ⊗ ix-p)
 ```
 
-We also need a way to reshape IX then get the flat position.
+We also need a way reshape IX then get the flat position.
 We can also then create a function to get this position after a reshape has been applied
 ```agda
   ix-flat-index : ∀ {n : ℕ} → Ix (ν n) → String
@@ -322,6 +322,87 @@ us. These lay out a structure for the eventual C dsl
 
 ```agda
 module _ where
+  rmC : Ty → Ty
+  rmC C = R ⋆ R
+  rmC R = R
+  rmC N = N
+  rmC (ix x) = ix x
+  rmC (x ⇒ y) = rmC x ⇒ rmC y
+  rmC (x ⋆ y) = rmC x ⋆ rmC y
+
+  mutual
+    unrefine-var : translate-Ty (rmC τ) → translate-Ty τ
+    unrefine-var {C} (r , i) = fromR r i
+    unrefine-var {R} x = x
+    unrefine-var {N} x = x
+    unrefine-var {ix _} x = x
+    unrefine-var {τ ⇒ σ} f y = do
+      x ← f (refine-var y)
+      return $ unrefine-var x
+    unrefine-var {τ ⋆ σ} (x , y) = unrefine-var x , unrefine-var y
+
+    refine-var : translate-Ty τ → translate-Ty (rmC τ)
+    refine-var {C} x = fromCr x , fromCi x
+    refine-var {R} x = x
+    refine-var {N} x = x
+    refine-var {ix _} x = x
+    refine-var {τ ⇒ σ} f y = do
+      x ← f (unrefine-var y)
+      return $ refine-var x
+    refine-var {τ ⋆ σ} (x , y) = refine-var x , refine-var y
+
+  refine-arit : Arit translate-Ty τ → Arit translate-Ty (rmC τ)
+  refine-arit (var x) = var $ refine-var x
+  refine-arit (lam f) = lam $ refine-arit ∘ f ∘ unrefine-var
+  refine-arit (app f x) = app (refine-arit f) (refine-arit x)
+  refine-arit (x *C y) = 
+    let x′ = refine-arit x in
+    let y′ = refine-arit y in
+    uncurry ((uncurry mult) x′) y′
+  refine-arit (ω` n j) = to-⋆ (ωr` n j) (ωi` n j) 
+  refine-arit (toC r i) = to-⋆ r i
+  refine-arit (toRᵣ x) = ⋆-proj₁ (refine-arit x)
+  refine-arit (toRᵢ x) = ⋆-proj₂ (refine-arit x)
+  refine-arit (to-⋆ l r) = to-⋆ (refine-arit l) (refine-arit r)
+  refine-arit (⋆-proj₁ x) = ⋆-proj₁ $ refine-arit x 
+  refine-arit (⋆-proj₂ x) = ⋆-proj₂ $ refine-arit x 
+  refine-arit op@(sizeN _) = op
+  refine-arit op@(posiN _ _) = op
+  refine-arit op@(spliₗ _) = op
+  refine-arit op@(spliᵣ _) = op
+  refine-arit op@(_ *N _) = op
+  refine-arit op@(_ *R _) = op 
+  refine-arit op@(_ +R _) = op
+  refine-arit op@(_ -R _) = op
+  refine-arit op@(ωr` _ _) = op
+  refine-arit op@(ωi` _ _) = op
+
+  refine-inp : Inp translate-Ty s (Scl C) → Inp translate-Ty s ((Scl R) ⋆ (Scl R))
+  refine-inp (compose inp₁ inp₂) = compose (refine-inp inp₁) (refine-inp inp₂)
+  refine-inp (copyOut` {p = s} r₁ r₂ inp) = copyOut` r₁ r₂ (refine-inp inp)
+  refine-inp (part` s⊂p inp) = part` s⊂p (refine-inp inp)
+  refine-inp (imap` op) = imap` $ refine-arit op
+  refine-inp (mapSum` op) = mapSum` $ refine-arit op
+
+  {-
+  pre-ufftEq : ∀ {s : S (ss zz)} → refine-inp {_} {s} (pre-ufft` dft`) ≡ Rpre-ufft` Rdft`
+  pre-ufftEq {ι (ν x)} = ?
+  pre-ufftEq {s ⊗ s₁} = ?
+
+  post-ufftEq : ∀ {s} →
+                refine-inp {s = s} (post-ufft` (copyOut` (rev transpᵣ) (Change-Major.CMᵗ ℕ-CM) (pre-ufft` dft`)))
+                ≡
+                Rpost-ufft` (copyOut` (rev transpᵣ) (Change-Major.CMᵗ ℕ-CM) (Rpre-ufft` Rdft`))
+  post-ufftEq {ι s} = cong (copyOut` _ _) ?
+  post-ufftEq {s₁ ⊗ s₂} rewrite post-ufftEq {s₁} | post-ufftEq {s₂} = cong₂ compose (cong₂ compose refl (cong imap` (cong lam ?))) refl
+
+  fftnEq : ∀ {s : S (ss (ss zz))} → refine-inp (fftn` s) ≡ Rfftn` s
+  fftnEq = cong (copyOut` _ _) (post-ufftEq {_})
+  -}
+```
+
+```agda
+module _ where
   num-tuple : Set → Num τ → Set
   num-tuple X (x ⋆ y) = num-tuple X x × num-tuple X y
   num-tuple X _ = X
@@ -364,8 +445,8 @@ module _ where
              → State ℕ (Program × Program)
   create-ass {X = X} α op xs ys i = do
     tmp-vars′ ← fresh-vars α
-    let tmp-vars = num-map α (λ x → λ _ → x) (tmp-vars′) 
-    return $ declare-tmp-vars α tmp-vars′ , create-tmp-ass tmp-vars ++ₗ create-ass-from-tmp (tmp-vars′)
+    let tmp-vars = num-map α (λ x → λ _ → x) tmp-vars′
+    return $ declare-tmp-vars α tmp-vars′ , create-tmp-ass tmp-vars ++ₗ create-ass-from-tmp tmp-vars′
     where
       declare-tmp-vars : (β : Num σ) → (num-tuple String β) → Program
       declare-tmp-vars (Scl β) zs = [ declareScl′ zs β ]ₗ
@@ -671,9 +752,9 @@ num-step α xs (mapSum` {u} arit) = do
 
   return $ assigns′ ++ₗ body ++ₗ [ copyBack ]ₗ ++ₗ frees′
 
-{-
 -- This would be quite a nice proof, to show that our more complicated step 
 -- implementation is eqivilant to our more simple step implementation for scalars...
+{-
 scl≡num : ∀ (scl : Scalar τ) → (inp : Inp translate-Ty s (Scl scl)) → (xs : Ix s → String) → scl-step scl xs inp ≡ num-step (Scl scl) xs inp
 scl≡num scl (compose inp inp₁) xs rewrite scl≡num scl inp xs | scl≡num scl inp₁ xs = refl
 scl≡num scl (copyOut` r₁ r₂ inp) xs rewrite scl≡num scl inp _ = ?
@@ -744,7 +825,8 @@ module _ where
                              -- inp-signature-Scl C (fftn` s) "fftn"
 
   fftn-test-sig′ : S (ss (ss zz)) → String
-  fftn-test-sig′ s = inp-signature _ (Rfftn` s) "fftn"
+  fftn-test-sig′ s = inp-signature _ (refine-inp $ fftn` s) "fftn"
+  --fftn-test-sig′ s = inp-signature _ (Rfftn` s) "fftn"
 
 
   fftn-test-Complex′ : S (ss (ss zz)) → String
@@ -755,6 +837,7 @@ module _ where
 
   fftn-test′ : S (ss (ss zz)) → String
   fftn-test′ s =
-    let fun = Rfftn` s in
+    let fun = refine-inp (fftn` s) in
+    --let fun = Rfftn` s in
     inp→f _ fun "fftn"
 ```

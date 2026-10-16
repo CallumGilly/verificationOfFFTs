@@ -3,6 +3,7 @@ I should then be able to define a transpiler from an implementation in the DSL,
 to Agda (to give semantics), and to `C` (to generate for performance).
 
 ```agda
+{-# OPTIONS --allow-unsolved-metas #-}
 module CodeGeneration.DSL where
 open import Matrix.Mon
 open import Matrix.NatMon
@@ -36,14 +37,21 @@ For now I will just deal with Complex as a type - this needs to be changed to �
 but this is probably best left till later (have done it before and should be 
 an easy conversion).
 ```agda
-infixr 5 _⇒_
+infixr 25 _⇒_
+infixr 30 _⋆_
 data Ty : Set where
   C : Ty
   R : Ty
   N : Ty
   ix : {l : L} → S l → Ty
   _⇒_ : Ty → Ty → Ty
-  _⋆_ : Ty → Ty → Ty
+  _⋆_ : Ty → Ty → Ty -- Can I use this for SIMD Then????
+  -- Or do I want something like:
+  --SR : Ty
+  -- Using ⋆ may break refinement of C to R ⋆ R
+  -- Using SR means that we don't have clear semantics?
+  -- I COULD add a new × which is also Scalar?
+  _◎_ : Ty → ℕ → Ty
 
 private
   variable
@@ -69,6 +77,8 @@ data Scalar : Ty → Set where
 
 data Num : Ty → Set where
   Scl : Scalar τ → Num τ
+  --Simd : Scalar τ → (n : ℕ) → Num (repeat n τ)
+  _◎_ : Num τ → (n : ℕ) → Num (τ ◎ n)
   _⋆_ : Num τ →  Num σ → Num (τ ⋆ σ)
   --arr : ∀ {s : S l} → Num τ → Num (ix s ⇒ τ)
 ```
@@ -120,29 +130,39 @@ data Arit (ctxt : Ty → Set) : Ty → Set where
   _+R_ : Arit ctxt R → Arit ctxt R → Arit ctxt R 
   _-R_ : Arit ctxt R → Arit ctxt R → Arit ctxt R 
 
+  repeat       : (n : ℕ) → Arit ctxt τ → Arit ctxt (τ ◎ n)
+
+  SIMD-*R      : {n : ℕ} → Arit ctxt (R ◎ n) → Arit ctxt (R ◎ n) → Arit ctxt (R ◎ n)
+  SIMD-+R      : {n : ℕ} → Arit ctxt (R ◎ n) → Arit ctxt (R ◎ n) → Arit ctxt (R ◎ n)
+  SIMD--R      : {n : ℕ} → Arit ctxt (R ◎ n) → Arit ctxt (R ◎ n) → Arit ctxt (R ◎ n)
+
+  SIMD-to-⋆    : {n : ℕ} → Arit ctxt (τ ◎ n) → Arit ctxt (σ ◎ n) → Arit ctxt (τ ⋆ σ ◎ n)
+  SIMD-⋆-proj₁ : {n : ℕ} → Arit ctxt (τ ⋆ σ ◎ n)  → Arit ctxt (τ ◎ n)
+  SIMD-⋆-proj₂ : {n : ℕ} → Arit ctxt (τ ⋆ σ ◎ n)  → Arit ctxt (σ ◎ n)
+
   ωr`  : Arit ctxt N → Arit ctxt N → Arit ctxt R
   ωi`  : Arit ctxt N → Arit ctxt N → Arit ctxt R
 ```
-I initially tried allowing the below constructors in Arit, but this:
-- A) Doesn't make sense in the context of Arit, as the stringification of Arit 
-     should be assignable 
-- B) Its a pain to work with when we want to remove Complex and have to deal with ⇒'s
-  to-⋆     : Arit ctxt τ → Arit ctxt σ → Arit ctxt (τ ⋆ σ)
-  ⋆-proj₁ : Arit ctxt (τ ⋆ σ) → Arit ctxt τ
 
-  ⋆-proj₂ : Arit ctxt (τ ⋆ σ) → Arit ctxt σ
-Instead, I plan to push dealing with Complex or Reals to Inp where it (somewhat)
-makes more sense
 ```agda  
 
 mult : {ctxt : Ty → Set} (a b c d : Arit ctxt R) → Arit ctxt (R ⋆ R)
 mult a b c d = to-⋆ ((a *R c) -R (b *R d)) ((a *R d) +R (b *R c)) 
 
-curry : ∀ {ctxt : Ty → Set} → ∀ { X : Set } → (Arit ctxt (R ⋆ R) → X) → Arit ctxt R → Arit ctxt R → X
+SIMD-mult : {n : ℕ} {ctxt : Ty → Set} (a b c d : Arit ctxt (R ◎ n)) → Arit ctxt (R ⋆ R ◎ n)
+SIMD-mult a b c d = SIMD-to-⋆ (SIMD--R (SIMD-*R a c) (SIMD-*R b d)) (SIMD-+R (SIMD-*R a d) (SIMD-*R b c))
+
+curry : ∀ {ctxt : Ty → Set} → ∀ { X : Set } → (Arit ctxt (R ⋆ R) → X) → (Arit ctxt R → Arit ctxt R → X)
 curry f r i = f (to-⋆ r i)
+
+SIMD-curry : ∀ {n : ℕ} {ctxt : Ty → Set} → ∀ { X : Set } → (Arit ctxt (R ⋆ R ◎ n) → X) → (Arit ctxt (R ◎ n) → Arit ctxt (R ◎ n) → X)
+SIMD-curry f r i = f (SIMD-to-⋆ r i)
 
 uncurry : ∀ {ctxt : Ty → Set} → ∀ { X : Set } → (Arit ctxt R → Arit ctxt R → X) → (Arit ctxt (R ⋆ R) → X)
 uncurry f x = f (⋆-proj₁ x) (⋆-proj₂ x)
+
+SIMD-uncurry : ∀ {n : ℕ} {ctxt : Ty → Set} → ∀ { X : Set } → (Arit ctxt (R ◎ n) → Arit ctxt (R ◎ n) → X) → (Arit ctxt (R ⋆ R ◎ n) → X)
+SIMD-uncurry f x = f (SIMD-⋆-proj₁ x) (SIMD-⋆-proj₂ x)
 
 {-
 ω` : ∀ {ctxt : Ty → Set} → Arit ctxt N → Arit ctxt N → Arit ctxt C
@@ -189,42 +209,80 @@ We can then define the set of In-Place operations `Inp`.
 
 We restrict these to currently operate over one shape level `l`
 ```agda
-infixl 2 _>>>_
-open import Data.Default
+module _ where
+  infixl 2 _>>>_
+```
 
-data Inp (ctxt : Ty → Set) : {l : L} (s : S l) {τ : Ty} (num : Num τ) → Set₁ where
-  compose  : ∀ {s₁ : S l} {τ : Ty} {num : Num τ}
-           → Inp ctxt s₁ num
-           → Inp ctxt s₁ num
-           → Inp ctxt s₁ num
-  copyOut` : {s : S (ss l)} 
-           → {p : S (ss l)}
-           → {τ : Ty} {num : Num τ}
-           → (r₁ : Reshape s p) 
-           → (r₂ : Reshape p s) 
-           → Inp ctxt p num
-           → Inp ctxt (ι s) num
-  part`    : ∀ {s p : S (ss l)} 
-           → {τ : Ty} {num : Num τ}
-           → (s⊂p : s ⊂ p) 
-           → Inp ctxt (inv-⊂ s⊂p) num
-           → Inp ctxt p num
-  imap`    : ∀ {τ : Ty} {num : Num τ} 
-           → Arit ctxt (ix s ⇒ τ ⇒ τ) → Inp ctxt s num
-  mapSum`  : ∀ {u : ℕ} 
-           → ∀ {τ : Ty} {num : Num τ}
-           → Arit ctxt ((ar (ι (ν u)) τ) ⇒ ix (ι (ν u)) ⇒ ix (ι (ν u)) ⇒ τ) 
-           → Inp ctxt (ι (ν u)) num
+Sure the below would work and would allow us to refine to SIMD, but is it too 
+strict. If we want to be able to use simd operations when we ⟨ swap ⟩ we would 
+require s ≡ lanes. This would mean we would be fixing the radix of the fft to 
+lanes as opposed to a multiple of.
+
+```agda
+  --data IsSimd′ : {ℓ : L} (s : S ℓ) → Set where
+  --  base : ∀ {n : ℕ} → IsSimd′ (ν (n *ₙ lane))
+
+  {-
+  data IsSimd : {ℓ : L} (s : S ℓ) → Set where
+    base : ∀ {s : S zz} → IsSimd ((ι s) ⊗ ι lanes)
+    down : ∀ {ℓ : L} {s : S ℓ} → IsSimd s → IsSimd (ι s)
+    comp : ∀ {ℓ : L} {s p : S (ss ℓ)} → IsSimd s → IsSimd p → IsSimd (s ⊗ p)
+  -}
+
+  data Inp (ctxt : Ty → Set) : {l : L} (s : S l) {τ : Ty} (num : Num τ) → Set₁ where
+    compose  : ∀ {s₁ : S l} {τ : Ty} {num : Num τ}
+             → Inp ctxt s₁ num
+             → Inp ctxt s₁ num
+             → Inp ctxt s₁ num
+    copyOut` : {s : S (ss l)} 
+             → {p : S (ss l)}
+             → {τ : Ty} {num : Num τ}
+             → (r₁ : Reshape s p) 
+             → (r₂ : Reshape p s) 
+             → Inp ctxt p num
+             → Inp ctxt (ι s) num
+    part`    : ∀ {s p : S (ss l)} 
+             → {τ : Ty} {num : Num τ}
+             → (s⊂p : s ⊂ p) 
+             → Inp ctxt (inv-⊂ s⊂p) num
+             → Inp ctxt p num
+    imap`    : ∀ {τ : Ty} {num : Num τ} 
+             → Arit ctxt (ix s ⇒ τ ⇒ τ) → Inp ctxt s num
+    mapSum`  : ∀ {u : ℕ} 
+             → ∀ {τ : Ty} {num : Num τ}
+             → Arit ctxt ((ar (ι (ν u)) τ) ⇒ ix (ι (ν u)) ⇒ ix (ι (ν u)) ⇒ τ) 
+             → Inp ctxt (ι (ν u)) num
+```
+I need some way to pack from (s ⊗ ι (ν LANES)) τ into s (τ ◎ LANES)
+Because this deals with Shape, I belive that this has to be an Inp operation
+```agda
+    pack : ∀ {τ : Ty} {n : ℕ}
+          → {num : Num τ}
+          → (v⊂s : (ι (ν n) ⊂ s))
+          → Inp ctxt (inv-⊂ v⊂s) (num ◎ n)
+          → Inp ctxt s num
+
+    {-
+    simdSum : ∀ {u : ℕ}
+            → ∀ {τ : Ty} {num : Num τ}
+            → Arit ctxt ((ar (ι (ν u)) τ) ⇒ ix (ι (ν u)) ⇒ ix (ι (ν u)) ⇒ τ) 
+            → Inp ctxt ((ι lanes) ⊗ (ι (ν u))) num
+    simdImap` : ∀ {τ : Ty} {num : Num τ} 
+              → {s : S (ss zz)}
+              → Arit ctxt (ix s ⇒ τ ⇒ τ) 
+              → Inp ctxt (ι lanes ⊗ s) num
+    -}
   
-_>>>_ : ∀ {ctxt : Ty → Set} 
-      → ∀ {l : L}
-      → ∀ {s : S l}
-      → ∀ {τ : Ty} {num : Num τ} 
-      → Inp ctxt s num → Inp ctxt s num → Inp ctxt s num
-_>>>_ {ctxt} {_} {s} e₁ e₂ = compose e₁ e₂
+  _>>>_ : ∀ {ctxt : Ty → Set} 
+        → ∀ {l : L}
+        → ∀ {s : S l}
+        → ∀ {τ : Ty} {num : Num τ} 
+        → Inp ctxt s num → Inp ctxt s num → Inp ctxt s num
+  _>>>_ {ctxt} {_} {s} e₁ e₂ = compose e₁ e₂
 ```
 
 Within these in place operations, we can then represent twiddles...
+
 
 ```agda
 twid` : {s s′ p p′ : S (ss l)} {ctxt : Ty → Set} → (r₁ : Reshape s′ s) → (r₂ : Reshape p′ p) → Inp ctxt (s ⊗ p) (Scl C)
@@ -245,49 +303,6 @@ Rtwid` {l} {s} {s′} {p} {p′} r₁ r₂ =
             let ωᵢ = ωi` (sizeN $ var i) ((posiN (spliₗ $ var $ i) r₁) *N (posiN (spliᵣ $ var $ i) r₂)) in
           (uncurry mult (var x)) ωᵣ ωᵢ
         )
-
---syntax _∺_ x y = x ∷ y ∷ [] 
-
-
-{-
-module _ where
-  --open import Data.Fin
-  -- Did not know this was a thing, but I love it.
-  -- https://agda.readthedocs.io/en/latest/language/pattern-synonyms.html
-  pattern real = fzero
-  pattern imag = fsuc fzero
-
-  ℂ₂ : Vector (Σ Ty Num) 2
-  ℂ₂ = (R , R) ∷ (R , R) ∷ []
-
-{-
-a = ω n i
-b = ω n i
-c = a + b ?
--}
-N-twid` : {s s′ p p′ : S (ss l)} {ctxt : Ty → Set} → (r₁ : Reshape s′ s) → (r₂ : Reshape p′ p) → N-Inp ctxt (s ⊗ p) ((R , R) ∺ (R , R))
-N-twid` {ctxt = ctxt} r₁ r₂ =
-  N-imap` 
-    (((R , R) , (`λ i ⇒ `λ xᵣ ⇒ `λ xᵢ ⇒ 
-         ((var xᵣ) *R (ωr` (sizeN (var i)) ((posiN (spliₗ $ var $ i) r₁) *N (posiN (spliᵣ $ var $ i) r₂)))) 
-      -R ((var xᵢ) *R (ωi` (sizeN (var i)) ((posiN (spliₗ $ var $ i) r₁) *N (posiN (spliᵣ $ var $ i) r₂))))
-    )) ∷ []) 
-    λ { real → `λ _ ⇒ `λ _ ⇒ `λ _ ⇒ `λ letAssignedR ⇒ var letAssignedR
-      ; imag → `λ i ⇒ `λ xᵣ ⇒ `λ xᵢ ⇒ `λ _ ⇒
-           ((var xᵣ) *R (ωi` (sizeN (var i)) ((posiN (spliₗ $ var $ i) r₁) *N (posiN (spliᵣ $ var $ i) r₂))))
-        +R ((var xᵢ) *R (ωr` (sizeN (var i)) ((posiN (spliₗ $ var $ i) r₁) *N (posiN (spliᵣ $ var $ i) r₂))))
-      }
-  --? ?
-  --  (λ { zero → `λ i ⇒ `λ xᵣ ⇒ `λ xᵢ ⇒ ?
-  --    ; imag → ? 
-  --    })
-{-
-  where
-    --arits : All (λ (τ , _) → Arit ctxt (ix _ ⇒ vecAsParams ℂ₂ τ)) ℂ₂
-    --arits real = `λ i ⇒ `λ xᵣ ⇒ `λ xᵢ ⇒ ? -- Here we really want to be using pre computed values of twiddles
-    --arits imag = `λ i ⇒ `λ xᵣ ⇒ `λ xᵢ ⇒ ? -- and here we need a pre saved value of xᵣ
-    -}
-    -}
 ```
 
 ```agda
@@ -300,6 +315,28 @@ Rdft` {ν u} = mapSum` {u = u} $ `λ xs ⇒ `λ j ⇒ `λ k ⇒
     let ωᵣ  = ωr` (sizeN (var j)) ((posiN (var k) eq) *N (posiN (var j) eq)) in
     let ωᵢ  = ωi` (sizeN (var j)) ((posiN (var k) eq) *N (posiN (var j) eq)) in
     (uncurry mult (app (var xs) (var k))) ωᵣ ωᵢ
+
+-- Should do N dft's in parallel
+SIMDdft` : ∀ {s : S zz} {ctxt : Ty → Set} → {n : ℕ} → Inp ctxt (ι s) (((Scl R) ⋆ (Scl R)) ◎ n)
+SIMDdft` {ν u} {ctxt} = mapSum` {u = u} $ `λ xs ⇒ `λ j ⇒ `λ k ⇒
+    let ωᵣ  = ωr` (sizeN (var j)) ((posiN (var k) eq) *N (posiN (var j) eq)) in
+    let ωᵢ  = ωi` (sizeN (var j)) ((posiN (var k) eq) *N (posiN (var j) eq)) in
+    (SIMD-uncurry SIMD-mult (app (var xs) (var k))) (repeat _ ωᵣ) (repeat _ ωᵢ)
+    
+SIMDdft`′ : ∀ {s : S zz} {ctxt : Ty → Set} → {n : ℕ} → Inp ctxt (ι (ν n) ⊗ (ι s)) ((Scl R) ⋆ (Scl R))
+SIMDdft`′ {s} {ctxt} {n} = ?
+
+--module _ where
+--  lanes : S zz
+--  lanes = ν 3
+  
+  --SIMD* : {ctxt : Ty → Set} → Arit ctxt (SR′ ⇒ SR′ ⇒ SR′)
+  --SIMD* {ctxt} = `λ a ⇒ `λ b ⇒ to-⋆ (((⋆-proj₁ (var a))) *R ((⋆-proj₁ (var b)))) (to-⋆ ? (to-⋆ ? ?))
+
+  --simdDft` : {s : S zz} {ctxt : Ty → Set} → Inp ctxt (ι s) ((Scl R ⋆ Scl R ⋆ Scl R ⋆ Scl R) ⋆ (Scl R ⋆ Scl R ⋆ Scl R ⋆ Scl R))
+  --simdDft` {ν x} = mapSum` ?
+  --simdDft` : ∀ {s : S zz} {ctxt : Ty → Set} → Inp ctxt ((ι lanes) ⊗ (ι s)) (Scl C)
+  --simdDft` {ν u} = simdSum {u = u} $ `λ xs ⇒ `λ j ⇒ `λ k ⇒ (app (var xs) (var k)) *C (ω` (sizeN (var j)) ((posiN (var k) eq) *N (posiN (var j) eq)))
 ```
 
 # Defining the FFT
@@ -325,6 +362,8 @@ Rpre-ufft` lower-ft {ι s} = lower-ft
 Rpre-ufft` lower-ft {s ⊗ p} = part` (le sid) (Rpre-ufft` lower-ft {p})       -- Left ufft
                              >>> Rtwid` {_} {s} {transp s} {p} {p} transpᵣ eq  -- Twiddles 
                              >>> part` (ri sid) (Rpre-ufft` lower-ft {s})       -- Right ufft
+
+--SIMD-Rpre-ufft : ∀ {ctxt : Ty → Set} {p : S (ss zz)} → Inp ctxt (transp p) (Scl R ⋆ Scl R)
 ```
 The output of the following `post-ufft` would need to be transposed then 
 change majored to be correct.
@@ -353,6 +392,42 @@ fftn` s = copyOut` eq (CMᵗ ∙ rev transpᵣ) (post-ufft` (copyOut` (rev trans
 
 Rfftn` : ∀ {ctxt : Ty → Set} → (s : S (ss (ss zz))) → Inp ctxt (ι s) ((Scl R) ⋆ (Scl R))
 Rfftn` s = copyOut` eq (CMᵗ ∙ rev transpᵣ) (Rpost-ufft` (copyOut` (rev transpᵣ) CMᵗ (Rpre-ufft` Rdft`))) 
+
+```
+I've had to take some time to consider when a given shape is SIMD able, and 
+have realised that we can easily represent this with the levels.
+- Level zz    - remains as natural
+- Level ss zz - Pose a restriction that (ι (ν n) ⊗ (ι (ν 4))) is the only valid 
+                shape, this allows us to easily split when we want to use SIMD op's
+              
+
+```agda
+module _ where
+
+  LANES : ℕ
+  LANES = 4
+  
+  data SIMD-able : ∀ {ℓ : L} → S ℓ → Set where
+    base : (n : ℕ) → SIMD-able (ι (ι (ν n) ⊗ (ι (ν LANES))))
+    _⊗_ : ∀ {ℓ : L} {s p : S (ss (ss ℓ))} → SIMD-able s → SIMD-able p → SIMD-able (s ⊗ p)
+    ι : ∀ {ℓ : L} {s : S (ss ℓ)} → SIMD-able s → SIMD-able (ι s)
+
+  f : ∀ {ctxt : Ty → Set} → (∀ {p : S zz} → Inp ctxt (ι p) ((Scl R) ⋆ (Scl R))) → ∀ (s : S (ss (ss zz))) → (SIMD : SIMD-able (ι s)) → Inp ctxt (ι s) ((Scl R) ⋆ (Scl R))
+  -- In this case we just have to do the DFT without SIMD
+  f g (ι .(ι (ν n) ⊗ ι (ν LANES))) (ι (base n)) = ?
+  -- Here are our three new main base cases where we are able to apply SIMD
+  f g (ι .(ι (ν n) ⊗ ι (ν LANES)) ⊗ ι .(ι (ν m) ⊗ ι (ν LANES))) (ι (base n ⊗ base m)) =
+    -- Effectively we want to loop over n, such that we have ι (ν LANES) ⊗ (ι (ν m * LANES)) 
+    ?
+    >>> ?
+  f g (ι (.(ι (ν n)) ⊗ .(ι (ν LANES))) ⊗ (s₁ ⊗ s₂)) (ι (base n ⊗ simd₁)) = ?
+  f g ((s ⊗ s₁) ⊗ ι (.(ι (ν n)) ⊗ .(ι (ν LANES)))) (ι (simd ⊗ base n)) = ?
+  -- This is our new general recursive step, where we don't do squat about SIMD
+  f g ((s ⊗ s₁) ⊗ (s₂ ⊗ s₃)) (ι (simd ⊗ simd₁)) = ?
+
+
+  SIMD-Rfftn` : ∀ {ctxt : Ty → Set} → (s : S (ss (ss zz))) → Inp ctxt (ι s) ((Scl R) ⋆ (Scl R))
+  SIMD-Rfftn` s = copyOut` eq (CMᵗ ∙ rev transpᵣ) (Rpost-ufft` (copyOut` (rev transpᵣ) CMᵗ ?)) 
 ```
 
 One observation here is that we end up with `? >>> copy r₁ >>> copy r₂ >>> ?`
@@ -376,62 +451,3 @@ with `∀ {s s′ : S l} → Reshape s s′` as this could include `up eq ∙ do
 
 For ℝ × ℝ ≡ ℂ, I need to think of a nice way to relate the dsl with the split 
 to the Agda without.
-
-```agda
-{-
-module _ where
-  open import Data.Product
-  open import Data.Maybe
-  open import Data.Sum
-
-  private variable
-    ctxt : Ty → Set
-
-  data NoCPred : Ty → Set where
-    N   : NoCPred N
-    R   : NoCPred R
-    ix  : NoCPred (ix s)
-    _⇒_ : NoCPred τ → NoCPred σ → NoCPred (τ ⇒ σ)
-    _⋆_ : NoCPred τ → NoCPred σ → NoCPred (τ ⋆ σ)
-
-  AritC→AritRR : Arit ctxt C → Arit ctxt (R ⋆ R)
-  AritC→AritRR inp@(var _) =
-    to-⋆ (toRᵣ inp) (toRᵢ inp)
-  AritC→AritRR inp@(app _ _) =
-    to-⋆ (toRᵣ inp) (toRᵢ inp)
-  AritC→AritRR (x *C y) = 
-    let x′ = AritC→AritRR x in
-    let y′ = AritC→AritRR y in
-    let a = ⋆-proj₁ x′ in
-    let b = ⋆-proj₂ x′ in
-    let c = ⋆-proj₁ y′ in
-    let d = ⋆-proj₂ y′ in
-    to-⋆ ((a *R c) -R (b *R d)) ((a *R d) +R (b *R c))
-  AritC→AritRR (ω`  n j) = to-⋆ (ωr` n j) (ωi` n j)
-  AritC→AritRR (toC r i) = to-⋆ r i
-
-  C→RR : Num τ → Arit ctxt τ → Σ Ty (λ σ → NoCPred σ × Arit ctxt σ)
-  C→RR {C} _ x = R ⋆ R , R ⋆ R , (AritC→AritRR x)
-  C→RR {R} _ x = R , R , x
-  C→RR {N} _ x = N , N , x
-  C→RR {ix s} _ x = ix s , ix , x
-  C→RR {.R ⋆ .R} C′ x = R ⋆ R , R ⋆ R , x
-  C→RR {_ ⇒ _} () _
-
-  InpC→InpRR : Inp ctxt s C → Inp ctxt s C′
-  InpC→InpRR (compose a b) = 
-    let a′ = InpC→InpRR a in
-    let b′ = InpC→InpRR b in
-    compose a′ b′
-  InpC→InpRR (copyOut` r₁ r₂ a) =
-    let a′ = InpC→InpRR a in
-    copyOut` r₁ r₂ a′
-  InpC→InpRR (part` s⊂p a) =
-    let a′ = InpC→InpRR a in
-    part` s⊂p a′
-  InpC→InpRR (imap` a) = 
-    let a′ = AritC→AritRR ? in 
-    ?
-  InpC→InpRR (mapSum` a) = ?
-  -}
-```

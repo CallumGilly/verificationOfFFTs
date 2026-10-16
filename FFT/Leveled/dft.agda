@@ -118,6 +118,20 @@ module ℕ-dft′ where
   --rewrite length-transp p₁ | length-transp p₂ = cong₂ -ω ? ?
 
 
+  flatten-z₂-preserves-length : ∀ {s p : S (ss (ss ℓ))}
+                              → (length (flatten-z s) *ₙ length (flatten-z p) +ₙ length (flatten-z s) +ₙ length (flatten-z p))
+                              ≡ length s *ₙ length p +ₙ length s +ₙ length p
+  flatten-z₂-preserves-length {ℓ} {s} {p} = sym 
+                                              (cong₂ _+ₙ_ 
+                                                (cong₂ _+ₙ_ 
+                                                  (cong₂ _*ₙ_ 
+                                                    (resh-length {_} {_} {s} flatten-zᵣ) 
+                                                    (resh-length {_} {_} {p} flatten-zᵣ)
+                                                  ) 
+                                                  (resh-length {_} {_} {s} flatten-zᵣ)
+                                                ) 
+                                                (resh-length {_} {_} {p} flatten-zᵣ)
+                                              )
 
   twiddles-flatten-zᵣ-lemma : ∀ {s p : S (ss (ss ℓ))}
                             → ∀ (i : P (flatten-z s))
@@ -125,28 +139,96 @@ module ℕ-dft′ where
                             → twiddles {_} {s} {p} (i ⟨ flatten-zᵣ ⟩) (j ⟨ flatten-zᵣ ⟩)
                             ≡ twiddles i j
   twiddles-flatten-zᵣ-lemma {ℓ} {s} {p} i j = cong₂ -ω 
-        ? --(cong₂ _*ₙ_ (resh-length {_} {_} {s} flatten-zᵣ) (resh-length {_} {_} {p} flatten-zᵣ))
+        (sym (flatten-z₂-preserves-length {_} {s} {p}))
         (cong₂ _*ₙ_ 
           (thm₁ {_} {_} {_} {s} flatten-zᵣ (flatten-z-isInplace) i)
           (thm₁ {_} {_} {_} {p} flatten-zᵣ (flatten-z-isInplace) j)
         )
--- iota ((i ⟨ flatten-zᵣ ⟩) ⟨ rev u-flattenᵣ ⟩) *ₙ
--- iota ((j ⟨ flatten-zᵣ ⟩) ⟨ rev u-flattenᵣ ⟩)
--- ≡ iota (i ⟨ rev u-flattenᵣ ⟩) *ₙ iota (j ⟨ rev u-flattenᵣ ⟩)
+
+  u-flatten-z-lemma : {s : S (ss (ss ℓ))} → u-flatten (flatten-z s) ≡ u-flatten s
+  u-flatten-z-lemma {ℓ} {ι s} = refl
+  u-flatten-z-lemma {ℓ} {s ⊗ p} rewrite u-flatten-z-lemma {_} {s} | u-flatten-z-lemma {_} {p} = refl
+
+  help : {s : S (ss (ss ℓ))} {i : P s} →
+       subst (λ z → P (ν z)) (u-flatten-z-lemma {_} {s}) ((i ⟨ rev flatten-zᵣ ⟩) ⟨ rev ν-flattenᵣ ⟩)
+       ≡ (i ⟨ rev ν-flattenᵣ ⟩)
+  help {ℓ} {.(ι _)} {ι i} = refl
+  help {ℓ} {(s ⊗ p)} {i ⊗ j} with u-flatten-z-lemma {_} {s} | u-flatten-z-lemma {_} {p}
+  ... | x | y = ?
+
+
   twiddles-rev-flatten-zᵣ-lemma : {s p
                                  : S (ss (ss ℓ))}
                                 (i : P s) (j : P p) →
                                 twiddles (i ⟨ rev flatten-zᵣ ⟩) (j ⟨ rev flatten-zᵣ ⟩) ≡
                                 twiddles i j
-  twiddles-rev-flatten-zᵣ-lemma = ?
+  twiddles-rev-flatten-zᵣ-lemma {ℓ} {s} {p} i j = cong₂ -ω 
+      (flatten-z₂-preserves-length {_} {s} {p}) 
+      (cong₂ _*ₙ_ {iota′ ((i ⟨ rev flatten-zᵣ ⟩) ⟨ rev ν-flattenᵣ ⟩)} {iota′ (i ⟨ rev ν-flattenᵣ ⟩)} {iota′ ((j ⟨ rev flatten-zᵣ ⟩) ⟨ rev ν-flattenᵣ ⟩)} {iota′ (j ⟨ rev ν-flattenᵣ ⟩)} 
+          (dcong₂ (λ a b → iota′ {a} b) {_} {_} {(i ⟨ rev flatten-zᵣ ⟩) ⟨ rev ν-flattenᵣ ⟩} {(i ⟨ rev ν-flattenᵣ ⟩)} (u-flatten-z-lemma {_} {s}) ?)
+          ?
+      )
+            -- iota′ ((i ⟨ rev flatten-zᵣ ⟩) ⟨ rev ν-flattenᵣ ⟩) *ₙ
+            -- iota′ ((j ⟨ rev flatten-zᵣ ⟩) ⟨ rev ν-flattenᵣ ⟩)
+            -- ≡ iota′ (i ⟨ rev ν-flattenᵣ ⟩) *ₙ iota′ (j ⟨ rev ν-flattenᵣ ⟩)
+
+
+  lemma₁ : ∀ (s : S (ss ℓ)) → transp (transp s) ≡ s
+  lemma₁ {ℓ} (ι s) = refl
+  lemma₁ {ℓ} (s ⊗ p) rewrite lemma₁ s | lemma₁ p = refl
+
+  module _ (A : Set) (Pr : A → Set) where 
+    thm : (f : A → A → A) 
+        → (g : {x y : A} → (Pr x → Pr y → Pr (f x y))) 
+        → (x a y b : A) 
+        → (prf₁ : x ≡ a)
+        → (prf₂ : y ≡ b)
+        → (x′ : Pr x) (y′ : Pr y) 
+        → subst Pr (cong₂ f prf₁ prf₂) (g x′ y′) ≡ g (subst Pr prf₁ x′) (subst Pr prf₂ y′)
+    thm f g x .x y .y refl refl x′ y′ = refl
+  
+  lemma₂ : ∀ {s : S (ss ℓ)} {i : P s} → i ≡ subst P (lemma₁ s) (i ⟨ transpᵣ ⟩ ⟨ transpᵣ ⟩) 
+  lemma₂ {ℓ} {ι s} {ι i} = refl
+  lemma₂ {ℓ} {s ⊗ p} {i ⊗ j} =
+    begin
+      i ⊗ j
+    ≡⟨ ? ⟩
+      subst P (cong₂ _⊗_ (lemma₁ s) (lemma₁ p)) ((i ⊗ j) ⟨ transpᵣ ⟩ ⟨ transpᵣ ⟩)
+    ≡⟨ ? ⟩
+      subst P (lemma₁ (s ⊗ p)) ((i ⊗ j) ⟨ transpᵣ ⟩ ⟨ transpᵣ ⟩)
+    ∎
+
+  lemma₃ : ∀ {s : S (ss ℓ)} {i : P s} → i ⟨ transpᵣ ⟩ ⟨ transpᵣ ⟩ ≡ subst P (sym (lemma₁ s)) i
+  lemma₃ {ℓ} {ι s} {ι i} = refl
+  lemma₃ {ℓ} {s ⊗ p} {i ⊗ j} rewrite lemma₃ {i = i} | lemma₃ {i = j} = ?
+  
+  un-ν : ∀ {n : U} → P (ν n) → Fin (suc n)
+  un-ν (ν i) = i
+
+  open import Data.Fin.Properties
+
+  lemma₅ : ∀ {n m : U} {i : P (ν n)} {j : P (ν m)} → iota′ (((ι i) ⊗ (ι j)) ⟨ unflat ⟩) ≡ toℕ ((combine (un-ν i) (un-ν j)))
+  --toℕ {suc (iota′ j +ₙ iota′ i *ₙ suc (iota′ j))} (cast refl (combine (fromℕ (iota′ i)) (fromℕ (iota′ j)))) 
+  lemma₅ {_} {_} {ν x} {ν y} = ?
+
+  lemma₄ : {s : S (ss ℓ)} {i : P s} →
+         iota′ (((i ⟨ transpᵣ ⟩) ⟨ transpᵣ ⟩) ⟨ rev ν-flattenᵣ ⟩) ≡ iota′ (i ⟨ rev ν-flattenᵣ ⟩)
+  lemma₄ {ℓ} {ι s} {ι i} = refl
+  lemma₄ {ℓ} {s ⊗ p} {i ⊗ j} = ? 
+    {-rewrite 
+      lemma₅ {_} {_} {(((i ⟨ transpᵣ ⟩) ⟨ transpᵣ ⟩) ⟨ rev ν-flattenᵣ ⟩)} {(((j ⟨ transpᵣ ⟩) ⟨ transpᵣ ⟩) ⟨ rev ν-flattenᵣ ⟩)} 
+    | lemma₅ {_} {_} {(i ⟨ rev ν-flattenᵣ ⟩)} {(j ⟨ rev ν-flattenᵣ ⟩)}
+    | lemma₄ {_} {_} {i}
+    | lemma₄ {_} {_} {j}
+    | lemma₁ s
+      = refl-}
 
   twiddles-transₗ-lemma : {s p : S (ss ℓ)}
                         (i : P s) (j : P p) →
                         twiddles (i ⟨ transpᵣ ∙ transpᵣ ⟩) j ≡
                         twiddles i j
-  twiddles-transₗ-lemma {ℓ} {s} {p} i j = cong₂ -ω 
-                                            ?  --(cong (_*ₙ _) (resh-length {_} {_} {transp (transp s)} (transpᵣ ∙ transpᵣ))) 
-                                            ?   
+  twiddles-transₗ-lemma {ℓ} {s} {p} i j rewrite (resh-length {_} {_} {transp (transp s)} (transpᵣ ∙ transpᵣ)) 
+      = cong (-ω _) (cong₂ _*ₙ_ {iota′ (((i ⟨ transpᵣ ⟩) ⟨ transpᵣ ⟩) ⟨ rev ν-flattenᵣ ⟩) } {iota′ (i ⟨ rev ν-flattenᵣ ⟩)} ? refl)
 
   dft≡fft : {s : S (ss zz)}
           (xs : Ar s ℂ) (i : P s) →
@@ -161,6 +243,7 @@ module ℕ-dft′ where
                ; twiddles-flatten-zᵣ-lemma = λ {l} {s} {p} → ℕ-dft′.twiddles-flatten-zᵣ-lemma {_} {s} {p}
                }
 
+--This email refers to Agda the programming language, not the Golgafrinchan junior personnel officer
 {-
 module _ where
   open ℕ-dft′

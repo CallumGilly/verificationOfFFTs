@@ -41,6 +41,7 @@ open AlgebraStructures  {A = ℂ} _≡_
 open AlgebraDefinitions {A = ℂ} _≡_
 
 open IsCommutativeRing +-*-isCommutativeRing hiding (trans; refl; sym)
+open import Data.Vec.Functional hiding (length; map)
 ```
 
 We first need a translation between DSL types, and our Agda types.
@@ -53,6 +54,7 @@ translate-Ty N = ℕ
 translate-Ty (ix i) = P i
 translate-Ty (x ⇒ y) = (translate-Ty x) → (translate-Ty y)
 translate-Ty (x ⋆ y) = translate-Ty x × translate-Ty y
+translate-Ty (τ ◎ n) = Vector (translate-Ty τ) n
 ```
 
 Given this we then need to create two translators - that for the set of in place 
@@ -99,6 +101,14 @@ translate-Arit (arit₁ -R arit₂) = (translate-Arit arit₁) -ᵣ (translate-A
 
 translate-Arit (ωr` aritₙ aritᵢ) = proj₁ $ fromℂ $ -ω (translate-Arit aritₙ) (translate-Arit aritᵢ)
 translate-Arit (ωi` aritₙ aritᵢ) = proj₂ $ fromℂ $ -ω (translate-Arit aritₙ) (translate-Arit aritᵢ)
+
+translate-Arit {.(_ ◎ n)} (repeat n arit) _ = translate-Arit arit
+translate-Arit {.(R ◎ _)} (SIMD-*R arit₁ arit₂) i = (translate-Arit arit₁) i *ᵣ (translate-Arit arit₂) i
+translate-Arit {.(R ◎ _)} (SIMD-+R arit₁ arit₂) i = (translate-Arit arit₁) i +ᵣ (translate-Arit arit₂) i
+translate-Arit {.(R ◎ _)} (SIMD--R arit₁ arit₂) i = (translate-Arit arit₁) i -ᵣ (translate-Arit arit₂) i
+translate-Arit {.((_ ⋆ _) ◎ _)} (SIMD-to-⋆ arit₁ arit₂) i = (translate-Arit arit₁ i) , (translate-Arit arit₂ i)
+translate-Arit {.(_ ◎ _)} (SIMD-⋆-proj₁ arit) i = translate-Arit arit i .proj₁
+translate-Arit {.(_ ◎ _)} (SIMD-⋆-proj₂ arit) i = translate-Arit arit i .proj₂
 ```
 
 
@@ -109,6 +119,7 @@ translate-Inp (copyOut` r₁ r₃ inp) =  reshape (up r₃) ∘ translate-Inp in
 translate-Inp (part` s⊂p inp) = reshape (rev $ to-resh s⊂p) ∘ unnest ∘ map (translate-Inp inp) ∘ nest ∘ reshape (to-resh s⊂p)
 translate-Inp (imap` x) = imap $ translate-Arit x
 translate-Inp (mapSum` x) xs i = sum ((translate-Arit x) xs i ∘ ι)
+translate-Inp (pack v⊂s a) xs (i ⊗ j) = ?
 ```
 
 We can then see what our fftn translates into
@@ -136,6 +147,17 @@ lemma₁ {ℓ} {s₁ ⊗ s₂} FT-Inp FT FT-cong prf xs (i₁ ⊗ i₂) rewrite 
 
 lemma₅ : ∀ {a b : ℕ} → a *ₙ b +ₙ a +ₙ b ≡ b *ₙ a +ₙ b +ₙ a 
 lemma₅ {a} {b} = solve 2 (λ :a :b → :a :* :b :+ :a :+ :b := :b :* :a :+ :b :+ :a) refl a b 
+
+test : {s₁ s₂ : S (ss ℓ)}
+       {i₁ : P s₁} {i₂ : P s₂} →
+       iota′ (i₁ ⟨ rev ν-flattenᵣ ⟩) *ₙ
+       iota′ ((i₂ ⟨ transpᵣ ⟩) ⟨ rev ν-flattenᵣ ⟩)
+       ≡
+       iota′ (i₂ ⟨ rev ν-flattenᵣ ⟩) *ₙ
+       iota′ ((i₁ ⟨ transpᵣ ⟩) ⟨ rev ν-flattenᵣ ⟩)
+test {ℓ} {.(ι _)} {.(ι _)} {ι i₁} {ι i₂} = ?
+test {ℓ} {.(ι _)} {.(_ ⊗ _)} {ι i₁} {i₂ ⊗ i₃} = ?
+test {ℓ} {.(_ ⊗ _)} {s₂} {i₁ ⊗ i₃} {i₂} = ?
 
 lemma₂ : ∀ {s : S (ss ℓ)} 
        → ∀ (FT-Inp : ∀ {p : S ℓ} → Inp translate-Ty (ι p) (Scl C))

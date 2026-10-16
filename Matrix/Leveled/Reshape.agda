@@ -36,6 +36,14 @@ module Matrix.Leveled.Reshape (M : Mon) where
     swap   : ∀ {s p : S (ss l)} → Reshape (s ⊗ p) (p ⊗ s)
     assoₗ  : ∀ {s p q : S (ss l)} → Reshape ((s ⊗ p) ⊗ q) (s ⊗ (p ⊗ q))
     assoᵣ : ∀ {s p q : S (ss l)} → Reshape (s ⊗ (p ⊗ q)) ((s ⊗ p) ⊗ q)
+
+  data SingleLevel : {ℓ : L} {s p : S ℓ} → Reshape s p → Set where
+    eq    : ∀ {ℓ : L} → ∀ {s : S ℓ} → SingleLevel {ℓ} {s} eq
+    _∙_   : ∀ {ℓ : L} → ∀ {s p q : S ℓ}      {r₁ : Reshape s p} {r₂ : Reshape q s} → SingleLevel r₁ → SingleLevel r₂ → SingleLevel (r₁ ∙ r₂)
+    _⊕_   : ∀ {ℓ : L} → ∀ {s₁ s₂ p₁ p₂ : S (ss ℓ)} {r₁ : Reshape s₁ s₂} {r₂ : Reshape p₁ p₂} → SingleLevel r₁ → SingleLevel r₂ → SingleLevel (r₁ ⊕ r₂)
+    swap  : ∀ {ℓ : L} → ∀ {s p : S (ss ℓ)} → SingleLevel {_} {s ⊗ p} swap
+    assoₗ : ∀ {ℓ : L} → ∀ {s p q : S (ss ℓ)} → SingleLevel {_} {(s ⊗ p) ⊗ q} assoₗ
+    assoᵣ : ∀ {ℓ : L} → ∀ {s p q : S (ss ℓ)} → SingleLevel {_} {s ⊗ (p ⊗ q)} assoᵣ
     
   _⟨_⟩ : {s : S l} {p : S r} → P s → Reshape p s → P p
   i ⟨ eq ⟩ = i
