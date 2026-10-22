@@ -312,6 +312,13 @@ module _ where
     n′ ← arit-eval n
     i′ ← arit-eval i
     return $ Rωi n′ i′
+  arit-eval (repeat n x) = ?
+  arit-eval (SIMD-*R x x₁) = ?
+  arit-eval (SIMD-+R x x₁) = ?
+  arit-eval (SIMD--R x x₁) = ?
+  arit-eval (SIMD-to-⋆ x x₁) = ?
+  arit-eval (SIMD-⋆-proj₁ x) = ?
+  arit-eval (SIMD-⋆-proj₂ x) = ?
 ```
 
 # C Helpers
@@ -377,12 +384,26 @@ module _ where
   refine-arit op@(ωr` _ _) = op
   refine-arit op@(ωi` _ _) = op
 
+  refine-arit₂ : Arit translate-Ty τ → Arit translate-Ty (τ ◎ n)
+  refine-arit₂ x = ?
+
   refine-inp : Inp translate-Ty s (Scl C) → Inp translate-Ty s ((Scl R) ⋆ (Scl R))
   refine-inp (compose inp₁ inp₂) = compose (refine-inp inp₁) (refine-inp inp₂)
   refine-inp (copyOut` {p = s} r₁ r₂ inp) = copyOut` r₁ r₂ (refine-inp inp)
   refine-inp (part` s⊂p inp) = part` s⊂p (refine-inp inp)
   refine-inp (imap` op) = imap` $ refine-arit op
   refine-inp (mapSum` op) = mapSum` $ refine-arit op
+  refine-inp (packₗ op) = let a = refine-inp ? in packₗ ?
+  refine-inp (packᵣ op) = ?
+  
+  refine-inp₂ : ∀ {num : Num τ} → Inp translate-Ty s num → Inp translate-Ty s (num ◎ n)
+  refine-inp₂ (compose inp₁ inp₂) = compose (refine-inp₂ inp₁) (refine-inp₂ inp₂)
+  refine-inp₂ (copyOut` r₁ r₂ x) = copyOut` r₁ r₂ (refine-inp₂ x)
+  refine-inp₂ (part` s⊂p x) = ?
+  refine-inp₂ (imap` x) = ?
+  refine-inp₂ (mapSum` x) = ?
+  refine-inp₂ {a} {b} {c} {d} {e} (packₗ x) = ?
+  refine-inp₂ (packᵣ x) = ?
 
   {-
   pre-ufftEq : ∀ {s : S (ss zz)} → refine-inp {_} {s} (pre-ufft` dft`) ≡ Rpre-ufft` Rdft`
@@ -698,6 +719,10 @@ scl-step scl xs (part` {_} {s} {p} s⊂p inp) = do
   op ← scl-step scl ys inp
 
   return $ [ loop′ i op ]ₗ
+scl-step scl xs (packₗ inp) = do
+  a ← scl-step ? ? ?
+  return ?
+scl-step scl xs (packᵣ inp) = ?
 
 num-step : (num : Num τ) → num-tuple (Ix s → String) num → Inp translate-Ty s num → (State ℕ Program)
 num-step α xs (imap` fs) = do

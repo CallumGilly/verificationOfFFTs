@@ -256,12 +256,60 @@ lanes as opposed to a multiple of.
 I need some way to pack from (s ⊗ ι (ν LANES)) τ into s (τ ◎ LANES)
 Because this deals with Shape, I belive that this has to be an Inp operation
 ```agda
-    pack : ∀ {τ : Ty} {n : ℕ}
-          → {num : Num τ}
-          → (v⊂s : (ι (ν n) ⊂ s))
-          → Inp ctxt (inv-⊂ v⊂s) (num ◎ n)
-          → Inp ctxt s num
+    packₗ : ∀ {τ} {n LANES : ℕ}
+         → {num : Num τ}
+         → {s : S (ss zz)}
+         → Inp ctxt s (num ◎ LANES)
+         → Inp ctxt (ι (ν (n * LANES)) ⊗ s) num
+         
+    packᵣ : ∀ {τ} {n LANES : ℕ}
+         → {num : Num τ}
+         → {s : S (ss zz)}
+         → Inp ctxt s (num ◎ LANES)
+         → Inp ctxt (s ⊗ ι (ν (n * LANES))) num
+    
 
+    -- What if, instead of working with pack as above, we create a bastardisation of part which will use simd at the next step...
+    SIMDpart` : ∀ {s p : S (ss zz)}
+              → {τ : Ty} {num : Num τ}
+              → {n LANES : ℕ}
+              → (s⊂p : (s ⊗ (ι (ν (n * LANES)))) ⊂ p)
+              → Inp ctxt s (num ◎ LANES)
+              → Inp ctxt p num
+  {-
+    packₗ : ∀ {τ} {n m LANES : ℕ}
+         → {num : Num τ}
+         → Inp ctxt ((ι (ν m))) (num ◎ LANES)
+         → Inp ctxt (ι (ν (n * LANES)) ⊗ ι (ν m)) num
+         
+    packᵣ : ∀ {τ} {n m LANES : ℕ}
+         → {num : Num τ}
+         → Inp ctxt ((ι (ν m))) (num ◎ LANES)
+         → Inp ctxt (ι (ν m) ⊗ ι (ν (n * LANES))) num
+    -}
+    {-
+    pack : ∀ {τ : Ty} {m n LANES : ℕ}
+         → {num : Num τ}
+         → Inp ctxt (ι (ν n)) (num ◎ LANES)
+         → Inp ctxt (ι (ν (m * LANES)) ⊗ ι (ν n)) num
+    -}
+    {-
+    pack : ∀ {τ : Ty} {m n LANES : ℕ}
+         → {num : Num τ}
+         → Inp ctxt (ι (ν n)) (num ◎ LANES)
+         → Inp ctxt (ι (ν n) ⊗ ι (ν (m * LANES))) num
+    -}
+
+    --pack : ∀ {τ : Ty} {n : ℕ}
+    --pack : ∀ {τ : Ty} {n : ℕ}
+    --      → {num : Num τ}
+    --      → (v⊂s : (ι (ν n) ⊂ s))
+    --      → Inp ctxt (inv-⊂ v⊂s) (num ◎ n)
+    --      → Inp ctxt s num
+
+    --packAny : ∀ {τ : Ty} {n : ℕ}
+    --        → {num : Num τ}
+    --        → ?
     {-
     simdSum : ∀ {u : ℕ}
             → ∀ {τ : Ty} {num : Num τ}
@@ -323,9 +371,11 @@ SIMDdft` {ν u} {ctxt} = mapSum` {u = u} $ `λ xs ⇒ `λ j ⇒ `λ k ⇒
     let ωᵢ  = ωi` (sizeN (var j)) ((posiN (var k) eq) *N (posiN (var j) eq)) in
     (SIMD-uncurry SIMD-mult (app (var xs) (var k))) (repeat _ ωᵣ) (repeat _ ωᵢ)
     
+{-
 SIMDdft`′ : ∀ {s : S zz} {ctxt : Ty → Set} → {n : ℕ} → Inp ctxt (ι (ν n) ⊗ (ι s)) ((Scl R) ⋆ (Scl R))
 SIMDdft`′ {s} {ctxt} {n} = ?
 
+-}
 --module _ where
 --  lanes : S zz
 --  lanes = ν 3
@@ -407,10 +457,129 @@ module _ where
   LANES : ℕ
   LANES = 4
   
+  {-
   data SIMD-able : ∀ {ℓ : L} → S ℓ → Set where
     base : (n : ℕ) → SIMD-able (ι (ι (ν n) ⊗ (ι (ν LANES))))
     _⊗_ : ∀ {ℓ : L} {s p : S (ss (ss ℓ))} → SIMD-able s → SIMD-able p → SIMD-able (s ⊗ p)
     ι : ∀ {ℓ : L} {s : S (ss ℓ)} → SIMD-able s → SIMD-able (ι s)
+  -}
+
+  data SIMD-able : ∀ {ℓ : L} → S ℓ → Set where
+    base : (n : ℕ) → SIMD-able (ν (n * LANES))
+    _⊗_ : ∀ {ℓ : L} {s p : S (ss ℓ)} → SIMD-able s → SIMD-able p → SIMD-able (s ⊗ p)
+    ι : ∀ {ℓ : L} {s : S ℓ} → SIMD-able s → SIMD-able (ι s)
+
+  -- For any SIMD-able shape, we can pull 
+
+```
+I could give something similar to SIMD, which lets you, for a shape of any level, 
+pull the LANES from (ν (a * LANES)), as to "guide" the recursion
+- But is this what I need????
+  
+
+```agda
+
+{-
+Rpost-ufft` : ∀ {ctxt : Ty → Set} → ∀ (lower-ft : ∀ {p : S l} → Inp ctxt (ι p) ((Scl R) ⋆ (Scl R)))
+          → ∀ {s : S (ss l)} → Inp ctxt s ((Scl R) ⋆ (Scl R))
+Rpost-ufft` lower-ft {ι s} = lower-ft 
+Rpost-ufft` lower-ft {s ⊗ p} = part` (ri sid) (Rpost-ufft` lower-ft {s})     -- Right ufft
+                              >>> Rtwid` {_} {s} {s} {p} {transp p} eq transpᵣ -- Twiddles 
+                              >>> part` (le sid) (Rpost-ufft` lower-ft {p})     -- Left ufft
+                              -}
+
+  open import Data.Product
+  -- Using this means I don't need to deal with Maybe 
+  pull-left′ : {s₁ s₂ : S (ss zz)} → SIMD-able (s₁ ⊗ s₂) → ∃ λ n → (ι (ν (n * LANES))) ⊂ (s₁ ⊗ s₂)
+  pull-left′ (ι (base n) ⊗ _) = n , le sid
+  pull-left′ (SIMD@(_ ⊗ _) ⊗ _) = let n , sub = pull-left′ SIMD in n , (le (st sub))
+
+  pull-coleft′ : {s₁ s₂ : S (ss zz)} → (SIMD : SIMD-able (s₁ ⊗ s₂)) → (inv-⊂ (pull-left′ SIMD .proj₂)) ⊂ (s₁ ⊗ s₂)
+  pull-coleft′ (ι (base n) ⊗ SIMD₂) = ri sid
+  pull-coleft′ ((SIMD₁ ⊗ SIMD₃) ⊗ SIMD₂) = bₗ (pull-coleft′ (SIMD₁ ⊗ SIMD₃)) sid
+
+  pull-coleft : {s₁ s₂ : S (ss zz)} → (SIMD : SIMD-able (s₁ ⊗ s₂)) → ∃ λ s → s ⊂ (s₁ ⊗ s₂)
+  pull-coleft {ι .(ν (n * LANES))} {s₂} (ι (base n) ⊗ SIMD₂) = s₂ , ri sid
+  pull-coleft {s₁ ⊗ s₂} {s₃} ((SIMD₁ ⊗ SIMD₂) ⊗ SIMD₃) = let s , sub = pull-coleft (SIMD₁ ⊗ SIMD₂) in s ⊗ s₃ , bₗ sub sid
+
+  pull-coleft-inv-is-base : ∀ {s₁ s₂ : S (ss zz)} → (SIMD : SIMD-able (s₁ ⊗ s₂)) → ∃ λ n → inv-⊂ (pull-coleft SIMD .proj₂) ≡ ι (ν (n * 4))
+  pull-coleft-inv-is-base (ι (base n) ⊗ _) = n , refl
+  pull-coleft-inv-is-base ((SIMD₁ ⊗ SIMD₂) ⊗ _) = pull-coleft-inv-is-base (SIMD₁ ⊗ SIMD₂)
+
+  {-
+  obi1 : ∀ {b} {c} {n} {x : SIMD-able b} {x₁ : SIMD-able c} →
+       (ι (ν (n * LANES)) ⊗
+        ι (ν (pull-coleft-inv-is-base (x ⊗ x₁) .proj₁ * LANES)))
+       ≡ inv-⊂ (ri {_} {_} {ι (ν n)} (st (pull-coleft (x ⊗ x₁) .proj₂)))
+  obi1 {b} {c} {n} {x} {x₁} = ?
+  -}
+  pull-left : (s : S (ss zz)) → SIMD-able s → ∃ λ n → (ι (ν (n * LANES))) ⊆ s
+  pull-left (ι s) (ι (base n)) = n , sid
+  pull-left (s ⊗ s₁) (SIMD ⊗ SIMD₁) = let n , sub = pull-left s SIMD in n , (st (le sub))
+
+  pull-right′ : {s₁ s₂ : S (ss zz)} → SIMD-able (s₁ ⊗ s₂) → ∃ λ n → (ι (ν (n * LANES))) ⊂ (s₁ ⊗ s₂)
+  pull-right′ (_ ⊗ ι (base n)) = n , ri sid
+  pull-right′ (_ ⊗ SIMD@(_ ⊗ _)) = let n , sub = pull-right′ SIMD in n , (ri (st sub))
+  
+  SIMD-Rpost-ufft` : ∀ {ctxt : Ty → Set} → ∀ (lower-ft : ∀ {p : S zz} → Inp ctxt (ι p) (((Scl R) ⋆ (Scl R)) ◎ LANES))
+            → ∀ {s : S ((ss zz))} → SIMD-able s → Inp ctxt s ((Scl R) ⋆ (Scl R))
+  SIMD-Rpost-ufft` {ctxt} lower-ft {ι s} (ι SIMD) = ? -- Here we don't actually have a lower-ft we can use...
+  SIMD-Rpost-ufft` {ctxt} lower-ft (ι (base n) ⊗ ι (base m)) =  
+          packᵣ {n = m} lower-ft
+      >>> Rtwid` eq transpᵣ
+      >>> packₗ {n = n} lower-ft
+  SIMD-Rpost-ufft` {ctxt} lower-ft {ι (ν .(n * LANES)) ⊗ (s₂ ⊗ s₃)} (ι (base n) ⊗ (SIMD₂ ⊗ SIMD₃)) = 
+          SIMDpart` {ctxt} {_} {_} {_} {_} {pull-left′ (SIMD₂ ⊗ SIMD₃) .proj₁} (bᵣ sid (pull-left′ (SIMD₂ ⊗ SIMD₃) .proj₂)) lower-ft
+      >>> Rtwid` eq transpᵣ
+      >>> part` (le sid) (SIMD-Rpost-ufft` lower-ft (SIMD₂ ⊗ SIMD₃))
+  SIMD-Rpost-ufft` {ctxt} lower-ft {(s₁ ⊗ s₂) ⊗ ι (ν .(n * LANES))} ((SIMD₁ ⊗ SIMD₂) ⊗ ι (base n)) = ?
+  SIMD-Rpost-ufft` {ctxt} lower-ft {(s₁ ⊗ s₂) ⊗ (s₃ ⊗ s₄)} ((SIMD₁ ⊗ SIMD₂) ⊗ (SIMD₃ ⊗ SIMD₄)) = ?
+  {-
+  -- This is the case we can't do any SIMD, annoying by my own definition of lower-ft I also cant use that, maybe I need to take a non SIMD lower-ft and vectorise it automatically...
+  SIMD-Rpost-ufft` lower-ft (ι (base n)) = ?
+  -- These are the cases we can use simd 
+  -- This first one is trivial, as we can easily see where we can bunch for SIMD
+  SIMD-Rpost-ufft` lower-ft (ι (base n) ⊗ ι (base m)) = packᵣ {n = m} lower-ft
+                                                      >>> Rtwid` eq transpᵣ
+                                                      >>> packₗ {n = n} lower-ft
+  SIMD-Rpost-ufft` {ctxt} lower-ft {(ι (ν (_))) ⊗ (b ⊗ c)} (SIMD-s@(ι (base n)) ⊗ SIMD-p@(_ ⊗ _)) = --rewrite pull-coleft-inv-is-base SIMD-p .proj₂ = 
+                                                              --part` (ri (let a = pull-coleft′ SIMD-p in st a)) (packₗ ?)
+                                                              --part` (bᵣ sid (pull-coleft′ SIMD-p)) ? --(SIMD-Rpost-ufft` lower-ft SIMD-s)
+                                                              -- I want to use part so I get (ι (ν base )) ⊗ (ι (ν base))
+                                                              
+                                                                -- Here I know that inv-⊂ (pull-coleft (x ⊗ x₁)) is ι (ν m * 4)...
+                                                                -- Proven in pull-coleft-inv-is-base
+--
+                                                            --- Subst here makes this absolutly grim
+                                                              part` 
+                                                                (ri (st (pull-coleft SIMD-p .proj₂))) 
+                                                                (subst 
+                                                                  (λ s → Inp ctxt s {R ⋆ R} ((Scl R) ⋆ (Scl R))) 
+                                                                  (cong (_ ⊗_) (sym (pull-coleft-inv-is-base SIMD-p .proj₂))) 
+                                                                  (packᵣ {n = pull-coleft-inv-is-base SIMD-p .proj₁} (lower-ft {ν (n * LANES)}))
+                                                                ) --(packᵣ ?)
+                                                          >>> Rtwid` eq transpᵣ
+                                                          >>> part` (le sid) (SIMD-Rpost-ufft` lower-ft SIMD-p)
+
+                                                          {-
+                                                              part` (ri (st (pull-left′ _ _ SIMD-p .proj₂))) (packₗ ?) -- Ew - can't use lower-ft
+                                                          >>> Rtwid` eq transpᵣ
+                                                          >>> part` (le sid) (SIMD-Rpost-ufft` lower-ft SIMD-p)
+                                                          -}
+  SIMD-Rpost-ufft` lower-ft (SIMD-s@(_ ⊗ _) ⊗ ι (base n)) = part` (ri sid) (SIMD-Rpost-ufft` lower-ft SIMD-s)
+                                                          >>> Rtwid` eq transpᵣ
+                                                          >>> part` (le (?)) ?
+  -- Then this is out recursive step, where we dont need to do anything for the DFT simd
+  SIMD-Rpost-ufft` lower-ft (SIMD-s@(_ ⊗ _) ⊗ SIMD-p@(_ ⊗ _)) = part` (ri sid) (SIMD-Rpost-ufft` lower-ft SIMD-s)
+                                                           >>> Rtwid` eq transpᵣ
+                                                           >>> part` (le sid) (SIMD-Rpost-ufft` lower-ft SIMD-p)
+  -}                                                          
+  {-
+  SIMD-map : ∀ {ctxt : Ty → Set} {n : ℕ} {s : S (ss zz)} {τ : Ty} {num : Num τ} → (f : Inp ctxt s (num ◎ LANES)) → Inp ctxt (ι ((ι s) ⊗ (ι (ι (ν n) ⊗ ι (ν LANES))))) num
+  SIMD-map f = ? --part` (ri (st (le sid))) (pack (ri sid) f)
+
+  SIMD-map′ : ∀ {ctxt : Ty → Set} {n : ℕ} {s : S (ss zz)} {τ : Ty} {num : Num τ} → (f : Inp ctxt s (num ◎ LANES)) → Inp ctxt (ι (ι (ι (ν n) ⊗ ι (ν LANES)) ⊗ (ι s))) num
+  SIMD-map′ f = ? -- part` (le (st (le sid))) (pack (le sid) f)
 
   f : ∀ {ctxt : Ty → Set} → (∀ {p : S zz} → Inp ctxt (ι p) ((Scl R) ⋆ (Scl R))) → ∀ (s : S (ss (ss zz))) → (SIMD : SIMD-able (ι s)) → Inp ctxt (ι s) ((Scl R) ⋆ (Scl R))
   -- In this case we just have to do the DFT without SIMD
@@ -418,7 +587,7 @@ module _ where
   -- Here are our three new main base cases where we are able to apply SIMD
   f g (ι .(ι (ν n) ⊗ ι (ν LANES)) ⊗ ι .(ι (ν m) ⊗ ι (ν LANES))) (ι (base n ⊗ base m)) =
     -- Effectively we want to loop over n, such that we have ι (ν LANES) ⊗ (ι (ν m * LANES)) 
-    ?
+    SIMD-map ?
     >>> ?
   f g (ι (.(ι (ν n)) ⊗ .(ι (ν LANES))) ⊗ (s₁ ⊗ s₂)) (ι (base n ⊗ simd₁)) = ?
   f g ((s ⊗ s₁) ⊗ ι (.(ι (ν n)) ⊗ .(ι (ν LANES)))) (ι (simd ⊗ base n)) = ?
@@ -428,6 +597,7 @@ module _ where
 
   SIMD-Rfftn` : ∀ {ctxt : Ty → Set} → (s : S (ss (ss zz))) → Inp ctxt (ι s) ((Scl R) ⋆ (Scl R))
   SIMD-Rfftn` s = copyOut` eq (CMᵗ ∙ rev transpᵣ) (Rpost-ufft` (copyOut` (rev transpᵣ) CMᵗ ?)) 
+  -}
 ```
 
 One observation here is that we end up with `? >>> copy r₁ >>> copy r₂ >>> ?`
