@@ -17,7 +17,7 @@ open import Matrix.Leveled.NatMon-Change-Major
 
 open import Data.Fin renaming (zero to fzero; suc to fsuc)
 open import Relation.Binary.PropositionalEquality
-open import Function.Base
+open import Function.Base hiding (_∋_)
 
 _⊡_ = trans
 ```
@@ -78,10 +78,88 @@ data Num : Ty → Set where
   --arr : ∀ {s : S l} → Num τ → Num (ix s ⇒ τ)
 ```
 The set of numeric types and applications which return numeric types
-```
+```agda
 data FNum : Ty → Set where
   num : Num τ → FNum τ
   fun : Num τ → FNum σ → FNum (τ ⇒ σ)
+```
+
+```agda
+Id : Set
+Id = ?
+
+record ConPair : Set where
+  constructor [_,_]
+  field
+    { ConPair_τ }  : Ty
+    ConPair_Num    : Num ConPair_τ
+    { ConPair_ℓ }  : L
+    ConPair_Shape  : S ConPair_ℓ
+open ConPair
+
+infixr 7 _◃_ 
+infixr 7 _◂_ 
+data Ctxt : Set where
+  ⊘ : Ctxt
+  _◃_ : ConPair → Ctxt → Ctxt
+
+variable
+  Γ Δ Φ : Ctxt
+  
+
+data _∋_ : Ctxt → ConPair → Set where
+  here : ∀ {x : ConPair} {Γ : Ctxt} → (x ◃ Γ) ∋ x
+  there : ∀ {x y : ConPair} {Γ : Ctxt} → Γ ∋ x → (y ◃ Γ) ∋ x
+
+data All (P : ConPair → Set) : Ctxt → Set where 
+  ⊘   : All P ⊘
+  _◂_ : ∀ {x : ConPair} → P x → All P Γ → All P (x ◃ Γ)
+
+open import Data.List hiding (drop)
+open import Data.Product hiding (curry; uncurry) renaming (_,_ to _,ₚ_)
+
+{-
+-- This is going to reverse the order of Ctxt...
+allTys : Ctxt → Ty → Ty
+allTys ⊘ σ = σ
+allTys (conPair ◃ Γ) σ = allTys Γ σ ⇒ (ConPair_τ conPair)
+-}
+
+allTys : Ctxt → Ty → Ty
+allTys ⊘ σ = σ
+allTys (conPair ◃ ⊘) σ = (ConPair_τ conPair) ⇒ σ
+allTys (conPair ◃ Γ@(_ ◃ _)) σ = (ConPair_τ conPair) ⇒ (allTys Γ σ)
+
+mapCtxt : Ctxt → (ConPair → ConPair) → Ctxt
+mapCtxt ⊘ f = ⊘
+mapCtxt (x ◃ Γ) f = f x ◃ mapCtxt Γ f
+
+mapCtxtP : (Γ : Ctxt) → {P : ConPair → Set} → All P Γ → ((Σ ConPair P) → ConPair) → Ctxt
+mapCtxtP ⊘ ⊘ _ = ⊘
+mapCtxtP (x ◃ Γ) (p ◂ all) f = f (x ,ₚ p) ◃ mapCtxtP Γ all f
+
+--ConPairToArit : ConPair → ? --Arit Sem ?
+
+-- Order preserving
+data _⊆ᶜ_ : Ctxt → Ctxt → Set where
+  empt : ⊘ ⊆ᶜ Γ
+  drop : ∀ {x : ConPair} → Δ ⊆ᶜ Γ →      Δ  ⊆ᶜ (x ◃ Γ)
+  here : ∀ {x : ConPair} → Δ ⊆ᶜ Γ → (x ◃ Δ) ⊆ᶜ (x ◃ Γ)
+
+{-
+-- This currently requires that the contexts are in the same order, probable not
+-- what we want.
+data _⊆ᶜ_ : Ctxt → Ctxt → Set where
+  sid : Γ ⊆ᶜ Γ
+  here  : ∀ {x : ConPair} → Δ ⊆ᶜ Γ → (x ◃ Δ) ⊆ᶜ (x ◃ Γ)
+  there : ∀ {x : ConPair} → Δ ⊆ᶜ Γ → Δ ⊆ᶜ (x ◃ Γ)
+-}
+
+-- Lookup in a context
+-- This allows repeated addition of the same variable into the new context!
+data _⊢_ : Ctxt → Ctxt → Set where
+  base : Γ ⊢ ⊘
+  recu : ∀ {x : ConPair} → Γ ∋ x → Γ ⊢ (x ◃ Δ)
 ```
 
 # The DSL
@@ -233,6 +311,120 @@ lanes as opposed to a multiple of.
     comp : ∀ {ℓ : L} {s p : S (ss ℓ)} → IsSimd s → IsSimd p → IsSimd (s ⊗ p)
   -}
 
+  data NewInp (Sem : Ty → Set) : (Γ Δ : Ctxt) → Set where
+    {-
+    -- This feels to restrictive, as we may want to add free and alloc operations
+    compose : NewInp Sem Γ
+            → NewInp Sem Γ
+            → NewInp Sem Γ
+    -}
+    {-
+    -- We could do some kind of subcontext relation...
+    -- But this feels off and wouldn't allow Free
+    compose : Φ ⊆ᶜ Γ 
+            → Δ ⊆ᶜ Γ
+            → NewInp Sem Φ
+            → NewInp Sem Δ
+            → NewInp Sem Γ
+    -}
+    {-
+    -- We could make it enterly free
+    -- But this feels very wrong - how do we know if the required inputs are 
+    -- in the context
+    compose : NewInp Sem Φ
+            → NewInp Sem Δ
+            → NewInp Sem Γ
+    -}
+    -- So maybe we should make NewInp accept two Ctxt's - the starting context 
+    -- and the ending context...
+    compose : NewInp Sem Γ Φ
+            → NewInp Sem Φ Δ
+            → NewInp Sem Γ Δ
+
+    {-
+    -- Basic imap over one array
+    imap` : ∀ {τ : Ty} {num : Num τ}
+          → Γ ∋ [ num , s ]
+          → Arit Sem (ix s ⇒ τ ⇒ τ) → NewInp Sem Γ
+    -}
+    {-
+    -- Generalised imap, but which assumes every operation to be independent
+    imap` : ∀ {Δ : Ctxt}
+          → Γ ⊢ Δ
+          → ∀ {ℓ : L} (s : S ℓ)
+          → All (Reshape s ∘ ConPair_Shape) Δ
+          → All (λ conPair → Arit Sem (ix (ConPair_Shape conPair) ⇒ (ConPair_τ conPair) ⇒ (ConPair_τ conPair))) Δ
+          → NewInp Sem Γ
+    -}
+    -- Generalised imap where every operation can also access the elements at 
+    -- the simultanious operations (Meaning we will need to make use of temporary variables)
+    imap` : ∀ {Γ Δ : Ctxt}
+          → Γ ⊢ Δ --- This should really be ⊆ and flipped ⊢ feels wrong in this context (pun intended)
+          → ∀ {ℓ : L} (s : S ℓ)
+          → All (Reshape s ∘ ConPair_Shape) Δ
+          → All (λ conPair → Arit Sem ((allTys Δ (ix (ConPair_Shape conPair))) ⇒ ConPair_τ conPair)) Δ
+          → NewInp Sem Γ Γ
+
+    mapSum` : ∀ {Γ Δ : Ctxt} 
+            → Γ ⊢ Δ
+            → ∀ {u : ℕ}
+            → All (Reshape (ι (ν u)) ∘ ConPair_Shape) Δ
+            --→ ∀ {Sem : Ty → Set}
+            → All (λ conPair → Arit Sem (allTys Δ (ix (ι (ν u)) ⇒ ix (ι (ν u)) ⇒ ConPair_τ conPair))) Δ
+            → NewInp Sem Γ Γ
+
+    {-
+    -- Somewhat ugly, also restricts whats available in the copy'd out context too much
+    copyOut` : {s : S (ss l)}
+             → {p : S (ss l)}
+             → {τ : Ty} {num : Num τ}
+             → {Γ : Ctxt}
+             → (r₁ : Reshape s p) 
+             → (r₂ : Reshape p s) 
+             → NewInp Sem ([ num , s ] ◃ ⊘)
+             → Γ ∋ [ num , ι p ]
+             → NewInp Sem Γ
+      -}
+    copyOut` : {Γ Δ : Ctxt} 
+             → Γ ⊢ Δ
+             → (s : S (ss l))
+             → All (λ conPair → Reshape s (ConPair_Shape conPair)) Δ
+             → All (λ conPair → Reshape (ConPair_Shape conPair) s) Δ
+             → NewInp Sem (mapCtxt Δ (λ conPair → [ (ConPair_Num conPair) , s ] )) (mapCtxt Δ (λ conPair → [ (ConPair_Num conPair) , s ] ))
+             → NewInp Sem Γ Γ
+    
+    {-
+    part`    : ∀ {s p : S (ss l)} 
+             → {τ : Ty} {num : Num τ}
+             → (s⊂p : s ⊂ p) 
+             → Inp Sem (inv-⊂ s⊂p) num
+             → Inp Sem p num
+    -}
+    -- The easiest form of part is where every Ar in Δ is of the same Shape
+    part` : ∀ {Γ Δ : Ctxt}
+          → Γ ⊢ Δ
+          → {ℓ : L} (s p : S (ss ℓ))
+          → (s⊂p : s ⊂ p)
+          → (sameS : All (λ conPair → Σ (ConPair_ℓ conPair ≡ (ss ℓ)) λ{refl → s ≡ ConPair_Shape conPair}) Δ)
+          → let Φ = mapCtxtP Δ sameS λ{(conPair ,ₚ refl ,ₚ refl) → [ (ConPair_Num conPair) , (inv-⊂ s⊂p) ]} in NewInp Sem Φ Φ
+          → NewInp Sem Γ Γ
+    {-
+    -- I need to generate a context from Δ, where every shape is a subshape of 
+    --
+    -- We can flip this on it's head and say that we iterate over S, and say
+    -- how s is a subshape of each of the shapes in the context
+    -- Then our inverse of s ⊂ conShape is the new shape in the context :)
+    part` : ∀ {Γ Δ : Ctxt}
+          → Γ ⊢ Δ
+          → {ℓ : L} (s : S ℓ)
+          → (subs : All (λ conPair → Σ (ConPair_ℓ conPair ≡ ℓ) λ{refl → s ⊂ (ConPair_Shape conPair)}) Δ) 
+          → let a = mapCtxt Δ (λ conPair → [ (ConPair_Num conPair) , (let a = s ⊂ ? in ?) ] ) in ?
+          → NewInp Sem ? ?
+          → NewInp Sem Γ Γ
+    -}
+ 
+
+
   data Inp (Sem : Ty → Set) : {l : L} (s : S l) {τ : Ty} (num : Num τ) → Set₁ where
     compose  : ∀ {s₁ : S l} {τ : Ty} {num : Num τ}
              → Inp Sem s₁ num
@@ -292,6 +484,9 @@ twid` {l} {s} {s′} {p} {p′} r₁ r₂ =
             (sizeN $ var i) 
             ((posiN (spliₗ $ var $ i) r₁) *N (posiN (spliᵣ $ var $ i) r₂))
         )
+
+Ntwid` : {s s′ p p′ : S (ss l)} {Sem : Ty → Set} → (r₁ : Reshape s′ s) → (r₂ : Reshape p′ p) → NewInp Sem ([ Scl R , (s ⊗ p) ] ◃ [ Scl R , (s ⊗ p) ] ◃ ⊘) _
+Ntwid` {l} {s} {s′} {p} {p′} {Sem} r₁ r₂ = imap` (?) ? ? ?
 
 Rtwid` : {s s′ p p′ : S (ss l)} {Sem : Ty → Set} → (r₁ : Reshape s′ s) → (r₂ : Reshape p′ p) → Inp Sem (s ⊗ p) ((Scl R) ⋆ (Scl R))
 Rtwid` {l} {s} {s′} {p} {p′} r₁ r₂ = 
