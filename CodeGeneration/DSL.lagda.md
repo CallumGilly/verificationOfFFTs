@@ -76,6 +76,13 @@ data Num : Ty → Set where
   Scl : Scalar τ → Num τ
   _⋆_ : Num τ →  Num σ → Num (τ ⋆ σ)
   --arr : ∀ {s : S l} → Num τ → Num (ix s ⇒ τ)
+
+-- A context can contain arrays, and Scalars
+data ConTy : Ty → Set where
+  CNum : Num τ → ConTy τ
+  CArr : ∀ {s : S l} → Num τ → ConTy (ix s ⇒ τ)
+  
+
 ```
 The set of numeric types and applications which return numeric types
 ```agda
@@ -97,46 +104,66 @@ record ConPair : Set where
     ConPair-Shape  : S ConPair-ℓ
 open ConPair
 
-infixr 7 _◃_ 
-infixr 7 _◂_ 
--- I think I need to extend context to allow it to carry scalars as well as arrays
--- What if i did the smart thing and carried num with the option of ix s ⇒ Scl τ...
-data Ctxt : Set where
-  ⊘ : Ctxt
-  _◃_ : ConPair → Ctxt → Ctxt
+module Contexts {X : Set} (Pred : X → Set) where
+  private 
+    variable
+      x y : X
 
-variable
-  Γ Δ Φ : Ctxt
+  infixr 7 _◃_ 
+  infixr 7 _◂_ 
 
-data _∋_ : Ctxt → ConPair → Set where
-  here  : ∀ {x   : ConPair} {Γ : Ctxt} →         (x ◃ Γ) ∋ x
-  there : ∀ {x y : ConPair} {Γ : Ctxt} → Γ ∋ x → (y ◃ Γ) ∋ x
+  data Ctxt : Set where
+    ⊘ : Ctxt
+    _◃_ : Pred x → Ctxt → Ctxt
 
-data All (P : ConPair → Set) : Ctxt → Set where 
-  ⊘   : All P ⊘
-  _◂_ : ∀ {x : ConPair} → P x → All P Γ → All P (x ◃ Γ)
+  variable
+    Γ Δ Φ : Ctxt
 
-data NonEmpty : Ctxt → Set where
-  ne : ∀ {x : ConPair} → {Γ : Ctxt} → NonEmpty (x ◃ Γ)
+  data _∋_ : Ctxt → Pred x → Set where
+    here  : ∀ {a   : Pred x} {Γ : Ctxt} →         (a ◃ Γ) ∋ a
+    there : ∀ {a b : Pred x} {Γ : Ctxt} → Γ ∋ a → (b ◃ Γ) ∋ a
 
+  data All (P : Pred x → Set) : Ctxt → Set where 
+    ⊘   : All P ⊘
+    _◂_ : ∀ {a : Pred x} → P a → All P Γ → All P (a ◃ Γ)
+
+  data NonEmpty : Ctxt → Set where
+    ne : ∀ {a : Pred x} → {Γ : Ctxt} → NonEmpty (a ◃ Γ)
+
+  open import Data.Product hiding (curry; uncurry) renaming (_,_ to _,ₚ_)
+
+  mapCtxt : Ctxt → (∀ {x} → Pred x → ∃ Pred) → Ctxt
+  mapCtxt ⊘ f = ⊘
+  mapCtxt (a ◃ Γ) f = f a .proj₂ ◃ mapCtxt Γ f
+
+
+open Contexts {Ty} ConTy
+
+
+Ctxt-to-Ty : (Γ : Ctxt) → NonEmpty Γ → Ty
+Ctxt-to-Ty (x₁ ◃ Γ) x = ?
 allTys : Ctxt → Ty → Ty
 allTys ⊘ σ = σ
-allTys (conPair ◃ Γ) σ = (ConPair-τ conPair) ⇒ (allTys Γ σ)
+allTys (_◃_ {τ} _ Γ) σ = τ ⇒ (allTys Γ σ)
 
-_ : ∀ {τ : Ty} {x y z : ConPair} → allTys (x ◃ y ◃ z ◃ ⊘) τ ≡ (ConPair-τ x) ⇒ ((ConPair-τ y) ⇒ ((ConPair-τ z) ⇒ τ))
+-- This is pretty grim...
+_ : ∀ {τ σ₁ σ₂ σ₃ : Ty} 
+  → ∀ {x : ConTy σ₁}
+  → ∀ {y : ConTy σ₂} 
+  → ∀ {z : ConTy σ₃}
+  → allTys (x ◃ y ◃ z ◃ ⊘) τ ≡ σ₁ ⇒ (σ₂ ⇒ (σ₃ ⇒ τ))
 _ = refl
+{-# WARNING_ON_USAGE allTys "TODO: Update to be more consistently named and have a form with non empty and maybe a form without" #-}
 
 Ctxt-to-⋆ : (Γ : Ctxt) → NonEmpty Γ → Ty
-Ctxt-to-⋆ (x ◃ ⊘)         ne = ConPair-τ x
-Ctxt-to-⋆ (x ◃ Γ@(_ ◃ _)) ne = ConPair-τ x ⋆ (Ctxt-to-⋆ Γ ne)
+Ctxt-to-⋆ (_◃_ {τ} _ ⊘        ) ne = τ
+Ctxt-to-⋆ (_◃_ {τ} _ Γ@(_ ◃ _)) ne = τ ⋆ (Ctxt-to-⋆ Γ ne)
 
-_ : ∀ {x y z : ConPair} → Ctxt-to-⋆ (x ◃ y ◃ z ◃ ⊘) ne ≡ (ConPair-τ x) ⋆ ((ConPair-τ y) ⋆ (ConPair-τ z))
+_ : ∀ {σ₁ σ₂ σ₃ : Ty} {x : ConTy σ₁} {y : ConTy σ₂} {z : ConTy σ₃} 
+    → Ctxt-to-⋆ (x ◃ y ◃ z ◃ ⊘) ne ≡ σ₁ ⋆ (σ₂ ⋆ σ₃)
 _ = refl
 
-
-mapCtxt : Ctxt → (ConPair → ConPair) → Ctxt
-mapCtxt ⊘ f = ⊘
-mapCtxt (x ◃ Γ) f = f x ◃ mapCtxt Γ f
+{-
 
 module _ {P : ConPair → Set} where
   open import Data.Product
@@ -571,4 +598,5 @@ fftn` s = copyOut` eq (CMᵗ ∙ rev transpᵣ) (post-ufft` (copyOut` (rev trans
 
 Rfftn` : ∀ {Sem : Ty → Set} → (s : S (ss (ss zz))) → Inp Sem (ι s) ((Scl R) ⋆ (Scl R))
 Rfftn` s = copyOut` eq (CMᵗ ∙ rev transpᵣ) (Rpost-ufft` (copyOut` (rev transpᵣ) CMᵗ (Rpre-ufft` Rdft`))) 
+-}
 ```
