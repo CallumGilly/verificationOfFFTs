@@ -80,8 +80,31 @@ data Num : Ty → Set where
 -- A context can contain arrays, and Scalars
 data ConTy : Ty → Set where
   CNum : Num τ → ConTy τ
+  CIx : ConTy (ix s)
   CArr : ∀ {s : S l} → Num τ → ConTy (ix s ⇒ τ)
+  CHEAT : ConTy τ
   
+module _ where
+  open import Data.Maybe renaming (zipWith to zipWithₘ; map to mapₘ)
+
+  isScalar : (τ : Ty) → Maybe (Scalar τ)
+  isScalar C = just C
+  isScalar R = just R
+  isScalar N = just N
+  isScalar ℝ = just ℝ
+  isScalar _ = nothing
+
+  isNum : (τ : Ty) → Maybe (Num τ)
+  isNum (_ ⇒ _) = nothing
+  isNum (ix x)  = nothing
+  isNum (τ ⋆ σ) = zipWithₘ _⋆_ (isNum τ) (isNum σ)
+  isNum x = mapₘ Scl (isScalar x) 
+
+  isConTy : (τ : Ty) → Maybe (ConTy τ)
+  isConTy (ix _ ⇒ τ) = mapₘ CArr (isNum τ)
+  --isConTy (_    ⇒ _) = nothing
+  isConTy (ix x) = just CIx
+  isConTy = mapₘ CNum ∘ isNum
 
 ```
 The set of numeric types and applications which return numeric types
@@ -92,9 +115,6 @@ data FNum : Ty → Set where
 ```
 
 ```agda
-Id : Set
-Id = ?
-
 record ConPair : Set where
   constructor [_,_]
   field
@@ -137,11 +157,13 @@ module Contexts {X : Set} (Pred : X → Set) where
   mapCtxt (a ◃ Γ) f = f a .proj₂ ◃ mapCtxt Γ f
 
 
+-- I think I've overcomplicated contexts, and that I don't need to restrict here
 open Contexts {Ty} ConTy
 
 
 Ctxt-to-Ty : (Γ : Ctxt) → NonEmpty Γ → Ty
-Ctxt-to-Ty (x₁ ◃ Γ) x = ?
+Ctxt-to-Ty (τ ◃ Γ) ne = ?
+
 allTys : Ctxt → Ty → Ty
 allTys ⊘ σ = σ
 allTys (_◃_ {τ} _ Γ) σ = τ ⇒ (allTys Γ σ)
@@ -163,26 +185,29 @@ _ : ∀ {σ₁ σ₂ σ₃ : Ty} {x : ConTy σ₁} {y : ConTy σ₂} {z : ConTy 
     → Ctxt-to-⋆ (x ◃ y ◃ z ◃ ⊘) ne ≡ σ₁ ⋆ (σ₂ ⋆ σ₃)
 _ = refl
 
-{-
 
+{-
 module _ {P : ConPair → Set} where
   open import Data.Product
 
   mapCtxtP : (Γ : Ctxt) → All P Γ → ((Σ ConPair P) → ConPair) → Ctxt
   mapCtxtP ⊘ ⊘ _ = ⊘
   mapCtxtP (x ◃ Γ) (p ◂ all) f = f (x , p) ◃ mapCtxtP Γ all f
+-}
 
 -- Order preserving
 data _⊆ᶜ_ : Ctxt → Ctxt → Set where
   empt : ⊘ ⊆ᶜ Γ
-  drop : ∀ {x : ConPair} → Δ ⊆ᶜ Γ →      Δ  ⊆ᶜ (x ◃ Γ)
-  here : ∀ {x : ConPair} → Δ ⊆ᶜ Γ → (x ◃ Δ) ⊆ᶜ (x ◃ Γ)
+  drop : ∀ {x : ConTy τ} → Δ ⊆ᶜ Γ →      Δ  ⊆ᶜ (x ◃ Γ)
+  here : ∀ {x : ConTy τ} → Δ ⊆ᶜ Γ → (x ◃ Δ) ⊆ᶜ (x ◃ Γ)
 
-module _ (F : ConPair → ConPair) where
+{-
+module _ (F : ConTy _ → ConTy _) where
   data _⊆ᵖ_ : Ctxt → Ctxt → Set where
     empt : ⊘ ⊆ᵖ Γ
-    drop : ∀ {x : ConPair} → Δ ⊆ᵖ Γ →        Δ  ⊆ᵖ (x ◃ Γ)
-    here : ∀ {x : ConPair} → Δ ⊆ᵖ Γ → (F x ◃ Δ) ⊆ᵖ (x ◃ Γ)
+    drop : ∀ {x : ConTy τ} → Δ ⊆ᵖ Γ →        Δ  ⊆ᵖ (x ◃ Γ)
+    here : ∀ {x : ConTy τ} → Δ ⊆ᵖ Γ → (F x ◃ Δ) ⊆ᵖ (x ◃ Γ)
+-}
 
 
 open import Data.Product hiding (curry; uncurry) renaming (_,_ to _,ₚ_)
@@ -222,6 +247,76 @@ went to create the Agda translator.
 -- I could generalise contexts to something like [ConPair | Num τ]
 -- data CtxtArit (Γ : Ctxt) : Ty → Set where
 
+-- Need to use contexts instead, need to get ⊆ relations right
+
+-- A Arithmetic operation operates within a context which it cannot extend 
+-- or reduce.
+-- This current definition however allows CtxtArit to return ANY type 
+-- This also doesn't make great use of contexts (or use of at all)
+data CtxtArit (Γ : Ctxt) : Ty → Set where
+  {-
+  var : ConTy τ  → CtxtArit Γ τ
+  lam : (ConTy τ → CtxtArit Γ σ) → CtxtArit Γ (τ ⇒ σ)
+  app : CtxtArit Γ (τ ⇒ σ) → CtxtArit Γ τ → CtxtArit Γ σ
+  -}
+
+  var : {conTy : ConTy τ} → Γ ∋ conTy → CtxtArit Γ τ
+  lam : {conTy : ConTy τ} → CtxtArit (conTy ◃ Γ) σ → CtxtArit Γ (τ ⇒ σ)
+  app : CtxtArit Γ (σ ⇒ τ) → CtxtArit Γ σ → CtxtArit Γ τ
+
+  {-
+  var : Γ ∋ τ → DSL Γ τ
+  lam : DSL (τ ◃ Γ) σ → DSL Γ (τ ⇒ σ)
+  app : DSL Γ (σ ⇒ τ) → DSL Γ σ → DSL Γ τ
+  -}
+
+infix 1 lam
+--syntax lam (λ x → e) = `λ x ⇒ e
+```
+
+
+Here I check that I have setup the lambda calculi correctly by ensuring I can 
+represent the SKI operators
+```agda
+module _ where
+  -- This makes me think that I shouldn't have define contexts over ConTy....
+  I` : CtxtArit Γ (τ ⇒ τ) 
+  I` = lam (var here)
+
+  K` : CtxtArit Γ (τ ⇒ σ ⇒ τ)
+  K` {Γ} {τ} {σ} = lam (lam (var (?)))
+  --K` {Γ} {τ} {σ} = lam λ x → lam λ y → var x
+
+  S` : CtxtArit Γ ((σ ⇒ δ ⇒ τ) ⇒ (σ ⇒ δ) ⇒ σ ⇒ τ)
+  S` = ? --`λ x ⇒ `λ y ⇒ `λ z ⇒ app (app (var x) (var z)) (app (var y) (var z))
+{-
+```
+
+Is this something we can compile...
+```agda
+module _ where
+  COp : Set
+  ROp : Set
+  NOp : Set
+  Ix : ∀ {ℓ} → S ℓ → Set
+  State : Set → Set → Set
+
+  translate-Ty : (τ : Ty) → Set
+  translate-Ty C = COp
+  translate-Ty R = ROp
+  translate-Ty N = NOp
+  translate-Ty (ix s) = Ix s
+  translate-Ty (τ ⇒ σ) = translate-Ty τ → State ℕ (translate-Ty σ)
+  translate-Ty (τ ⋆ σ) = translate-Ty τ × translate-Ty σ
+
+  translateArit : CtxtArit Γ τ → translate-Ty τ
+  translateArit (var {τ} _) = ?
+  translateArit (lam x) x₁ = ?
+  translateArit (app arit arit₁) = ?
+-}
+```
+```agda
+{-
 data Arit (Sem : Ty → Set) : Ty → Set where
   var   : Sem τ → Arit Sem τ
   lam   : (Sem τ → Arit Sem σ) → Arit Sem (τ ⇒ σ)
@@ -310,8 +405,6 @@ x *C′ y =
 --let′_=′_in′_ nm x y = app ? ?
 
 
-infix 1 lam
-syntax lam (λ x → e) = `λ x ⇒ e
 ```
 
 Here I check that I have setup the lambda calculi correctly by ensuring I can 
