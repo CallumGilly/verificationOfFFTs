@@ -80,7 +80,8 @@ module SimplyTyped where
 ```
 
 Now we can start giving typing hints when we try to define our SKI calculus, 
-but our language still can't carry what the type of variables is - see S
+but our language still can't carry what the type of variables are, making these 
+hints only advisory
 ```agda
   module SKI where
     -- S x y z = xz(yz)

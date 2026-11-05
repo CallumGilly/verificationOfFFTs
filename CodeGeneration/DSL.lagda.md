@@ -23,6 +23,10 @@ _⊡_ = trans
 ```
 ```agda
 open Change-Major ℕ-CM
+
+variable
+  l : L
+  s p : S l
 ```
 
 Technically I don't actually need a dependency on FFT yet - it's only needed 
@@ -37,21 +41,127 @@ For now I will just deal with Complex as a type - this needs to be changed to �
 but this is probably best left till later (have done it before and should be 
 an easy conversion).
 ```agda
-infixr 25 _⇒_
-infixr 30 _⋆_
-data Ty : Set where
-  C : Ty
-  R : Ty
-  N : Ty
-  ix : {l : L} → S l → Ty
-  _⇒_ : Ty → Ty → Ty
-  _⋆_ : Ty → Ty → Ty
-  ℝ : Ty
+module Contexts (Ty : Set) where
+  private 
+    variable
+      τ σ : Ty
 
-private
+  infixr 7 _◃_ 
+
+  data Ctxt : Set where
+    ⊘ : Ctxt
+    _◃_ : Ty → Ctxt → Ctxt
+
   variable
-    l : L
-    s p : S l
+    Γ Δ Φ : Ctxt
+
+  data _∋_ : Ctxt → Ty → Set where
+    here  : (τ ◃ Γ) ∋ τ
+    there : Γ ∋ τ → (σ ◃ Γ) ∋ τ
+
+  {-
+  -- Now defined by CtxtSem
+  data All (P : Ty → Set) : Ctxt → Set where 
+    ⊘   : All P ⊘
+    _◂_ : P τ → All P Γ → All P (τ ◃ Γ)
+  -}
+
+  data NonEmpty : Ctxt → Set where
+    ne : NonEmpty (τ ◃ Γ)
+
+  mapCtxt : Ctxt → (Ty → Ty) → Ctxt
+  mapCtxt ⊘ f = ⊘
+  mapCtxt (a ◃ Γ) f = f a ◃ mapCtxt Γ f
+
+  -- Order preserving
+  data _⊆ᶜ_ : Ctxt → Ctxt → Set where
+    empt : ⊘ ⊆ᶜ Γ
+    drop : Δ ⊆ᶜ Γ →      Δ  ⊆ᶜ (τ ◃ Γ)
+    here : Δ ⊆ᶜ Γ → (τ ◃ Δ) ⊆ᶜ (τ ◃ Γ)
+
+  data _∶_⊆ₚ_ (P : Ty → Set) : Ctxt → Ctxt → Set where
+    empt : P ∶ ⊘ ⊆ₚ Γ 
+    drop : P ∶ Δ ⊆ₚ Γ →       P ∶      Δ  ⊆ₚ (τ ◃ Γ)
+    here : P ∶ Δ ⊆ₚ Γ → P τ → P ∶ (τ ◃ Δ) ⊆ₚ (τ ◃ Γ)
+
+  -- data each (P : Ty → Set) (P₂ : (τ : Ty) → P τ → Set) : _∶_⊆ₚ_ P Δ Γ → Set where
+  --   empt : each ?
+
+
+
+
+  -- This is actually very useful - not only does it allow me to define 
+  -- Semantics for Ty, but I think it also defines All :)
+  module CtxtSem (Sem : Ty → Set) where
+    data CtxtVal : Ctxt → Set where
+      ⊘ : CtxtVal ⊘
+      _◃_ : Sem τ → CtxtVal Γ → CtxtVal (τ ◃ Γ)
+
+    pull : CtxtVal Γ → Γ ∋ τ → Sem τ
+    pull (x ◃ _) here = x
+    pull (_ ◃ Γ) (there ni) = pull Γ ni
+
+  module _ where
+    private open CtxtSem hiding (pull)
+    All : (Ty → Set) → Ctxt → Set
+    All = CtxtVal
+
+    private variable 
+      P₁ : Ty → Set
+      Γₚ : All P₁ Γ
+      τₚ : P₁ τ
+    
+    -- All with two dependent properties
+    {-
+    data All₂ (P₁ : Ty → Set) (P₂ : (τ : Ty) → P₁ τ → Set) : (Γ : Ctxt) → Set where
+      ⊘ : All₂ _ _ ⊘
+      rec : (τₚ₂ : P₂ τ ?) → All₂ P₁ P₂ Γ → All₂ _ _ (τ ◃ Γ)
+    -}
+
+    --data All′ (P : ?) : (Γₚ : All′ ? ?) → Set where
+    
+    -- How do I generalise for $n$ many dependent properties??
+    --data Allₙ : (Γ : Ctxt) → Set where
+
+  -- For now, when an all is dependent on annother All, I will just use Σ, but 
+  -- I strongly feel that there is a smart way of doing this
+  {-
+    -- I need a form of all which is dependent on the prior all
+    -- P₁ : Ty → Set
+    -- P₂ : (τ : Ty) → P₁ τ → Set
+    -- All P₁ Γ
+    -- All P₂ Γ
+    -- All (Ε P₂)
+
+    --AllP : (P₁ : Ty → Set) → (P₂ : (τ : Ty) → P₁ τ → Set) → All P₁ Δ → Set
+    --AllP P₁ P₂ = ?
+
+    data All₂ (P₁ : Ty → Set) (P₂ : (τ : Ty) → P₁ τ → Set) : (Γ : Ctxt) → All P₁ Γ → Set where
+      ⊘ : All₂ P₁ P₂ ⊘ ⊘
+      _◃_ : (τₚ : P₁ τ) → P₂ τ τₚ → All₂ P₁ P₂ Γ Γₚ → All₂ P₁ P₂ (τ ◃ Γ) (τₚ ◃ Γₚ)
+
+  module _ (P₁ : Ty → Set) (P₂ : (τ : Ty) → P₁ τ → Set) where
+    private open CtxtSem
+    open import Data.Product
+    AllP : All P₁ Δ → All (λ τ → Σ (P₁ τ) (P₂ τ)) Δ
+    AllP ⊘ = ⊘
+    AllP (τₚ ◃ Γₚ) = (τₚ , ?) ◃ AllP Γₚ
+  -}
+
+module Types where
+
+  infixr 25 _⇒_
+  infixr 30 _⋆_
+  data Ty : Set where
+    C : Ty
+    R : Ty
+    N : Ty
+    ix : {l : L} → S l → Ty
+    _⇒_ : Ty → Ty → Ty
+    _⋆_ : Ty → Ty → Ty
+    ℝ : Ty
+
+  variable
     τ δ σ : Ty
 ```
 
@@ -59,108 +169,62 @@ For these basic types, we can then define arrays. This definition (and that
 above for `ix`) doesn't do anything special yet for levels, but just parses them 
 in the same way we have before.
 ```agda
-ar : ∀ {l : L} → S l → Ty → Ty
-ar s X = ix s ⇒ X
+  ar : ∀ {l : L} → S l → Ty → Ty
+  ar s X = ix s ⇒ X
 ```
 We can then define two subsets of `Ty`:
 The set of numeric types (Complex and Arrays)
 ```agda
-data Scalar : Ty → Set where
-  C : Scalar C
-  R : Scalar R
-  N : Scalar N
-  --- This is a lie, but a good one ---
-  ℝ : Scalar ℝ
+  data Scalar : Ty → Set where
+    C : Scalar C
+    R : Scalar R
+    N : Scalar N
+    --- This is a lie, but a good one ---
+    ℝ : Scalar ℝ
 
-data Num : Ty → Set where
-  Scl : Scalar τ → Num τ
-  _⋆_ : Num τ →  Num σ → Num (τ ⋆ σ)
-  --arr : ∀ {s : S l} → Num τ → Num (ix s ⇒ τ)
+  data Num : Ty → Set where
+    Scl : Scalar τ → Num τ
+    _⋆_ : Num τ →  Num σ → Num (τ ⋆ σ)
+    --arr : ∀ {s : S l} → Num τ → Num (ix s ⇒ τ)
 
--- A context can contain arrays, and Scalars
-data ConTy : Ty → Set where
-  CNum : Num τ → ConTy τ
-  CIx : ConTy (ix s)
-  CArr : ∀ {s : S l} → Num τ → ConTy (ix s ⇒ τ)
-  CHEAT : ConTy τ
+  -- A context can contain arrays, and Scalars
+  data ConTy : Ty → Set where
+    CNum : Num τ → ConTy τ
+    CIx : ConTy (ix s)
+    CArr : ∀ {s : S l} → Num τ → ConTy (ix s ⇒ τ)
+
+  data Arr : Ty → Set where
+    ARR : ∀ {s : S l} → Num τ → Arr (ix s ⇒ τ)
+    
   
-module _ where
-  open import Data.Maybe renaming (zipWith to zipWithₘ; map to mapₘ)
+  module _ where
+    open import Data.Maybe renaming (zipWith to zipWithₘ; map to mapₘ)
 
-  isScalar : (τ : Ty) → Maybe (Scalar τ)
-  isScalar C = just C
-  isScalar R = just R
-  isScalar N = just N
-  isScalar ℝ = just ℝ
-  isScalar _ = nothing
+    isScalar : (τ : Ty) → Maybe (Scalar τ)
+    isScalar C = just C
+    isScalar R = just R
+    isScalar N = just N
+    isScalar ℝ = just ℝ
+    isScalar _ = nothing
 
-  isNum : (τ : Ty) → Maybe (Num τ)
-  isNum (_ ⇒ _) = nothing
-  isNum (ix x)  = nothing
-  isNum (τ ⋆ σ) = zipWithₘ _⋆_ (isNum τ) (isNum σ)
-  isNum x = mapₘ Scl (isScalar x) 
+    isNum : (τ : Ty) → Maybe (Num τ)
+    isNum (_ ⇒ _) = nothing
+    isNum (ix x)  = nothing
+    isNum (τ ⋆ σ) = zipWithₘ _⋆_ (isNum τ) (isNum σ)
+    isNum x = mapₘ Scl (isScalar x) 
 
-  isConTy : (τ : Ty) → Maybe (ConTy τ)
-  isConTy (ix _ ⇒ τ) = mapₘ CArr (isNum τ)
-  --isConTy (_    ⇒ _) = nothing
-  isConTy (ix x) = just CIx
-  isConTy = mapₘ CNum ∘ isNum
-
-```
-The set of numeric types and applications which return numeric types
-```agda
-data FNum : Ty → Set where
-  num : Num τ → FNum τ
-  fun : Num τ → FNum σ → FNum (τ ⇒ σ)
+    isConTy : (τ : Ty) → Maybe (ConTy τ)
+    isConTy (ix _ ⇒ τ) = mapₘ CArr (isNum τ)
+    --isConTy (_    ⇒ _) = nothing
+    isConTy (ix x) = just CIx
+    isConTy = mapₘ CNum ∘ isNum
 ```
 
 ```agda
-record ConPair : Set where
-  constructor [_,_]
-  field
-    { ConPair-τ }  : Ty
-    ConPair-Num    : Num ConPair-τ
-    { ConPair-ℓ }  : L
-    ConPair-Shape  : S ConPair-ℓ
-open ConPair
+open Types
+open Contexts Ty
 
-module Contexts {X : Set} (Pred : X → Set) where
-  private 
-    variable
-      x y : X
-
-  infixr 7 _◃_ 
-  infixr 7 _◂_ 
-
-  data Ctxt : Set where
-    ⊘ : Ctxt
-    _◃_ : Pred x → Ctxt → Ctxt
-
-  variable
-    Γ Δ Φ : Ctxt
-
-  data _∋_ : Ctxt → Pred x → Set where
-    here  : ∀ {a   : Pred x} {Γ : Ctxt} →         (a ◃ Γ) ∋ a
-    there : ∀ {a b : Pred x} {Γ : Ctxt} → Γ ∋ a → (b ◃ Γ) ∋ a
-
-  data All (P : Pred x → Set) : Ctxt → Set where 
-    ⊘   : All P ⊘
-    _◂_ : ∀ {a : Pred x} → P a → All P Γ → All P (a ◃ Γ)
-
-  data NonEmpty : Ctxt → Set where
-    ne : ∀ {a : Pred x} → {Γ : Ctxt} → NonEmpty (a ◃ Γ)
-
-  open import Data.Product hiding (curry; uncurry) renaming (_,_ to _,ₚ_)
-
-  mapCtxt : Ctxt → (∀ {x} → Pred x → ∃ Pred) → Ctxt
-  mapCtxt ⊘ f = ⊘
-  mapCtxt (a ◃ Γ) f = f a .proj₂ ◃ mapCtxt Γ f
-
-
--- I think I've overcomplicated contexts, and that I don't need to restrict here
-open Contexts {Ty} ConTy
-
-
+{-
 Ctxt-to-Ty : (Γ : Ctxt) → NonEmpty Γ → Ty
 Ctxt-to-Ty (τ ◃ Γ) ne = ?
 
@@ -184,6 +248,8 @@ Ctxt-to-⋆ (_◃_ {τ} _ Γ@(_ ◃ _)) ne = τ ⋆ (Ctxt-to-⋆ Γ ne)
 _ : ∀ {σ₁ σ₂ σ₃ : Ty} {x : ConTy σ₁} {y : ConTy σ₂} {z : ConTy σ₃} 
     → Ctxt-to-⋆ (x ◃ y ◃ z ◃ ⊘) ne ≡ σ₁ ⋆ (σ₂ ⋆ σ₃)
 _ = refl
+-}
+
 
 
 {-
@@ -195,11 +261,6 @@ module _ {P : ConPair → Set} where
   mapCtxtP (x ◃ Γ) (p ◂ all) f = f (x , p) ◃ mapCtxtP Γ all f
 -}
 
--- Order preserving
-data _⊆ᶜ_ : Ctxt → Ctxt → Set where
-  empt : ⊘ ⊆ᶜ Γ
-  drop : ∀ {x : ConTy τ} → Δ ⊆ᶜ Γ →      Δ  ⊆ᶜ (x ◃ Γ)
-  here : ∀ {x : ConTy τ} → Δ ⊆ᶜ Γ → (x ◃ Δ) ⊆ᶜ (x ◃ Γ)
 
 {-
 module _ (F : ConTy _ → ConTy _) where
@@ -254,175 +315,90 @@ went to create the Agda translator.
 -- This current definition however allows CtxtArit to return ANY type 
 -- This also doesn't make great use of contexts (or use of at all)
 data CtxtArit (Γ : Ctxt) : Ty → Set where
-  {-
-  var : ConTy τ  → CtxtArit Γ τ
-  lam : (ConTy τ → CtxtArit Γ σ) → CtxtArit Γ (τ ⇒ σ)
-  app : CtxtArit Γ (τ ⇒ σ) → CtxtArit Γ τ → CtxtArit Γ σ
-  -}
-
-  var : {conTy : ConTy τ} → Γ ∋ conTy → CtxtArit Γ τ
-  lam : {conTy : ConTy τ} → CtxtArit (conTy ◃ Γ) σ → CtxtArit Γ (τ ⇒ σ)
+  var : Γ ∋ τ → CtxtArit Γ τ
+  lam : CtxtArit (τ ◃ Γ) σ → CtxtArit Γ (τ ⇒ σ)
   app : CtxtArit Γ (σ ⇒ τ) → CtxtArit Γ σ → CtxtArit Γ τ
 
-  {-
-  var : Γ ∋ τ → DSL Γ τ
-  lam : DSL (τ ◃ Γ) σ → DSL Γ (τ ⇒ σ)
-  app : DSL Γ (σ ⇒ τ) → DSL Γ σ → DSL Γ τ
-  -}
+  sizeN : CtxtArit Γ (ix s) → CtxtArit Γ N
+  posiN : CtxtArit Γ (ix s) → Reshape p s → CtxtArit Γ N
+  spliₗ : CtxtArit Γ (ix (s ⊗ p)) → CtxtArit Γ (ix s)
+  spliᵣ : CtxtArit Γ (ix (s ⊗ p)) → CtxtArit Γ (ix p)
 
-infix 1 lam
---syntax lam (λ x → e) = `λ x ⇒ e
-```
+  _*N_ : CtxtArit Γ N → CtxtArit Γ N → CtxtArit Γ N 
 
+  _*C_ : CtxtArit Γ C → CtxtArit Γ C → CtxtArit Γ C 
+  ω`   : CtxtArit Γ N → CtxtArit Γ N → CtxtArit Γ C
 
-Here I check that I have setup the lambda calculi correctly by ensuring I can 
-represent the SKI operators
-```agda
-module _ where
-  -- This makes me think that I shouldn't have define contexts over ConTy....
-  I` : CtxtArit Γ (τ ⇒ τ) 
-  I` = lam (var here)
+  toC  : CtxtArit Γ R → CtxtArit Γ R → CtxtArit Γ C
+  toRᵣ : CtxtArit Γ C → CtxtArit Γ R
+  toRᵢ : CtxtArit Γ C → CtxtArit Γ R
 
-  K` : CtxtArit Γ (τ ⇒ σ ⇒ τ)
-  K` {Γ} {τ} {σ} = lam (lam (var (?)))
-  --K` {Γ} {τ} {σ} = lam λ x → lam λ y → var x
-
-  S` : CtxtArit Γ ((σ ⇒ δ ⇒ τ) ⇒ (σ ⇒ δ) ⇒ σ ⇒ τ)
-  S` = ? --`λ x ⇒ `λ y ⇒ `λ z ⇒ app (app (var x) (var z)) (app (var y) (var z))
-{-
-```
-
-Is this something we can compile...
-```agda
-module _ where
-  COp : Set
-  ROp : Set
-  NOp : Set
-  Ix : ∀ {ℓ} → S ℓ → Set
-  State : Set → Set → Set
-
-  translate-Ty : (τ : Ty) → Set
-  translate-Ty C = COp
-  translate-Ty R = ROp
-  translate-Ty N = NOp
-  translate-Ty (ix s) = Ix s
-  translate-Ty (τ ⇒ σ) = translate-Ty τ → State ℕ (translate-Ty σ)
-  translate-Ty (τ ⋆ σ) = translate-Ty τ × translate-Ty σ
-
-  translateArit : CtxtArit Γ τ → translate-Ty τ
-  translateArit (var {τ} _) = ?
-  translateArit (lam x) x₁ = ?
-  translateArit (app arit arit₁) = ?
--}
-```
-```agda
-{-
-data Arit (Sem : Ty → Set) : Ty → Set where
-  var   : Sem τ → Arit Sem τ
-  lam   : (Sem τ → Arit Sem σ) → Arit Sem (τ ⇒ σ)
-  app   : Arit Sem (τ ⇒ σ) → Arit Sem τ → Arit Sem σ
-
-  sizeN : Arit Sem (ix s) → Arit Sem N
-  posiN : Arit Sem (ix s) → Reshape p s → Arit Sem N
-  spliₗ : Arit Sem (ix (s ⊗ p)) → Arit Sem (ix s)
-  spliᵣ : Arit Sem (ix (s ⊗ p)) → Arit Sem (ix p)
-
-  _*N_ : Arit Sem N → Arit Sem N → Arit Sem N 
-
-  _*C_ : Arit Sem C → Arit Sem C → Arit Sem C 
-  ω`   : Arit Sem N → Arit Sem N → Arit Sem C
-
-  toC  : Arit Sem R → Arit Sem R → Arit Sem C
-  toRᵣ : Arit Sem C → Arit Sem R
-  toRᵢ : Arit Sem C → Arit Sem R
-
-  to-⋆     : Arit Sem τ → Arit Sem σ → Arit Sem (τ ⋆ σ)
-  ⋆-proj₁ : Arit Sem (τ ⋆ σ) → Arit Sem τ
-  ⋆-proj₂ : Arit Sem (τ ⋆ σ) → Arit Sem σ
+  to-⋆     : CtxtArit Γ τ → CtxtArit Γ σ → CtxtArit Γ (τ ⋆ σ)
+  ⋆-proj₁ : CtxtArit Γ (τ ⋆ σ) → CtxtArit Γ τ
+  ⋆-proj₂ : CtxtArit Γ (τ ⋆ σ) → CtxtArit Γ σ
   
-  _*R_ : Arit Sem R → Arit Sem R → Arit Sem R 
-  _+R_ : Arit Sem R → Arit Sem R → Arit Sem R 
-  _-R_ : Arit Sem R → Arit Sem R → Arit Sem R 
+  _*R_ : CtxtArit Γ R → CtxtArit Γ R → CtxtArit Γ R 
+  _+R_ : CtxtArit Γ R → CtxtArit Γ R → CtxtArit Γ R 
+  _-R_ : CtxtArit Γ R → CtxtArit Γ R → CtxtArit Γ R 
 
-  repeat       : (n : ℕ) → Arit Sem R → Arit Sem ℝ
+  repeat       : (n : ℕ) → CtxtArit Γ R → CtxtArit Γ ℝ
 
-  SIMD-*R      : {n : ℕ} → Arit Sem ℝ → Arit Sem ℝ → Arit Sem ℝ
-  SIMD-+R      : {n : ℕ} → Arit Sem ℝ → Arit Sem ℝ → Arit Sem ℝ
-  SIMD--R      : {n : ℕ} → Arit Sem ℝ → Arit Sem ℝ → Arit Sem ℝ
+  SIMD-*R      : {n : ℕ} → CtxtArit Γ ℝ → CtxtArit Γ ℝ → CtxtArit Γ ℝ
+  SIMD-+R      : {n : ℕ} → CtxtArit Γ ℝ → CtxtArit Γ ℝ → CtxtArit Γ ℝ
+  SIMD--R      : {n : ℕ} → CtxtArit Γ ℝ → CtxtArit Γ ℝ → CtxtArit Γ ℝ
   {-
     Here we can just use to-⋆ to make a pair of ℝ
 
-  SIMD-to-⋆    : {n : ℕ} → Arit Sem (τ ◎ n) → Arit Sem (σ ◎ n) → Arit Sem (τ ⋆ σ ◎ n)
-  SIMD-⋆-proj₁ : {n : ℕ} → Arit Sem (τ ⋆ σ ◎ n)  → Arit Sem (τ ◎ n)
-  SIMD-⋆-proj₂ : {n : ℕ} → Arit Sem (τ ⋆ σ ◎ n)  → Arit Sem (σ ◎ n)
+  SIMD-to-⋆    : {n : ℕ} → CtxtArit Γ (τ ◎ n) → CtxtArit Γ (σ ◎ n) → CtxtArit Γ (τ ⋆ σ ◎ n)
+  SIMD-⋆-proj₁ : {n : ℕ} → CtxtArit Γ (τ ⋆ σ ◎ n)  → CtxtArit Γ (τ ◎ n)
+  SIMD-⋆-proj₂ : {n : ℕ} → CtxtArit Γ (τ ⋆ σ ◎ n)  → CtxtArit Γ (σ ◎ n)
   -}
 
-  ωr`  : Arit Sem N → Arit Sem N → Arit Sem R
-  ωi`  : Arit Sem N → Arit Sem N → Arit Sem R
+  ωr`  : CtxtArit Γ N → CtxtArit Γ N → CtxtArit Γ R
+  ωi`  : CtxtArit Γ N → CtxtArit Γ N → CtxtArit Γ R
 ```
 
 ```agda  
 
-mult : {Sem : Ty → Set} (a b c d : Arit Sem R) → Arit Sem (R ⋆ R)
+mult : (a b c d : CtxtArit Γ R) → CtxtArit Γ (R ⋆ R)
 mult a b c d = to-⋆ ((a *R c) -R (b *R d)) ((a *R d) +R (b *R c)) 
 
 {-
-SIMD-mult : {n : ℕ} {Sem : Ty → Set} (a b c d : Arit Sem (R ◎ n)) → Arit Sem (R ⋆ R ◎ n)
+SIMD-mult : {n : ℕ} {Γ : Ty → Set} (a b c d : CtxtArit Γ (R ◎ n)) → CtxtArit Γ (R ⋆ R ◎ n)
 SIMD-mult a b c d = SIMD-to-⋆ (SIMD--R (SIMD-*R a c) (SIMD-*R b d)) (SIMD-+R (SIMD-*R a d) (SIMD-*R b c))
 -}
 
-curry : ∀ {Sem : Ty → Set} → ∀ { X : Set } → (Arit Sem (R ⋆ R) → X) → (Arit Sem R → Arit Sem R → X)
+curry : ∀ { X : Set } → (CtxtArit Γ (R ⋆ R) → X) → (CtxtArit Γ R → CtxtArit Γ R → X)
 curry f r i = f (to-⋆ r i)
 
 {-
-SIMD-curry : ∀ {n : ℕ} {Sem : Ty → Set} → ∀ { X : Set } → (Arit Sem (R ⋆ R ◎ n) → X) → (Arit Sem (R ◎ n) → Arit Sem (R ◎ n) → X)
+SIMD-curry : ∀ {n : ℕ} {Γ : Ty → Set} → ∀ { X : Set } → (CtxtArit Γ (R ⋆ R ◎ n) → X) → (CtxtArit Γ (R ◎ n) → CtxtArit Γ (R ◎ n) → X)
 SIMD-curry f r i = f (SIMD-to-⋆ r i)
 -}
 
-uncurry : ∀ {Sem : Ty → Set} → ∀ { X : Set } → (Arit Sem R → Arit Sem R → X) → (Arit Sem (R ⋆ R) → X)
+uncurry : ∀ { X : Set } → (CtxtArit Γ R → CtxtArit Γ R → X) → (CtxtArit Γ (R ⋆ R) → X)
 uncurry f x = f (⋆-proj₁ x) (⋆-proj₂ x)
 
-{-
-SIMD-uncurry : ∀ {n : ℕ} {Sem : Ty → Set} → ∀ { X : Set } → (Arit Sem (R ◎ n) → Arit Sem (R ◎ n) → X) → (Arit Sem (R ⋆ R ◎ n) → X)
-SIMD-uncurry f x = f (SIMD-⋆-proj₁ x) (SIMD-⋆-proj₂ x)
--}
-
-{-
-ω` : ∀ {Sem : Ty → Set} → Arit Sem N → Arit Sem N → Arit Sem C
-ω` n j = toC (ωr` n j) (ωi` n j)
--}
-{-
-_*C_ : ∀ {Sem} → Arit Sem C → Arit Sem C → Arit Sem C 
-x *C′ y =
-  let a = toRᵣ x in
-  let b = toRᵢ x in
-  let c = toRᵣ y in
-  let d = toRᵢ y in
-  toC ((a *R c) -R (b *R d)) ((a *R d) +R (b *R c))
--}
-
---let′_=′_in′_ : ∀ {Sem} → (Sem τ) → (Arit Sem τ) → Arit Sem σ → Arit Sem σ
---let′_=′_in′_ nm x y = app ? ?
-
-
 ```
 
-Here I check that I have setup the lambda calculi correctly by ensuring I can 
-represent the SKI operators
+# Issue: Passing Arit to Inp
+Currently facing the issue, of trying to work out how to pass an Arit operation 
+to Inp for imap, mapsum, and anywhere else. 
+
+For these operations, we are going to define them over a context Δ which is a 
+⊆ of the main context Γ. We currently use All to declare that this context Δ 
+only contains Arrays. This is working out to be pretty shit.
+
+What if I instead used some kind of method similar to ∋ which lets me give 
+(for each element we extract) a predicate and our Arit, which is also just 
+another Predicate type which additionally takes evidence of the prior predicate!
 ```agda
-module _ where
-  private variable
-    Sem : Ty → Set
-
-  I` : Arit Sem (τ ⇒ τ)
-  I` = lam (λ x → var x)
-
-  K` : Arit Sem (τ ⇒ σ ⇒ τ)
-  K` = lam λ x → lam λ y → var x
-  -- 
-  S` : Arit Sem ((σ ⇒ δ ⇒ τ) ⇒ (σ ⇒ δ) ⇒ σ ⇒ τ)
-  S` = `λ x ⇒ `λ y ⇒ `λ z ⇒ app (app (var x) (var z)) (app (var y) (var z))
+data EachArit (P : Ty → Set) (Op : (τ : Ty) → P τ → Set) : Ctxt → Set where
+  empt : EachArit _ _ ⊘
+  there : EachArit P Op      Γ                         → EachArit _ _ (τ ◃ Γ)
+  here  : EachArit P Op Γ → (τₚ : P τ) → Op τ τₚ → EachArit _ _ (τ ◃ Γ)
 ```
+Is there any way I could make this nicer?
 
 # The set of in place operations
 
@@ -433,71 +409,58 @@ We restrict these to currently operate over one shape level `l`
 module _ where
   infixl 2 _>>>_
 ```
-
-Sure the below would work and would allow us to refine to SIMD, but is it too 
-strict. If we want to be able to use simd operations when we ⟨ swap ⟩ we would 
-require s ≡ lanes. This would mean we would be fixing the radix of the fft to 
-lanes as opposed to a multiple of
+When we define this set of new inplace operations, we want to restrict our 
+Contexts to only contain the types we can actually work with 
 
 ```agda
-  --data IsSimd′ : {ℓ : L} (s : S ℓ) → Set where
-  --  base : ∀ {n : ℕ} → IsSimd′ (ν (n *ₙ lane))
+  data NewInp : (Γ Δ : Ctxt) → Set where
+    compose : NewInp Γ Φ
+            → NewInp Φ Δ
+            → NewInp Γ Δ
 
-  {-
-  data IsSimd : {ℓ : L} (s : S ℓ) → Set where
-    base : ∀ {s : S zz} → IsSimd ((ι s) ⊗ ι lanes)
-    down : ∀ {ℓ : L} {s : S ℓ} → IsSimd s → IsSimd (ι s)
-    comp : ∀ {ℓ : L} {s p : S (ss ℓ)} → IsSimd s → IsSimd p → IsSimd (s ⊗ p)
-  -}
-
-  data NewInp (Sem : Ty → Set) : (Γ Δ : Ctxt) → Set where
-    compose : NewInp Sem Γ Φ
-            → NewInp Sem Φ Δ
-            → NewInp Sem Γ Δ
-
+    
     -- Generalised imap where every operation can also access the elements at 
     -- the simultanious operations (Meaning we will need to make use of temporary variables)
-    imap` : ∀ {Γ Δ : Ctxt}
-          → Δ ⊆ᶜ Γ --- This should really be ⊆ and flipped ⊢ feels wrong in this context (pun intended)
+    imap` : ∀ {Γ : Ctxt}
           → ∀ {ℓ : L} (s : S ℓ)
-          -- → ( ne : NonEmpty Δ )
-          → All (Reshape s ∘ ConPair-Shape) Δ
-          → All (λ conPair → Arit Sem (allTys Δ ((ix (ConPair-Shape conPair)) ⇒ ConPair-τ conPair))) Δ
-          -- Annoyingly, this is acceptable for map, but not acceptable for imap 
-          -- where each ar could be of a different shape
-          --→ Arit Sem (allTys Δ (Ctxt-to-⋆ Δ ne))
-          --→ _⊆ᵖ_ (λ conPair → Reshape s (ConPair-Shape conPair)) Δ Γ 
-          → NewInp Sem Γ Γ
+          --→ (sub : (λ τ → Σ (Arr τ) λ{(ARR {s = p} τₙ) → Reshape s p }) ∶ Δ ⊆ₚ Γ) -- Extract a sub array and ensure all the shapes have a
+            --→ All (λ τ → (Σ (Arr τ) (λ{(ARR {_} {_} {p} _) → Reshape s p}))) Δ -- We can only imap over Arrays
+          --→ ? -- All of these arrays must have a reshape into s
+          --→ All ? Δ -- For each of these arrays we need the operation
+          --→ ? --→ All (Reshape s ∘ ConPair-Shape) Δ
+          --→ ? --→ All (λ conPair → Arit Sem (allTys Δ ((ix (ConPair-Shape conPair)) ⇒ ConPair-τ conPair))) Δ
+            --→ All (λ τ → CtxtArit (ix s ◃ Δ) τ) Δ -- Could I get away with this???
+          -- Fairly nice compared to some of the other options
+          → EachArit (λ τ → (Σ (Arr τ) (λ{(ARR {_} {_} {p} _) → Reshape s p}))) 
+                     (λ{ (.(ix _) ⇒ τ) (ARR {s = p} num ,ₚ r) → CtxtArit (ix p ◃ Γ) τ })
+                      Γ
+          → NewInp Γ Γ
 
     mapSum` : ∀ {Γ Δ : Ctxt} 
             → Δ ⊆ᶜ Γ
             → ∀ {u : ℕ}
-            → All (Reshape (ι (ν u)) ∘ ConPair-Shape) Δ
+            → All (λ τ → (Σ (Arr τ) (λ{(ARR {_} {_} {p} _) → Reshape (ι (ν u)) p}))) Δ -- All (Reshape (ι (ν u)) ∘ ConPair-Shape) Δ
             --→ ∀ {Sem : Ty → Set}
-            → All (λ conPair → Arit Sem (allTys Δ (ix (ι (ν u)) ⇒ ix (ι (ν u)) ⇒ ConPair-τ conPair))) Δ
-            → NewInp Sem Γ Γ
+            → All (λ τ → CtxtArit Δ (ix (ι (ν u)) ⇒ ix (ι (ν u)) ⇒ τ)) Δ -- All (λ conPair → Arit Sem (allTys Δ (ix (ι (ν u)) ⇒ ix (ι (ν u)) ⇒ ConPair-τ conPair))) Δ
+            → NewInp Γ Γ
 
     copyOut` : {Γ Δ : Ctxt} 
-             → _⊆ᵖ_ (λ conPair → [ (ConPair-Num conPair) , s ] ) Δ Γ
+             → ? -- → _⊆ᵖ_ (λ conPair → [ (ConPair-Num conPair) , s ] ) Δ Γ
              → (s : S (ss l))
-             → All (λ conPair → Reshape s (ConPair-Shape conPair)) Δ
-             → All (λ conPair → Reshape (ConPair-Shape conPair) s) Δ
-             → NewInp Sem Δ Δ
-             → NewInp Sem Γ Γ
+             → ? -- → All (λ conPair → Reshape s (ConPair-Shape conPair)) Δ
+             → ? -- → All (λ conPair → Reshape (ConPair-Shape conPair) s) Δ
+             → NewInp Δ Δ
+             → NewInp Γ Γ
     
     -- The easiest form of part is where every Ar in Δ is of the same Shape
     part` : ∀ {Γ Δ : Ctxt}
           --→ Δ ⊆ᶜ Γ
           → {ℓ : L} (s p : S (ss ℓ))
-          --→ (s⊂p : s ⊂ p)
-          --→ (sameS : All (λ conPair → Σ (ConPair-ℓ conPair ≡ (ss ℓ)) λ{refl → s ≡ ConPair-Shape conPair}) Δ)
-          --→ let Φ = mapCtxtP Δ sameS λ{(conPair ,ₚ refl ,ₚ refl) → [ (ConPair-Num conPair) , (inv-⊂ s⊂p) ]} in NewInp Sem Φ Φ
-          -- Pain to read, but:
-            -- Give me a: Shape, which has a reshape to our shape of recursion, and is a subshape of the arrays shape 
-            -- And an imap which operates over the inverse of this sub
-          → (reshapeableS : All (λ conPair → ∃ λ p → Σ (Reshape s p) λ r → p ⊂ ConPair-Shape conPair) Δ)
-          → let Φ = mapCtxtP Δ reshapeableS λ{(conPair ,ₚ _ ,ₚ _ ,ₚ sub) → [ ConPair-Num conPair , (inv-⊂ sub) ] } in NewInp Sem Φ Φ
-          → NewInp Sem Γ Γ
+          → ? 
+          -- (reshapeableS : All (λ conPair → ∃ λ p → Σ (Reshape s p) λ r → p ⊂ ConPair-Shape conPair) Δ)
+          → ? 
+          --let Φ = mapCtxtP Δ reshapeableS λ{(conPair ,ₚ _ ,ₚ _ ,ₚ sub) → [ ConPair-Num conPair , (inv-⊂ sub) ] } in NewInp Sem Φ Φ
+          → NewInp Γ Γ
     {-
     -- I need to generate a context from Δ, where every shape is a subshape of 
     --
@@ -511,10 +474,11 @@ lanes as opposed to a multiple of
           → let a = mapCtxt Δ (λ conPair → [ (ConPair-Num conPair) , (let a = s ⊂ ? in ?) ] ) in ?
           → NewInp Sem ? ?
           → NewInp Sem Γ Γ
-    -}
  
+    -}
 
 
+    {-
   data Inp (Sem : Ty → Set) : {l : L} (s : S l) {τ : Ty} (num : Num τ) → Set₁ where
     compose  : ∀ {s₁ : S l} {τ : Ty} {num : Num τ}
              → Inp Sem s₁ num
@@ -559,12 +523,32 @@ lanes as opposed to a multiple of
         → Inp Sem (s ⊗ (ι (ν LANES))) (Scl R ⋆ Scl R)
         → Inp Sem s (Scl ℝ ⋆ Scl ℝ)
   vec-⋆ {Sem} {s} inp = ?
+    -}
 ```
 
 Within these in place operations, we can then represent twiddles...
 
 
 ```agda
+infix 3 there
+-- Should be the other way round, but causes an __impossible__ error on my version of agda
+--syntax here = name
+--syntax b = there here
+--syntax i₂ = there (there here)
+--syntax i₃ = there there there here
+--syntax i₄ = there there there there here
+
+twid` : {s s′ p p′ : S (ss l)} → (r₁ : Reshape s′ s) → (r₂ : Reshape p′ p) → NewInp ((ix (s ⊗ p) ⇒ R) ◃ (ix (s ⊗ p) ⇒ R) ◃ ⊘) _
+twid` {l} {s} {s′} {p} {p′} r₁ r₂ =
+  imap`
+    (s ⊗ p)
+    (here (here empt 
+      --- This is still not nice
+        -- Ideally, some way of tagging variables would be nice so debrunj
+      (ARR (Scl R) ,ₚ eq) (⋆-proj₁ (mult (app (var ?) (var ?)) (app (var (there (there here))) (var here)) ? ?))) 
+      (ARR (Scl R) ,ₚ eq) ?)
+
+{-
 twid` : {s s′ p p′ : S (ss l)} {Sem : Ty → Set} → (r₁ : Reshape s′ s) → (r₂ : Reshape p′ p) → Inp Sem (s ⊗ p) (Scl C)
 twid` {l} {s} {s′} {p} {p′} r₁ r₂ = 
       imap`
@@ -574,6 +558,8 @@ twid` {l} {s} {s′} {p} {p′} r₁ r₂ =
             (sizeN $ var i) 
             ((posiN (spliₗ $ var $ i) r₁) *N (posiN (spliᵣ $ var $ i) r₂))
         )
+-}
+{-
 
 -- This is grim, can I change this to allow me to give a Arit for (R ⋆ R)...
 Ntwid` : {s s′ p p′ : S (ss l)} {Sem : Ty → Set} → (r₁ : Reshape s′ s) → (r₂ : Reshape p′ p) → NewInp Sem ([ Scl R , (s ⊗ p) ] ◃ [ Scl R , (s ⊗ p) ] ◃ ⊘) _
